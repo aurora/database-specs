@@ -1,0 +1,75 @@
+# yaml-language-server: $schema=../../schemas/test.schema.json
+id: introspection-version-specific
+description: >
+  Introspection of features that exist only in newer versions: MySQL functional and invisible
+  indexes, MariaDB ignored indexes, PostgreSQL 18 NOT ENFORCED foreign keys.
+engines: [mysql, mariadb, postgresql]
+versions:
+  mysql: { since: "8.0.13" }
+  postgresql: { since: "18" }
+
+setup:
+  mysql:
+    - CREATE TABLE t_ref (id INT PRIMARY KEY)
+    - |
+      CREATE TABLE t_mod (
+        id INT PRIMARY KEY,
+        ref_id INT,
+        title VARCHAR(100),
+        KEY ix_fn ((LOWER(title))),
+        KEY ix_hidden (ref_id) INVISIBLE,
+        CONSTRAINT fk_mod_ref FOREIGN KEY (ref_id) REFERENCES t_ref (id)
+      )
+  mariadb:
+    - CREATE TABLE t_ref (id INT PRIMARY KEY)
+    - |
+      CREATE TABLE t_mod (
+        id INT PRIMARY KEY,
+        ref_id INT,
+        title VARCHAR(100),
+        KEY ix_hidden (title) IGNORED,
+        CONSTRAINT fk_mod_ref FOREIGN KEY (ref_id) REFERENCES t_ref (id)
+      )
+  postgresql:
+    - CREATE TABLE t_ref (id int PRIMARY KEY)
+    - |
+      CREATE TABLE t_mod (
+        id int PRIMARY KEY,
+        ref_id int,
+        title varchar(100),
+        CONSTRAINT fk_mod_ref FOREIGN KEY (ref_id) REFERENCES t_ref (id) NOT ENFORCED
+      )
+
+cleanup:
+  mysql: [DROP TABLE IF EXISTS t_mod, DROP TABLE IF EXISTS t_ref]
+  mariadb: [DROP TABLE IF EXISTS t_mod, DROP TABLE IF EXISTS t_ref]
+  postgresql: [DROP TABLE IF EXISTS t_mod, DROP TABLE IF EXISTS t_ref]
+
+steps:
+  - query: introspection.list-indexes
+    params: { schema: "{{schema}}", table: t_mod }
+    expect:
+      rows:
+        - match: { index_name: ix_fn }
+          engine: mysql
+          values: { column_name: null, expression: "lower(`title`)", is_visible: true }
+        - match: { index_name: ix_hidden }
+          engine: mysql
+          values: { column_name: ref_id, is_visible: false }
+        - match: { index_name: ix_hidden }
+          engine: mariadb
+          values: { column_name: title, is_visible: false }
+  - query: introspection.list-foreign-keys
+    params: { schema: "{{schema}}", table: t_mod }
+    expect:
+      row_count: 1
+      rows:
+        - match: { constraint_name: fk_mod_ref }
+          engine: mysql
+          values: { is_enforced: true }
+        - match: { constraint_name: fk_mod_ref }
+          engine: mariadb
+          values: { is_enforced: true }
+        - match: { constraint_name: fk_mod_ref }
+          engine: postgresql
+          values: { is_enforced: false }

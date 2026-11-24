@@ -1,0 +1,69 @@
+# yaml-language-server: $schema=../../../schemas/query.schema.json
+id: introspection.list-indexes
+title: List the indexes of a table
+description: >
+  One row per index element (key column, expression or included column), so composite and
+  functional indexes are fully described. Group by index_name on the client side.
+parameters:
+  - { name: schema, type: string }
+  - { name: table, type: string }
+
+result:
+  order: primary key first, then index_name, column_position
+  columns:
+    - { name: schema_name, type: string, nullable: false }
+    - { name: table_name, type: string, nullable: false }
+    - { name: index_name, type: string, nullable: false, description: "MySQL/MariaDB name the primary key PRIMARY." }
+    - { name: is_unique, type: boolean, nullable: false }
+    - { name: is_primary, type: boolean, nullable: false }
+    - name: index_type
+      type: string
+      nullable: false
+      description: Lower case access method (btree, hash, fulltext, spatial, gin, gist, brin, ...).
+    - { name: column_position, type: integer, nullable: false, description: "1-based position of the element in the index." }
+    - { name: column_name, type: string, nullable: true, description: "NULL for expression elements." }
+    - { name: expression, type: string, nullable: true, description: "Expression text for functional elements." }
+    - name: sort_order
+      type: string
+      nullable: true
+      enum: [asc, desc]
+      description: NULL when the index type has no order (hash, fulltext, spatial, gin, included columns).
+    - { name: nulls_first, type: boolean, nullable: true, description: "PostgreSQL only; NULL elsewhere." }
+    - { name: prefix_length, type: integer, nullable: true, description: "MySQL/MariaDB prefix index length (col(10))." }
+    - { name: is_included, type: boolean, nullable: false, description: "Non-key column (PostgreSQL INCLUDE)." }
+    - name: is_visible
+      type: boolean
+      nullable: false
+      description: false = ignored by the optimizer (MySQL INVISIBLE, MariaDB IGNORED). PostgreSQL has no such flag; always true.
+    - { name: predicate, type: string, nullable: true, description: "WHERE clause of a partial index (PostgreSQL)." }
+    - { name: comment, type: string, nullable: true }
+
+variants:
+  - engine: mysql
+    since: "5.7"
+    until: "8.0"
+    file: mysql-5.7.sql
+    notes: ["No functional key parts and no invisible indexes; DESC is parsed but stored as ASC."]
+  - engine: mysql
+    since: "8.0.13"
+    file: mysql.sql
+    notes:
+      - "EXPRESSION column since 8.0.13; IS_VISIBLE since 8.0."
+      - "InnoDB creates an index for every foreign key that has no usable index yet; it shows up here under the constraint's name."
+  - engine: mariadb
+    since: "10.6"
+    file: mariadb.sql
+    notes:
+      - "No functional key parts. IGNORED column since 10.6."
+      - "Descending indexes are real (sort_order desc) since 10.8; before that DESC is ignored."
+      - "InnoDB auto-creates foreign key indexes, as in MySQL."
+  - engine: postgresql
+    since: "12"
+    file: postgresql.sql
+    notes:
+      - "Unique and primary key constraints appear as their backing indexes (e.g. t_pkey)."
+      - "expression is pg_get_indexdef(index, n, true), i.e. the element as written in CREATE INDEX."
+      - "An index left invalid by a failed CREATE INDEX CONCURRENTLY (pg_index.indisvalid = false) is still listed."
+
+gaps:
+  - "MySQL 8.0.0 - 8.0.12 (IS_VISIBLE exists, EXPRESSION does not)."

@@ -1,0 +1,54 @@
+# yaml-language-server: $schema=../../../schemas/query.schema.json
+id: introspection.list-tables
+title: List tables and views of a schema
+description: >
+  Everything a client shows in its object tree for one schema (MySQL/MariaDB: database).
+  Sequences are excluded (separate query).
+parameters:
+  - { name: schema, type: string, description: "Database (MySQL/MariaDB) / schema (PostgreSQL)." }
+
+result:
+  order: table_name
+  columns:
+    - { name: schema_name, type: string, nullable: false }
+    - { name: table_name, type: string, nullable: false }
+    - name: table_type
+      type: string
+      nullable: false
+      enum: [table, partitioned-table, view, materialized-view, foreign-table]
+    - name: partition_of
+      type: string
+      nullable: true
+      description: Parent table name if this table is a partition (PostgreSQL only; MySQL partitions are not tables).
+    - { name: storage_engine, type: string, nullable: true, description: "MySQL/MariaDB ENGINE, PostgreSQL table access method (heap)." }
+    - name: row_estimate
+      type: integer
+      nullable: true
+      description: Statistics-based estimate, never an exact count. NULL = unknown.
+    - { name: data_bytes, type: integer, nullable: true }
+    - { name: index_bytes, type: integer, nullable: true }
+    - { name: collation, type: string, nullable: true, description: "Default collation of the table (MySQL/MariaDB)." }
+    - { name: comment, type: string, nullable: true }
+
+variants:
+  - engine: mysql
+    since: "5.7"
+    file: mysql.sql
+    notes:
+      - "Since 8.0 TABLE_ROWS / DATA_LENGTH / INDEX_LENGTH come from cached statistics (information_schema_stats_expiry, default 24h) and can be NULL or stale for new tables; ANALYZE TABLE refreshes them."
+      - "Views report TABLE_COMMENT = 'VIEW'; mapped to NULL."
+      - "Partitioned tables are detected via CREATE_OPTIONS ('partitioned')."
+  - engine: mariadb
+    since: "10.6"
+    file: mariadb.sql
+    notes:
+      - "TABLE_TYPE can also be SEQUENCE (excluded), SYSTEM VERSIONED (mapped to table) and TEMPORARY (excluded)."
+      - "TABLE_ROWS of partitioned tables is a rough per-partition estimate (an empty table with one partition reported 2)."
+      - "Views report TABLE_COMMENT = 'VIEW'; mapped to NULL."
+  - engine: postgresql
+    since: "12"
+    file: postgresql.sql
+    notes:
+      - "row_estimate from pg_class.reltuples. Before 14 a never-analyzed table reports 0 (not unknown); since 14 it reports -1, mapped to NULL."
+      - "data_bytes / index_bytes call pg_table_size() / pg_indexes_size() per table; on schemas with thousands of tables consider fetching them lazily."
+      - "partition_of is the parent's name only; the parent may live in another schema."

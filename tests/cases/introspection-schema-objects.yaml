@@ -1,0 +1,206 @@
+# yaml-language-server: $schema=../../schemas/test.schema.json
+id: introspection-schema-objects
+description: list-tables, list-indexes and list-foreign-keys on a shared parent/child fixture.
+engines: [mysql, mariadb, postgresql]
+
+setup:
+  mysql: &mysql_setup
+    - |
+      CREATE TABLE t_parent (
+        id INT PRIMARY KEY,
+        code VARCHAR(20) NOT NULL,
+        region INT NOT NULL,
+        UNIQUE KEY uq_parent_code (code),
+        UNIQUE KEY uq_parent_region_code (region, code)
+      ) COMMENT 'parents'
+    - |
+      CREATE TABLE t_child (
+        id INT PRIMARY KEY,
+        parent_id INT,
+        region INT,
+        code VARCHAR(20),
+        title VARCHAR(200),
+        KEY ix_child_title (title(20)) COMMENT 'prefix index',
+        KEY ix_child_multi (region, parent_id DESC),
+        CONSTRAINT fk_child_parent FOREIGN KEY (parent_id) REFERENCES t_parent (id)
+          ON DELETE CASCADE ON UPDATE SET NULL,
+        CONSTRAINT fk_child_region_code FOREIGN KEY (region, code) REFERENCES t_parent (region, code)
+      )
+    - CREATE VIEW v_child AS SELECT id, title FROM t_child
+    - |
+      CREATE TABLE t_part (id INT, created DATE)
+      PARTITION BY RANGE (YEAR(created)) (PARTITION p2026 VALUES LESS THAN (2027))
+  mariadb: *mysql_setup
+  postgresql:
+    - |
+      CREATE TABLE t_parent (
+        id int PRIMARY KEY,
+        code varchar(20) NOT NULL,
+        region int NOT NULL,
+        CONSTRAINT uq_parent_code UNIQUE (code),
+        CONSTRAINT uq_parent_region_code UNIQUE (region, code)
+      )
+    - COMMENT ON TABLE t_parent IS 'parents'
+    - |
+      CREATE TABLE t_child (
+        id int PRIMARY KEY,
+        parent_id int,
+        region int,
+        code varchar(20),
+        title varchar(200),
+        CONSTRAINT fk_child_parent FOREIGN KEY (parent_id) REFERENCES t_parent (id)
+          ON DELETE CASCADE ON UPDATE SET NULL,
+        CONSTRAINT fk_child_region_code FOREIGN KEY (region, code) REFERENCES t_parent (region, code)
+          DEFERRABLE INITIALLY DEFERRED
+      )
+    - CREATE INDEX ix_child_title ON t_child (lower(title))
+    - COMMENT ON INDEX ix_child_title IS 'expression index'
+    - CREATE INDEX ix_child_multi ON t_child (region, parent_id DESC NULLS LAST) INCLUDE (code) WHERE region > 0
+    - CREATE VIEW v_child AS SELECT id, title FROM t_child
+    - CREATE MATERIALIZED VIEW mv_child AS SELECT id FROM t_child
+    - CREATE TABLE t_part (id int, created date) PARTITION BY RANGE (created)
+    - CREATE TABLE t_part_2026 PARTITION OF t_part FOR VALUES FROM ('2026-01-01') TO ('2027-01-01')
+
+cleanup:
+  mysql: &mysql_cleanup
+    - DROP VIEW IF EXISTS v_child
+    - DROP TABLE IF EXISTS t_child
+    - DROP TABLE IF EXISTS t_parent
+    - DROP TABLE IF EXISTS t_part
+  mariadb: *mysql_cleanup
+  postgresql:
+    - DROP MATERIALIZED VIEW IF EXISTS mv_child
+    - DROP VIEW IF EXISTS v_child
+    - DROP TABLE IF EXISTS t_child
+    - DROP TABLE IF EXISTS t_parent
+    - DROP TABLE IF EXISTS t_part
+
+steps:
+  - query: introspection.list-tables
+    params: { schema: "{{schema}}" }
+    expect:
+      rows:
+        - match: { table_name: t_parent }
+          values: { table_type: table, comment: parents, partition_of: null }
+        - match: { table_name: t_child }
+          values: { table_type: table, comment: null }
+        - match: { table_name: v_child }
+          values: { table_type: view, comment: null, storage_engine: null, row_estimate: null }
+        - match: { table_name: t_part }
+          values: { table_type: partitioned-table }
+        - match: { table_name: t_parent }
+          engine: mysql
+          values: { storage_engine: InnoDB }
+        - match: { table_name: t_parent }
+          engine: mariadb
+          values: { storage_engine: InnoDB }
+        - match: { table_name: t_parent }
+          engine: postgresql
+          values: { storage_engine: heap, collation: null }
+        - match: { table_name: mv_child }
+          engine: postgresql
+          values: { table_type: materialized-view }
+        - match: { table_name: t_part_2026 }
+          engine: postgresql
+          values: { table_type: table, partition_of: t_part }
+        - match: { table_name: t_parent }
+          engine: postgresql
+          until: "14"
+          values: { row_estimate: 0 }
+        - match: { table_name: t_parent }
+          engine: postgresql
+          since: "14"
+          values: { row_estimate: null }
+
+  - query: introspection.list-indexes
+    params: { schema: "{{schema}}", table: t_child }
+    expect:
+      rows:
+        - match: { is_primary: true }
+          values: { column_name: id, column_position: 1, is_unique: true, index_type: btree, sort_order: asc }
+        - match: { index_name: ix_child_multi, column_position: 1 }
+          values: { column_name: region, is_unique: false, sort_order: asc, is_included: false }
+        # DESC: ignored by MySQL 5.7 and MariaDB < 10.8
+        - match: { index_name: ix_child_multi, column_position: 2 }
+          engine: mysql
+          until: "8.0"
+          values: { column_name: parent_id, sort_order: asc }
+        - match: { index_name: ix_child_multi, column_position: 2 }
+          engine: mysql
+          since: "8.0"
+          values: { column_name: parent_id, sort_order: desc }
+        - match: { index_name: ix_child_multi, column_position: 2 }
+          engine: mariadb
+          until: "10.8"
+          values: { column_name: parent_id, sort_order: asc }
+        - match: { index_name: ix_child_multi, column_position: 2 }
+          engine: mariadb
+          since: "10.8"
+          values: { column_name: parent_id, sort_order: desc }
+        - match: { index_name: ix_child_multi, column_position: 2 }
+          engine: postgresql
+          values: { column_name: parent_id, sort_order: desc, nulls_first: false }
+        # MySQL / MariaDB: prefix index with comment, auto-created FK indexes
+        - match: { index_name: ix_child_title }
+          engine: mysql
+          values: { column_name: title, prefix_length: 20, comment: prefix index, expression: null }
+        - match: { index_name: ix_child_title }
+          engine: mariadb
+          values: { column_name: title, prefix_length: 20, comment: prefix index }
+        - match: { index_name: fk_child_parent }
+          engine: mysql
+          values: { column_name: parent_id }
+        - match: { index_name: fk_child_parent }
+          engine: mariadb
+          values: { column_name: parent_id }
+        # PostgreSQL: expression, INCLUDE, partial index
+        - match: { index_name: ix_child_title }
+          engine: postgresql
+          values: { column_name: null, expression: "lower(title::text)", comment: expression index }
+        - match: { index_name: ix_child_multi, column_position: 3 }
+          engine: postgresql
+          values: { column_name: code, is_included: true, sort_order: null, predicate: (region > 0) }
+
+  - query: introspection.list-indexes
+    params: { schema: "{{schema}}", table: t_parent }
+    expect:
+      row_count: 4
+      rows:
+        - match: { is_primary: true }
+          values: { column_name: id }
+        - match: { index_name: uq_parent_code }
+          values: { is_unique: true, is_primary: false, column_name: code }
+        - match: { index_name: uq_parent_region_code, column_position: 2 }
+          values: { column_name: code, is_unique: true }
+
+  - query: introspection.list-foreign-keys
+    params: { schema: "{{schema}}", table: t_child }
+    expect:
+      row_count: 3
+      rows:
+        - match: { constraint_name: fk_child_parent }
+          values:
+            column_position: 1
+            column_name: parent_id
+            referenced_table: t_parent
+            referenced_column: id
+            on_update: set-null
+            on_delete: cascade
+            is_enforced: true
+        - match: { constraint_name: fk_child_region_code, column_position: 2 }
+          values: { column_name: code, referenced_column: code }
+        # default action when none is given
+        - match: { constraint_name: fk_child_region_code, column_position: 1 }
+          engine: mysql
+          until: "8.0"
+          values: { on_update: restrict, on_delete: restrict }
+        - match: { constraint_name: fk_child_region_code, column_position: 1 }
+          engine: mysql
+          since: "8.0"
+          values: { on_update: no-action, on_delete: no-action }
+        - match: { constraint_name: fk_child_region_code, column_position: 1 }
+          engine: mariadb
+          values: { on_update: restrict, on_delete: restrict, match_type: null, is_deferrable: false }
+        - match: { constraint_name: fk_child_region_code, column_position: 1 }
+          engine: postgresql
+          values: { on_update: no-action, on_delete: no-action, match_type: simple, is_deferrable: true, initially_deferred: true }

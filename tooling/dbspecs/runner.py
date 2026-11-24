@@ -123,6 +123,31 @@ def _render_operation(specs: Specs, op_id: str, server: Server, params: dict) ->
     return [render(t, values) for t in templates]
 
 
+def _check_contract(query: dict, rows: list[dict]) -> list[str]:
+    """Every row must match the declared column types, nullability and enums."""
+    problems = []
+    for col in query["result"]["columns"]:
+        name = col["name"]
+        for row in rows:
+            v = row.get(name)
+            if v is None:
+                if not col["nullable"]:
+                    problems.append(f"{name} is NULL but declared NOT NULL")
+                    break
+                continue
+            t = col["type"]
+            ok = (t == "string" and isinstance(v, str)) \
+                or (t == "integer" and isinstance(v, int) and not isinstance(v, bool)) \
+                or (t == "boolean" and (isinstance(v, bool) or v in (0, 1)))
+            if not ok:
+                problems.append(f"{name}: {v!r} ({type(v).__name__}) is not {t}")
+                break
+            if "enum" in col and v not in col["enum"]:
+                problems.append(f"{name}: {v!r} not in {col['enum']}")
+                break
+    return problems
+
+
 def _check(expect: dict, rows: list[dict], server: Server) -> list[str]:
     problems = []
     if "row_count" in expect and len(rows) != expect["row_count"]:
@@ -175,6 +200,7 @@ def run_tests(specs: Specs, server: Server, report: Report):
                     expected_cols = [c["name"] for c in query["result"]["columns"]]
                     if rows and list(rows[0]) != expected_cols:
                         problems.append(f"{step['query']}: columns {list(rows[0])} != contract {expected_cols}")
+                    problems += [f"{step['query']}: {p}" for p in _check_contract(query, rows)]
                     problems += [f"{step['query']}: {p}" for p in _check(step.get("expect", {}), rows, server)]
         except Exception as exc:
             problems.append(f"{type(exc).__name__}: {exc}".splitlines()[0])

@@ -1,0 +1,58 @@
+# yaml-language-server: $schema=../../../schemas/query.schema.json
+id: introspection.list-foreign-keys
+title: List the foreign keys of a table
+description: >
+  Outgoing foreign keys of one table, one row per column pair. Group by constraint_name.
+parameters:
+  - { name: schema, type: string }
+  - { name: table, type: string }
+
+result:
+  order: constraint_name, column_position
+  columns:
+    - { name: schema_name, type: string, nullable: false }
+    - { name: table_name, type: string, nullable: false }
+    - { name: constraint_name, type: string, nullable: false }
+    - { name: column_position, type: integer, nullable: false }
+    - { name: column_name, type: string, nullable: false }
+    - { name: referenced_schema, type: string, nullable: false }
+    - { name: referenced_table, type: string, nullable: false }
+    - { name: referenced_column, type: string, nullable: false }
+    - { name: on_update, type: string, nullable: false, enum: [no-action, restrict, cascade, set-null, set-default] }
+    - { name: on_delete, type: string, nullable: false, enum: [no-action, restrict, cascade, set-null, set-default] }
+    - name: match_type
+      type: string
+      nullable: true
+      enum: [simple, full, partial]
+      description: NULL when the engine does not record it (MySQL/MariaDB report NONE).
+    - { name: is_deferrable, type: boolean, nullable: false }
+    - { name: initially_deferred, type: boolean, nullable: false }
+    - { name: is_enforced, type: boolean, nullable: false, description: "false = NOT ENFORCED (PostgreSQL 18+)." }
+
+variants:
+  - engine: mysql
+    since: "5.7"
+    file: mysql.sql
+    notes:
+      - "Without an explicit ON UPDATE/ON DELETE, 5.7 reports restrict and 8.x reports no-action (observed 5.7.44 vs 8.0.46). InnoDB treats both the same (checked immediately)."
+      - "Foreign keys are not deferrable."
+    sources: [{ evidence: tested }]
+  - engine: mariadb
+    since: "10.6"
+    file: mysql.sql
+    notes:
+      - "Same query as MySQL. Without an explicit action MariaDB reports restrict."
+    sources: [{ evidence: tested }]
+  - engine: postgresql
+    since: "12"
+    until: "18"
+    file: postgresql.sql
+    notes: ["Without an explicit action: no-action. match_type defaults to simple."]
+  - engine: postgresql
+    since: "18"
+    file: postgresql-18.sql
+    notes: ["pg_constraint.conenforced since 18 (NOT ENFORCED foreign keys)."]
+
+gaps:
+  - "Incoming foreign keys (tables referencing this one) need a separate query."
+  - "PostgreSQL 15+ ON DELETE SET NULL (column list) is not represented."

@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=../../schemas/operation.schema.json
+id: ddl.drop-column
+title: Drop a column
+parameters:
+  - { name: table, kind: qualified-identifier }
+  - { name: column, kind: identifier }
+  - { name: cascade, kind: boolean, description: "PostgreSQL: also drop dependent views / constraints." }
+implementations:
+  mysql:
+    - status: supported
+      template: "ALTER TABLE {{table}} DROP COLUMN {{column}}"
+      transactional: false
+      caveats: ["Indexes that only contain the column are dropped with it; multi-column indexes lose the column. Fails if a foreign key uses it."]
+      sources: [{ evidence: tested }]
+  mariadb:
+    - status: supported
+      template: "ALTER TABLE {{table}} DROP COLUMN {{column}}"
+      transactional: false
+      caveats: ["As MySQL."]
+      sources: [{ evidence: tested }]
+  postgresql:
+    - status: supported
+      template: "ALTER TABLE {{table}} DROP COLUMN {{column}}{{#cascade}} CASCADE{{/cascade}}"
+      transactional: true
+      caveats: ["Without CASCADE it fails when views or constraints of other objects depend on the column. The column is only marked dropped (no rewrite)."]
+      sources: [{ evidence: tested }]

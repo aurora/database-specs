@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=../../schemas/operation.schema.json
+id: ddl.rename-table
+title: Rename a table
+parameters:
+  - { name: table, kind: qualified-identifier }
+  - { name: new_name, kind: identifier, description: "Unqualified new name; the table stays in its schema." }
+implementations:
+  mysql:
+    - status: supported
+      template: "ALTER TABLE {{table}} RENAME TO {{new_name}}"
+      transactional: false
+      caveats:
+        - "An unqualified new name refers to the session's current database: if the table lives in another database, qualify new_name with it or the table is moved."
+        - "Views referencing the old name break; foreign keys and triggers follow."
+      sources: [{ evidence: tested }]
+  mariadb:
+    - status: supported
+      template: "ALTER TABLE {{table}} RENAME TO {{new_name}}"
+      transactional: false
+      caveats: ["As MySQL."]
+      sources: [{ evidence: tested }]
+  postgresql:
+    - status: supported
+      template: "ALTER TABLE {{table}} RENAME TO {{new_name}}"
+      transactional: true
+      caveats: ["The new name must be unqualified. Views, foreign keys and triggers follow (by OID); the owned sequences of SERIAL columns keep their old names."]
+      sources: [{ evidence: tested }]

@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=../../schemas/operation.schema.json
+id: introspection.trigger-ddl
+title: Reconstruct the CREATE TRIGGER statement of a trigger
+parameters:
+  - { name: trigger, kind: qualified-identifier, description: "MySQL / MariaDB (schema.trigger)." }
+  - { name: schema_name, kind: string-literal, description: "PostgreSQL." }
+  - { name: table_name, kind: string-literal, description: "PostgreSQL." }
+  - { name: trigger_name, kind: string-literal, description: "PostgreSQL." }
+
+implementations:
+  mysql:
+    - status: supported
+      template: "SHOW CREATE TRIGGER {{trigger}}"
+      requires: [trigger]
+      result_column: 3
+      caveats:
+        - "Column 3 is the original statement incl. DEFINER; FOLLOWS / PRECEDES ordering is not part of it."
+      sources: [{ evidence: tested }]
+  mariadb:
+    - status: supported
+      template: "SHOW CREATE TRIGGER {{trigger}}"
+      requires: [trigger]
+      result_column: 3
+      caveats: ["As MySQL."]
+      sources: [{ evidence: tested }]
+  postgresql:
+    - status: supported
+      requires: [schema_name, table_name, trigger_name]
+      result_column: 1
+      template: |
+        SELECT pg_get_triggerdef(t.oid, true) || ';'
+            || CASE WHEN t.tgenabled = 'D'
+                    THEN E'\nALTER TABLE ' || quote_ident(n.nspname) || '.' || quote_ident(c.relname)
+                         || ' DISABLE TRIGGER ' || quote_ident(t.tgname) || ';'
+                    ELSE '' END
+            AS ddl
+        FROM pg_catalog.pg_trigger t
+        JOIN pg_catalog.pg_class c     ON c.oid = t.tgrelid
+        JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = {{schema_name}} AND c.relname = {{table_name}} AND t.tgname = {{trigger_name}}
+          AND NOT t.tgisinternal
+      caveats:
+        - "The trigger function is a separate object (introspection.routine-ddl) and must exist first."
+      sources: [{ evidence: tested }]

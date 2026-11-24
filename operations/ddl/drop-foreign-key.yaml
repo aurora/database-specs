@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=../../schemas/operation.schema.json
+id: ddl.drop-foreign-key
+title: Drop a foreign key
+parameters:
+  - { name: table, kind: qualified-identifier }
+  - { name: constraint, kind: identifier }
+implementations:
+  mysql:
+    - status: supported
+      template: "ALTER TABLE {{table}} DROP FOREIGN KEY {{constraint}}"
+      transactional: false
+      caveats: ["The index InnoDB created for the foreign key stays and has to be dropped separately. DROP CONSTRAINT works since 8.0.19."]
+      sources: [{ evidence: tested }]
+  mariadb:
+    - status: supported
+      template: "ALTER TABLE {{table}} DROP FOREIGN KEY {{constraint}}"
+      transactional: false
+      caveats: ["As MySQL; the auto-created index stays."]
+      sources: [{ evidence: tested }]
+  postgresql:
+    - status: supported
+      template: "ALTER TABLE {{table}} DROP CONSTRAINT {{constraint}}"
+      transactional: true
+      sources: [{ evidence: tested }]

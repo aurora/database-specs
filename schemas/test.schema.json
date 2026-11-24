@@ -34,11 +34,13 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["match", "values"],
+            "required": ["match"],
             "additionalProperties": false,
             "properties": {
               "match": { "type": "object" },
+              "count": { "type": "integer", "description": "Number of rows matching 'match' (default 1); 0 asserts absence." },
               "values": { "type": "object" },
+              "matches": { "type": "object", "description": "Column -> regular expression the value must contain (re.search, dot matches newline)." },
               "engine": { "$ref": "common.schema.json#/$defs/engineId" },
               "since": { "$ref": "common.schema.json#/$defs/version" },
               "until": { "$ref": "common.schema.json#/$defs/version" }
@@ -75,6 +77,37 @@
         "properties": {
           "query": { "$ref": "common.schema.json#/$defs/id" },
           "operation": { "$ref": "common.schema.json#/$defs/id" },
+          "sql": {
+            "description": "Ad-hoc check per engine (not a contract), e.g. to verify the effect of an operation.",
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          },
+          "roundtrip": {
+            "description": "Snapshot the compare queries, run the DDL operation, drop the object, execute the returned DDL, compare again.",
+            "type": "object",
+            "required": ["operation", "drop", "compare"],
+            "additionalProperties": false,
+            "properties": {
+              "operation": { "$ref": "common.schema.json#/$defs/id" },
+              "params": { "type": "object" },
+              "params_by_engine": { "type": "object", "additionalProperties": { "type": "object" } },
+              "drop": { "type": "object", "additionalProperties": { "$ref": "#/$defs/statements" } },
+              "compare": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": ["query"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "query": { "$ref": "common.schema.json#/$defs/id" },
+                    "params": { "type": "object" },
+                    "params_by_engine": { "type": "object", "additionalProperties": { "type": "object" } }
+                  }
+                }
+              }
+            }
+          },
           "params": { "type": "object" },
           "engines": {
             "description": "Run this step only for these engines / version ranges ({} = all versions).",
@@ -88,7 +121,7 @@
           },
           "expect": { "$ref": "#/$defs/expectation" }
         },
-        "oneOf": [{ "required": ["query"] }, { "required": ["operation"] }]
+        "oneOf": [{ "required": ["query"] }, { "required": ["operation"] }, { "required": ["sql"] }, { "required": ["roundtrip"] }]
       }
     }
   }

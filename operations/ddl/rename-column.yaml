@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=../../schemas/operation.schema.json
+id: ddl.rename-column
+title: Rename a column
+parameters:
+  - { name: table, kind: qualified-identifier }
+  - { name: column, kind: identifier }
+  - { name: new_name, kind: identifier }
+  - { name: column_definition, kind: sql-fragment, description: "MySQL < 8.0 / MariaDB < 10.5.2: full column definition (CHANGE COLUMN)." }
+implementations:
+  mysql:
+    - until: "8.0"
+      status: supported
+      template: "ALTER TABLE {{table}} CHANGE COLUMN {{column}} {{new_name}} {{column_definition}}"
+      requires: [column_definition]
+      transactional: false
+      caveats: ["CHANGE replaces the full definition (see ddl.change-column-type): repeat NOT NULL, DEFAULT, COMMENT, ..."]
+      sources: [{ evidence: tested }]
+    - since: "8.0"
+      status: supported
+      template: "ALTER TABLE {{table}} RENAME COLUMN {{column}} TO {{new_name}}"
+      transactional: false
+      caveats: ["Views and routines referencing the old name are not updated."]
+      sources: [{ evidence: tested }]
+  mariadb:
+    - until: "10.5.2"
+      status: supported
+      template: "ALTER TABLE {{table}} CHANGE COLUMN {{column}} {{new_name}} {{column_definition}}"
+      requires: [column_definition]
+      transactional: false
+    - since: "10.5.2"
+      status: supported
+      template: "ALTER TABLE {{table}} RENAME COLUMN {{column}} TO {{new_name}}"
+      transactional: false
+      caveats: ["Views and routines referencing the old name are not updated."]
+      sources: [{ evidence: tested }]
+  postgresql:
+    - status: supported
+      template: "ALTER TABLE {{table}} RENAME COLUMN {{column}} TO {{new_name}}"
+      transactional: true
+      caveats: ["Views, constraints and indexes follow the rename (they reference columns by number); function bodies do not."]
+      sources: [{ evidence: tested }]

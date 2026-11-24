@@ -1,0 +1,161 @@
+# yaml-language-server: $schema=../../schemas/test.schema.json
+id: ddl-roundtrip
+description: >
+  DDL reconstruction is complete if dropping an object and running the reconstructed DDL gives
+  identical introspection results (columns, indexes, constraints, foreign keys, ...).
+engines: [mysql, mariadb, postgresql]
+
+setup:
+  mysql: &mysql_setup
+    - CREATE TABLE t_rt_parent (id INT PRIMARY KEY)
+    - |
+      CREATE TABLE t_rt (
+        id INT NOT NULL AUTO_INCREMENT,
+        parent_id INT NULL,
+        code VARCHAR(20) NOT NULL DEFAULT 'x' COMMENT 'the code',
+        qty INT DEFAULT 0,
+        total INT AS (qty * 2) STORED,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_rt_code (code),
+        KEY ix_rt_qty (qty DESC),
+        CONSTRAINT fk_rt_parent FOREIGN KEY (parent_id) REFERENCES t_rt_parent (id) ON DELETE SET NULL,
+        CONSTRAINT chk_rt_qty CHECK (qty >= 0)
+      ) COMMENT 'round trip'
+    - CREATE VIEW v_rt AS SELECT id FROM t_rt_parent WHERE id > 0 WITH CASCADED CHECK OPTION
+    - CREATE FUNCTION f_rt(a INT) RETURNS INT DETERMINISTIC COMMENT 'doubles' RETURN a * 2
+    - CREATE PROCEDURE p_rt(IN a INT, OUT b INT) SET b = a * 2
+    - CREATE TRIGGER tr_rt BEFORE INSERT ON t_rt_parent FOR EACH ROW SET NEW.id = ABS(NEW.id)
+  mariadb: *mysql_setup
+  postgresql:
+    - CREATE TABLE t_rt_parent (id integer PRIMARY KEY)
+    - |
+      CREATE TABLE t_rt (
+        id integer GENERATED ALWAYS AS IDENTITY,
+        parent_id integer,
+        code varchar(20) COLLATE "C" NOT NULL DEFAULT 'x',
+        qty integer DEFAULT 0,
+        total integer GENERATED ALWAYS AS (qty * 2) STORED,
+        CONSTRAINT t_rt_pkey PRIMARY KEY (id),
+        CONSTRAINT uq_rt_code UNIQUE (code) DEFERRABLE,
+        CONSTRAINT fk_rt_parent FOREIGN KEY (parent_id) REFERENCES t_rt_parent (id) ON DELETE SET NULL,
+        CONSTRAINT chk_rt_qty CHECK (qty >= 0)
+      ) WITH (fillfactor = 80)
+    - CREATE INDEX ix_rt_qty ON t_rt (qty DESC) WHERE qty > 0
+    - COMMENT ON TABLE t_rt IS 'round trip'
+    - COMMENT ON COLUMN t_rt.code IS 'the code'
+    - sql: CREATE VIEW v_rt WITH (security_invoker = true) AS SELECT id FROM t_rt_parent WHERE id > 0 WITH CASCADED CHECK OPTION
+      since: "15"
+    - sql: CREATE VIEW v_rt AS SELECT id FROM t_rt_parent WHERE id > 0 WITH CASCADED CHECK OPTION
+      until: "15"
+    - COMMENT ON VIEW v_rt IS 'positive ids'
+    - CREATE FUNCTION f_rt(a integer, b text DEFAULT 'x') RETURNS integer LANGUAGE sql IMMUTABLE AS $$ SELECT a * 2 $$
+    - COMMENT ON FUNCTION f_rt(integer, text) IS 'doubles'
+    - CREATE PROCEDURE p_rt(IN a integer, INOUT b integer) LANGUAGE plpgsql AS $$ BEGIN b := a * 2; END $$
+    - CREATE FUNCTION trf_rt() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NULL; END $$
+    - CREATE TRIGGER tr_rt AFTER UPDATE OF id ON t_rt_parent FOR EACH STATEMENT EXECUTE FUNCTION trf_rt()
+
+cleanup:
+  mysql: &mysql_cleanup
+    - DROP TRIGGER IF EXISTS tr_rt
+    - DROP VIEW IF EXISTS v_rt
+    - DROP TABLE IF EXISTS t_rt
+    - DROP TABLE IF EXISTS t_rt_parent
+    - DROP FUNCTION IF EXISTS f_rt
+    - DROP PROCEDURE IF EXISTS p_rt
+  mariadb: *mysql_cleanup
+  postgresql:
+    - DROP VIEW IF EXISTS v_rt
+    - DROP TABLE IF EXISTS t_rt
+    - DROP TABLE IF EXISTS t_rt_parent
+    - DROP FUNCTION IF EXISTS f_rt(integer, text)
+    - DROP PROCEDURE IF EXISTS p_rt(integer, integer)
+    - DROP FUNCTION IF EXISTS trf_rt()
+
+steps:
+  - roundtrip:
+      operation: introspection.table-ddl
+      params: { table: t_rt, schema_name: "{{schema}}", table_name: t_rt }
+      drop:
+        mysql: [DROP TABLE t_rt]
+        mariadb: [DROP TABLE t_rt]
+        postgresql: [DROP TABLE t_rt]
+      compare:
+        - { query: introspection.list-columns, params: { schema: "{{schema}}", table: t_rt } }
+        - { query: introspection.list-indexes, params: { schema: "{{schema}}", table: t_rt } }
+        - { query: introspection.list-constraints, params: { schema: "{{schema}}", table: t_rt } }
+        - { query: introspection.list-foreign-keys, params: { schema: "{{schema}}", table: t_rt } }
+
+  - roundtrip:
+      operation: introspection.view-ddl
+      params: { view: v_rt, schema_name: "{{schema}}", view_name: v_rt }
+      drop:
+        mysql: [DROP VIEW v_rt]
+        mariadb: [DROP VIEW v_rt]
+        postgresql: [DROP VIEW v_rt]
+      compare:
+        - { query: introspection.list-views, params: { schema: "{{schema}}" } }
+
+  - roundtrip:
+      operation: introspection.routine-ddl
+      params: { routine: f_rt, routine_type: FUNCTION, schema_name: "{{schema}}", specific_name: "f_rt(a integer, b text)" }
+      drop:
+        mysql: [DROP FUNCTION f_rt]
+        mariadb: [DROP FUNCTION f_rt]
+        postgresql: ["DROP FUNCTION f_rt(integer, text)"]
+      compare:
+        - { query: introspection.list-routines, params: { schema: "{{schema}}" } }
+
+  # specific_name comes from list-routines; PostgreSQL < 14 omits the IN mode in identity arguments
+  - engines: { mysql: {}, mariadb: {}, postgresql: { since: "14" } }
+    roundtrip:
+      operation: introspection.routine-ddl
+      params: { routine: p_rt, routine_type: PROCEDURE, schema_name: "{{schema}}" }
+      params_by_engine:
+        postgresql: { specific_name: "p_rt(IN a integer, INOUT b integer)" }
+      drop:
+        mysql: [DROP PROCEDURE p_rt]
+        mariadb: [DROP PROCEDURE p_rt]
+        postgresql: ["DROP PROCEDURE p_rt(integer, integer)"]
+      compare:
+        - { query: introspection.list-routines, params: { schema: "{{schema}}" } }
+
+  - engines: { postgresql: { until: "14" } }
+    roundtrip:
+      operation: introspection.routine-ddl
+      params: { routine: p_rt, routine_type: PROCEDURE, schema_name: "{{schema}}" }
+      params_by_engine:
+        postgresql: { specific_name: "p_rt(a integer, INOUT b integer)" }
+      drop:
+        mysql: [DROP PROCEDURE p_rt]
+        mariadb: [DROP PROCEDURE p_rt]
+        postgresql: ["DROP PROCEDURE p_rt(integer, integer)"]
+      compare:
+        - { query: introspection.list-routines, params: { schema: "{{schema}}" } }
+
+  - roundtrip:
+      operation: introspection.trigger-ddl
+      params: { trigger: tr_rt, schema_name: "{{schema}}", table_name: t_rt_parent, trigger_name: tr_rt }
+      drop:
+        mysql: [DROP TRIGGER tr_rt]
+        mariadb: [DROP TRIGGER tr_rt]
+        postgresql: [DROP TRIGGER tr_rt ON t_rt_parent]
+      compare:
+        - { query: introspection.list-triggers, params: { schema: "{{schema}}", table: t_rt_parent } }
+
+  # the reconstructed text itself (shape checks)
+  - operation: introspection.table-ddl
+    params: { table: t_rt, schema_name: "{{schema}}", table_name: t_rt }
+    expect:
+      rows:
+        - match: {}
+          engine: postgresql
+          matches:
+            ddl: "^CREATE TABLE public\\.t_rt \\(\\n    id integer GENERATED ALWAYS AS IDENTITY NOT NULL,"
+        - match: {}
+          engine: postgresql
+          matches:
+            ddl: "WITH \\(fillfactor=80\\);\\nCREATE INDEX ix_rt_qty ON public\\.t_rt USING btree \\(qty DESC\\) WHERE \\(qty > 0\\);"
+        - match: {}
+          engine: postgresql
+          matches:
+            ddl: "COMMENT ON COLUMN public\\.t_rt\\.code IS 'the code';$"

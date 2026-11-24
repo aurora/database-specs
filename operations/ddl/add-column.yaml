@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=../../schemas/operation.schema.json
+id: ddl.add-column
+title: Add a column
+parameters:
+  - { name: table, kind: qualified-identifier }
+  - { name: column, kind: identifier }
+  - { name: column_definition, kind: sql-fragment, description: "Type and attributes, e.g. INT NOT NULL DEFAULT 0." }
+  - { name: after, kind: identifier, description: "MySQL / MariaDB only: place the new column after this one (FIRST is also possible)." }
+implementations:
+  mysql:
+    - status: supported
+      template: "ALTER TABLE {{table}} ADD COLUMN {{column}} {{column_definition}}{{#after}} AFTER {{after}}{{/after}}"
+      requires: [column_definition]
+      transactional: false
+      caveats:
+        - "ALGORITHM=INSTANT since 8.0.12 (only as last column until 8.0.29); otherwise the table is rebuilt."
+      sources: [{ evidence: tested }]
+  mariadb:
+    - status: supported
+      template: "ALTER TABLE {{table}} ADD COLUMN {{column}} {{column_definition}}{{#after}} AFTER {{after}}{{/after}}"
+      requires: [column_definition]
+      transactional: false
+      caveats: ["Instant ADD COLUMN since 10.3 (any position since 10.4)."]
+      sources: [{ evidence: tested }]
+  postgresql:
+    - status: supported
+      template: "ALTER TABLE {{table}} ADD COLUMN {{column}} {{column_definition}}"
+      requires: [column_definition]
+      transactional: true
+      caveats:
+        - "No column position; new columns are always last (reordering means recreating the table)."
+        - "A non-volatile DEFAULT is instant since 11; a volatile one (random(), clock_timestamp()) rewrites the table."
+      sources: [{ evidence: tested }]

@@ -1,0 +1,50 @@
+# yaml-language-server: $schema=../../schemas/operation.schema.json
+id: introspection.routine-ddl
+title: Reconstruct the CREATE FUNCTION / PROCEDURE statement of a routine
+parameters:
+  - { name: routine, kind: qualified-identifier, description: "MySQL / MariaDB." }
+  - name: routine_type
+    kind: sql-fragment
+    description: "MySQL / MariaDB: FUNCTION or PROCEDURE (from list-routines.routine_type, upper case)."
+  - { name: schema_name, kind: string-literal, description: "PostgreSQL." }
+  - name: specific_name
+    kind: string-literal
+    description: "PostgreSQL: specific_name from introspection.list-routines, e.g. f(a integer) - identifies the overload."
+
+implementations:
+  mysql:
+    - status: supported
+      template: "SHOW CREATE {{routine_type}} {{routine}}"
+      requires: [routine, routine_type]
+      result_column: 3
+      caveats:
+        - "Includes DEFINER. The result is NULL without SHOW_ROUTINE privilege (or ownership)."
+        - "The body may contain ';' - execute it as one statement, never through a script splitter that splits on ';'."
+      sources: [{ evidence: tested }]
+  mariadb:
+    - status: supported
+      template: "SHOW CREATE {{routine_type}} {{routine}}"
+      requires: [routine, routine_type]
+      result_column: 3
+      caveats: ["As MySQL."]
+      sources: [{ evidence: tested }]
+  postgresql:
+    - status: supported
+      requires: [schema_name, specific_name]
+      result_column: 1
+      template: |
+        SELECT pg_get_functiondef(p.oid) || ';'
+            || coalesce(E'\nCOMMENT ON ' || CASE WHEN p.prokind = 'p' THEN 'PROCEDURE ' ELSE 'FUNCTION ' END
+                        || quote_ident(n.nspname) || '.' || quote_ident(p.proname)
+                        || '(' || pg_get_function_identity_arguments(p.oid) || ') IS '
+                        || quote_literal(obj_description(p.oid, 'pg_proc')) || ';', '')
+            AS ddl
+        FROM pg_catalog.pg_proc p
+        JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+        WHERE n.nspname = {{schema_name}}
+          AND p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' = {{specific_name}}
+          AND p.prokind IN ('f', 'p')
+      caveats:
+        - "pg_get_functiondef returns CREATE OR REPLACE ...; aggregates and window functions are not supported by it."
+        - "Ownership, grants and ALTER FUNCTION ... SET options outside the definition are not included."
+      sources: [{ evidence: tested }]

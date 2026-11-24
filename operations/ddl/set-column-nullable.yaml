@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=../../schemas/operation.schema.json
+id: ddl.set-column-nullable
+title: Allow or forbid NULL in a column
+parameters:
+  - { name: table, kind: qualified-identifier }
+  - { name: column, kind: identifier }
+  - { name: nullable, kind: boolean }
+  - { name: column_definition, kind: sql-fragment, description: "MySQL / MariaDB: full new definition incl. NULL / NOT NULL." }
+implementations:
+  mysql:
+    - status: supported
+      template: "ALTER TABLE {{table}} MODIFY COLUMN {{column}} {{column_definition}}"
+      requires: [column_definition]
+      transactional: false
+      caveats: ["No dedicated syntax: MODIFY with the full definition (attributes not repeated are lost, see ddl.change-column-type). NOT NULL fails on existing NULLs in strict mode."]
+      sources: [{ evidence: tested }]
+  mariadb:
+    - status: supported
+      template: "ALTER TABLE {{table}} MODIFY COLUMN {{column}} {{column_definition}}"
+      requires: [column_definition]
+      transactional: false
+      caveats: ["As MySQL."]
+      sources: [{ evidence: tested }]
+  postgresql:
+    - status: supported
+      template: "ALTER TABLE {{table}} ALTER COLUMN {{column}} {{#nullable}}DROP{{/nullable}}{{^nullable}}SET{{/nullable}} NOT NULL"
+      transactional: true
+      caveats: ["SET NOT NULL scans the table (fails on NULLs). Primary key columns cannot DROP NOT NULL."]
+      sources: [{ evidence: tested }]

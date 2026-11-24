@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=../../schemas/operation.schema.json
+id: dml.insert-row
+title: Insert a row from the data grid
+parameters:
+  - { name: table, kind: qualified-identifier }
+  - { name: columns, kind: sql-fragment, description: "Quoted column list." }
+  - { name: values, kind: sql-fragment, description: "Matching value list, normally placeholders." }
+  - { name: returning, kind: sql-fragment, description: "Columns to return (generated keys, defaults) where supported." }
+implementations:
+  mysql:
+    - status: supported
+      template: "INSERT INTO {{table}} ({{columns}}) VALUES ({{values}})"
+      caveats: ["No RETURNING: read the generated AUTO_INCREMENT value with LAST_INSERT_ID() / mysql_insert_id(), other defaults by re-reading the row."]
+      sources: [{ evidence: tested }]
+  mariadb:
+    - status: supported
+      template: "INSERT INTO {{table}} ({{columns}}) VALUES ({{values}}){{#returning}} RETURNING {{returning}}{{/returning}}"
+      caveats: ["RETURNING since 10.5 (capability dml.returning)."]
+      sources: [{ evidence: tested }]
+  postgresql:
+    - status: supported
+      template: "INSERT INTO {{table}} ({{columns}}) VALUES ({{values}}){{#returning}} RETURNING {{returning}}{{/returning}}"
+      sources: [{ evidence: tested }]

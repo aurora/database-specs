@@ -1,0 +1,47 @@
+# yaml-language-server: $schema=../../schemas/operation.schema.json
+id: introspection.view-ddl
+title: Reconstruct the CREATE VIEW statement of a view
+parameters:
+  - { name: view, kind: qualified-identifier, description: "MySQL / MariaDB." }
+  - { name: schema_name, kind: string-literal, description: "PostgreSQL." }
+  - { name: view_name, kind: string-literal, description: "PostgreSQL." }
+
+implementations:
+  mysql:
+    - status: supported
+      template: "SHOW CREATE VIEW {{view}}"
+      requires: [view]
+      result_column: 2
+      caveats:
+        - "Includes ALGORITHM, DEFINER and SQL SECURITY; recreating with a DEFINER other than yourself needs SET_USER_ID / SUPER."
+        - "The SELECT is the server-rewritten form (fully qualified names), not the original text."
+      sources: [{ evidence: tested }]
+  mariadb:
+    - status: supported
+      template: "SHOW CREATE VIEW {{view}}"
+      requires: [view]
+      result_column: 2
+      caveats: ["As MySQL."]
+      sources: [{ evidence: tested }]
+  postgresql:
+    - status: supported
+      requires: [schema_name, view_name]
+      result_column: 1
+      template: |
+        SELECT
+            'CREATE ' || CASE WHEN c.relkind = 'm' THEN 'MATERIALIZED VIEW ' ELSE 'VIEW ' END
+            || quote_ident(n.nspname) || '.' || quote_ident(c.relname)
+            || CASE WHEN c.reloptions IS NOT NULL THEN ' WITH (' || array_to_string(c.reloptions, ', ') || ')' ELSE '' END
+            || ' AS' || E'\n' || rtrim(btrim(pg_get_viewdef(c.oid, true)), ';') || ';'
+            || coalesce(E'\nCOMMENT ON ' || CASE WHEN c.relkind = 'm' THEN 'MATERIALIZED VIEW ' ELSE 'VIEW ' END
+                        || quote_ident(n.nspname) || '.' || quote_ident(c.relname)
+                        || ' IS ' || quote_literal(obj_description(c.oid, 'pg_class')) || ';', '')
+            AS ddl
+        FROM pg_catalog.pg_class c
+        JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = {{schema_name}} AND c.relname = {{view_name}} AND c.relkind IN ('v', 'm')
+      caveats:
+        - "check_option and security_invoker are view options (reloptions) and come back as WITH (...)."
+        - "Materialized views: indexes on them are not included; the view is populated when the statement runs."
+        - "Column references inside the SELECT are qualified as pg_get_viewdef prints them (version dependent)."
+      sources: [{ evidence: tested }]

@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=../../schemas/operation.schema.json
+id: ddl.set-column-default
+title: Set or remove a column default
+parameters:
+  - { name: table, kind: qualified-identifier }
+  - { name: column, kind: identifier }
+  - { name: default, kind: sql-fragment, description: "Default expression; omit to DROP DEFAULT." }
+implementations:
+  mysql:
+    - status: supported
+      template: "ALTER TABLE {{table}} ALTER COLUMN {{column}} {{#default}}SET DEFAULT {{default}}{{/default}}{{^default}}DROP DEFAULT{{/default}}"
+      transactional: false
+      caveats: ["Expression defaults must be in parentheses: SET DEFAULT (uuid()) (8.0.13+); literals need none."]
+      sources: [{ evidence: tested }]
+  mariadb:
+    - status: supported
+      template: "ALTER TABLE {{table}} ALTER COLUMN {{column}} {{#default}}SET DEFAULT {{default}}{{/default}}{{^default}}DROP DEFAULT{{/default}}"
+      transactional: false
+      sources: [{ evidence: tested }]
+  postgresql:
+    - status: supported
+      template: "ALTER TABLE {{table}} ALTER COLUMN {{column}} {{#default}}SET DEFAULT {{default}}{{/default}}{{^default}}DROP DEFAULT{{/default}}"
+      transactional: true
+      caveats: ["Affects only future inserts; existing rows are not changed."]
+      sources: [{ evidence: tested }]

@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=../../schemas/operation.schema.json
+id: dml.update-row
+title: Update one row from the data grid
+parameters:
+  - { name: table, kind: qualified-identifier }
+  - { name: assignments, kind: sql-fragment, description: "col = ?, col2 = ?" }
+  - name: key_predicate
+    kind: sql-fragment
+    description: >
+      Identifies the row: primary key / unique key columns (id = ?). Without a unique key, all
+      original column values; use IS NULL for NULLs and avoid comparing approximate types (FLOAT).
+  - name: no_unique_key
+    kind: boolean
+    description: The table has no primary / unique key - limit the statement to one row.
+implementations:
+  mysql:
+    - status: supported
+      template: "UPDATE {{table}} SET {{assignments}} WHERE {{key_predicate}}{{#no_unique_key}} LIMIT 1{{/no_unique_key}}"
+      caveats:
+        - "Check the affected row count: 0 means the row was changed or deleted meanwhile. MySQL counts only rows actually changed (CLIENT_FOUND_ROWS changes that)."
+        - "LIMIT 1 for tables without a unique key: identical duplicate rows are indistinguishable anyway."
+      sources: [{ evidence: tested }]
+  mariadb:
+    - status: supported
+      template: "UPDATE {{table}} SET {{assignments}} WHERE {{key_predicate}}{{#no_unique_key}} LIMIT 1{{/no_unique_key}}"
+      caveats: ["As MySQL."]
+      sources: [{ evidence: tested }]
+  postgresql:
+    - status: supported
+      template: "UPDATE {{table}} SET {{assignments}} WHERE {{#no_unique_key}}ctid = (SELECT ctid FROM {{table}} WHERE {{key_predicate}} LIMIT 1){{/no_unique_key}}{{^no_unique_key}}{{key_predicate}}{{/no_unique_key}}"
+      caveats:
+        - "No UPDATE ... LIMIT: tables without a unique key are addressed by ctid (physical row id). A ctid changes with every update and VACUUM FULL; on partitioned tables it is only unique together with tableoid."
+        - "Alternative: select ctid with the grid rows and use WHERE ctid = ? directly."
+      sources: [{ evidence: tested }]

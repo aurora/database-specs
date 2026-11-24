@@ -18,7 +18,7 @@
         "additionalProperties": false,
         "properties": {
           "name": { "type": "string", "pattern": "^[a-z_][a-z0-9_]*$" },
-          "kind": { "enum": ["identifier", "qualified-identifier", "sql-fragment", "integer", "string-literal"] },
+          "kind": { "enum": ["identifier", "qualified-identifier", "sql-fragment", "integer", "string-literal", "boolean"] },
           "description": { "type": "string" }
         }
       }
@@ -48,6 +48,10 @@
               "items": { "type": "string" }
             },
             "protocol_call": { "type": "string", "description": "For method=protocol: the library call (e.g. mysql_stmt_prepare, PQprepare)." },
+            "result_column": {
+              "description": "For operations that return text (e.g. DDL): the result column holding it, by name or 1-based position.",
+              "type": ["string", "integer"]
+            },
             "requires": { "type": "array", "items": { "type": "string" } },
             "transactional": {
               "description": "Can the effect be rolled back inside an explicit transaction?",

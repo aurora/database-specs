@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import datetime as dt
+import re
 from dataclasses import dataclass, field
 
 from .servers import Server, fetch_dicts
-from .specs import Specs, in_range, quote_identifier, render, statement_for, variant_for
+from .specs import Specs, in_range, quote_identifier, quote_literal, render, statement_for, variant_for
 from .syntax import examples_for, grammar_accepts, grammar_should_accept, server_should_accept
 
 
@@ -132,9 +133,91 @@ def _render_operation(specs: Specs, op_id: str, server: Server, params: dict) ->
             value = quote_identifier(lexical, value)
         elif kinds.get(name) == "qualified-identifier":
             value = ".".join(quote_identifier(lexical, part) for part in str(value).split("."))
+        elif kinds.get(name) == "string-literal":
+            value = quote_literal(lexical, str(value))
+        elif kinds.get(name) == "boolean":
+            value = bool(value) or None  # sections test truthiness
         values[name] = value
     templates = impl.get("steps") or [impl["template"]]
     return [render(t, values) for t in templates]
+
+
+def _operation_impl(specs: Specs, op_id: str, server: Server) -> dict:
+    op = specs.get("operation", op_id)
+    return statement_for(op["implementations"].get(server.engine, []), server.version) or {}
+
+
+def _run_operation(specs: Specs, server: Server, conn, op_id: str, params: dict) -> list[dict]:
+    """Execute all rendered statements; return the rows of the last one that produced a result."""
+    rows: list[dict] = []
+    with conn.cursor() as cur:
+        for sql in _render_operation(specs, op_id, server, params):
+            if not sql.strip():
+                continue
+            cur.execute(sql)
+            if cur.description:
+                rows = fetch_dicts(cur)
+    return rows
+
+
+def _result_text(rows: list[dict], impl: dict) -> str:
+    """The text an operation returns (e.g. DDL): result_column by name or 1-based position."""
+    if not rows:
+        raise RuntimeError("operation returned no rows")
+    col = impl.get("result_column", 1)
+    row = rows[0]
+    value = list(row.values())[col - 1] if isinstance(col, int) else row[col]
+    return value.decode() if isinstance(value, (bytes, bytearray)) else value
+
+
+def _run_query(specs: Specs, server: Server, conn, query_id: str, params: dict) -> tuple[list[dict], list[str]]:
+    query = specs.get("query", query_id)
+    var = variant_for(query, server.engine, server.version)
+    if not var:
+        return [], [f"no variant of {query_id} for {server.engine} {server.version}"]
+    sql = (specs.path("query", query_id).parent / var["file"]).read_text(encoding="utf-8")
+    with conn.cursor() as cur:
+        cur.execute(server.format_sql(sql), params)
+        rows = fetch_dicts(cur)
+    problems = []
+    expected_cols = [c["name"] for c in query["result"]["columns"]]
+    if rows and list(rows[0]) != expected_cols:
+        problems.append(f"columns {list(rows[0])} != contract {expected_cols}")
+    problems += _check_contract(query, rows)
+    return rows, problems
+
+
+def _step_params(step: dict, server: Server) -> dict:
+    return _resolve_params({**step.get("params", {}),
+                            **step.get("params_by_engine", {}).get(server.engine, {})}, server)
+
+
+def _roundtrip(specs: Specs, server: Server, conn, spec: dict) -> list[str]:
+    """Snapshot introspection, reconstruct DDL, drop, re-run the DDL, compare the snapshot."""
+    def snapshot():
+        out = []
+        for c in spec["compare"]:
+            rows, problems = _run_query(specs, server, conn, c["query"], _step_params(c, server))
+            if problems:
+                raise RuntimeError(f"{c['query']}: {problems[0]}")
+            out.append((c["query"], rows))
+        return out
+
+    before = snapshot()
+    impl = _operation_impl(specs, spec["operation"], server)
+    ddl = _result_text(_run_operation(specs, server, conn, spec["operation"], _step_params(spec, server)), impl)
+    _exec_all(conn, _statements(spec["drop"].get(server.engine), server.version))
+    try:
+        with conn.cursor() as cur:
+            cur.execute(ddl)
+    except Exception as exc:
+        return [f"reconstructed DDL failed: {exc}".splitlines()[0] + f" -- DDL: {ddl[:300]!r}"]
+    problems = []
+    for (qid, old), (_, new) in zip(before, snapshot()):
+        if old != new:
+            diff = next(((o, n) for o, n in zip(old, new) if o != n), (len(old), len(new)))
+            problems.append(f"{qid} differs after round trip: {diff}")
+    return problems
 
 
 def _check_contract(query: dict, rows: list[dict]) -> list[str]:
@@ -172,11 +255,18 @@ def _check(expect: dict, rows: list[dict], server: Server) -> list[str]:
         if not in_range(server.version, exp):
             continue
         matches = [r for r in rows if all(r.get(k) == v for k, v in exp["match"].items())]
-        if len(matches) != 1:
-            problems.append(f"{exp['match']}: {len(matches)} matching rows")
+        want = exp.get("count", 1)
+        if len(matches) != want:
+            problems.append(f"{exp['match']}: {len(matches)} matching rows, expected {want}")
+            continue
+        if want != 1:
             continue
         row = matches[0]
-        for k, v in exp["values"].items():
+        for k, pattern in exp.get("matches", {}).items():
+            got = row.get(k)
+            if not isinstance(got, str) or not re.search(pattern, got, re.S):
+                problems.append(f"{exp['match']} {k}: {got!r} does not match /{pattern}/")
+        for k, v in exp.get("values", {}).items():
             got = row.get(k)
             if isinstance(v, bool) and isinstance(got, int):
                 got = bool(got)
@@ -201,25 +291,28 @@ def run_tests(specs: Specs, server: Server, report: Report):
                     if "engines" in step and not (server.engine in step["engines"]
                                                   and in_range(server.version, step["engines"][server.engine])):
                         continue
-                    params = _resolve_params({**step.get("params", {}),
-                                              **step.get("params_by_engine", {}).get(server.engine, {})}, server)
-                    if "operation" in step:
-                        _exec_all(conn, _render_operation(specs, step["operation"], server, params))
+                    params = _step_params(step, server)
+                    if "roundtrip" in step:
+                        label = f"roundtrip {step['roundtrip']['operation']}"
+                        problems += [f"{label}: {p}" for p in _roundtrip(specs, server, conn, step["roundtrip"])]
                         continue
-                    query = specs.get("query", step["query"])
-                    var = variant_for(query, server.engine, server.version)
-                    if not var:
-                        problems.append(f"no variant of {step['query']} for {server.engine} {server.version}")
-                        break
-                    sql = (specs.path("query", step["query"]).parent / var["file"]).read_text(encoding="utf-8")
-                    with conn.cursor() as cur:
-                        cur.execute(server.format_sql(sql), params)
-                        rows = fetch_dicts(cur)
-                    expected_cols = [c["name"] for c in query["result"]["columns"]]
-                    if rows and list(rows[0]) != expected_cols:
-                        problems.append(f"{step['query']}: columns {list(rows[0])} != contract {expected_cols}")
-                    problems += [f"{step['query']}: {p}" for p in _check_contract(query, rows)]
-                    problems += [f"{step['query']}: {p}" for p in _check(step.get("expect", {}), rows, server)]
+                    if "operation" in step:
+                        label = step["operation"]
+                        rows = _run_operation(specs, server, conn, step["operation"], params)
+                    elif "sql" in step:
+                        label = "sql"
+                        if server.engine not in step["sql"]:
+                            continue
+                        with conn.cursor() as cur:
+                            cur.execute(step["sql"][server.engine])
+                            rows = fetch_dicts(cur) if cur.description else []
+                    else:
+                        label = step["query"]
+                        rows, qp = _run_query(specs, server, conn, step["query"], params)
+                        problems += [f"{label}: {p}" for p in qp]
+                        if qp and qp[0].startswith("no variant"):
+                            break
+                    problems += [f"{label}: {p}" for p in _check(step.get("expect", {}), rows, server)]
         except Exception as exc:
             problems.append(f"{type(exc).__name__}: {exc}".splitlines()[0])
         finally:

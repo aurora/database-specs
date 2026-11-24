@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=../../schemas/operation.schema.json
+id: ddl.create-index
+title: Create an index
+description: Basic B-tree index on columns; see syntax ddl.create-index for the full statement.
+parameters:
+  - { name: table, kind: qualified-identifier }
+  - { name: index, kind: identifier, description: "Unqualified; the index is created in the table's schema." }
+  - { name: columns, kind: sql-fragment, description: "Comma-separated quoted column names, optionally with ASC / DESC." }
+  - { name: unique, kind: boolean }
+implementations:
+  mysql:
+    - status: supported
+      template: "CREATE {{#unique}}UNIQUE {{/unique}}INDEX {{index}} ON {{table}} ({{columns}})"
+      transactional: false
+      caveats: ["TEXT / BLOB columns need a prefix length: col(100)."]
+      sources: [{ evidence: tested }]
+  mariadb:
+    - status: supported
+      template: "CREATE {{#unique}}UNIQUE {{/unique}}INDEX {{index}} ON {{table}} ({{columns}})"
+      transactional: false
+      caveats: ["As MySQL."]
+      sources: [{ evidence: tested }]
+  postgresql:
+    - status: supported
+      template: "CREATE {{#unique}}UNIQUE {{/unique}}INDEX {{index}} ON {{table}} ({{columns}})"
+      transactional: true
+      caveats: ["Blocks writes while building; CREATE INDEX CONCURRENTLY avoids that but cannot run in a transaction."]
+      sources: [{ evidence: tested }]

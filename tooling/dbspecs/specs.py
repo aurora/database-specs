@@ -132,3 +132,16 @@ def quote_identifier(lexical: dict, name: str) -> str:
             escaped = name.replace(close, close + close) if "double" in q.get("escape", []) else name
             return f"{q['open']}{escaped}{close}"
     raise ValueError(f"no unconditional preferred quote in lexical spec {lexical['id']}")
+
+
+def quote_literal(lexical: dict, value: str) -> str:
+    """Quote a string literal with the dialect's unconditional single-quote rules."""
+    for q in lexical["strings"]:
+        if q.get("kind") == "string" and q["open"] == "'" and "when" not in q and "prefix" not in q:
+            esc = q.get("escape", [])
+            if "backslash" in esc:
+                value = value.replace("\\", "\\\\")
+            if "double" in esc:
+                value = value.replace("'", "''")
+            return f"'{value}'"
+    raise ValueError(f"no plain string literal rule in lexical spec {lexical['id']}")

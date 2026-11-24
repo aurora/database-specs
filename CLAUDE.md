@@ -60,6 +60,10 @@ uv run dbspecs build        # dist/db-specs.json + dist/syntax/ (railroad diagra
 - **Syntax examples** declare `expect: valid | invalid | semantic-error` per engine/version
   range; `validate` checks them offline for every version series, `test` against servers.
   Version annotations in EBNF (`/* @since X */`) apply to the single next item.
+- **Operations are tested by their effect**: run the operation in a test case, then verify with
+  introspection queries or an ad-hoc `sql` step. Operations that return DDL (`result_column`)
+  need a `roundtrip` step (snapshot, drop, re-run the DDL, compare) - that is what proves the
+  reconstruction is complete.
 - **Derived engines** get their own files; `extends` is lineage only, nothing is inherited.
 - **No vendor documentation prose** (MySQL docs are not freely licensed): facts in our own
   words, link the source.

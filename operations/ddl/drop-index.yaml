@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=../../schemas/operation.schema.json
+id: ddl.drop-index
+title: Drop an index
+parameters:
+  - { name: table, kind: qualified-identifier, description: "MySQL / MariaDB: the index belongs to a table." }
+  - { name: index, kind: identifier }
+  - { name: schema, kind: identifier, description: "PostgreSQL: schema of the index (indexes are schema objects)." }
+implementations:
+  mysql:
+    - status: supported
+      template: "DROP INDEX {{index}} ON {{table}}"
+      requires: [table]
+      transactional: false
+      caveats: ["The primary key is dropped with ALTER TABLE ... DROP PRIMARY KEY (index name PRIMARY). An index needed by a foreign key cannot be dropped."]
+      sources: [{ evidence: tested }]
+  mariadb:
+    - status: supported
+      template: "DROP INDEX {{index}} ON {{table}}"
+      requires: [table]
+      transactional: false
+      caveats: ["As MySQL."]
+      sources: [{ evidence: tested }]
+  postgresql:
+    - status: supported
+      template: "DROP INDEX {{#schema}}{{schema}}.{{/schema}}{{index}}"
+      transactional: true
+      caveats: ["Indexes backing PRIMARY KEY / UNIQUE constraints must be removed with ALTER TABLE ... DROP CONSTRAINT."]
+      sources: [{ evidence: tested }]

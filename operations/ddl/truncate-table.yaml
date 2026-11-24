@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=../../schemas/operation.schema.json
+id: ddl.truncate-table
+title: Remove all rows of a table
+parameters:
+  - { name: table, kind: qualified-identifier }
+  - { name: restart_identity, kind: boolean, description: "PostgreSQL: reset owned sequences." }
+  - { name: cascade, kind: boolean, description: "PostgreSQL: also truncate referencing tables." }
+implementations:
+  mysql:
+    - status: supported
+      template: "TRUNCATE TABLE {{table}}"
+      transactional: false
+      caveats:
+        - "Implicit commit, cannot be rolled back, resets AUTO_INCREMENT, does not fire DELETE triggers."
+        - "Fails if another table has a foreign key referencing this one (even when empty) unless foreign_key_checks = 0; use DELETE FROM instead."
+      sources: [{ evidence: tested }]
+  mariadb:
+    - status: supported
+      template: "TRUNCATE TABLE {{table}}"
+      transactional: false
+      caveats: ["As MySQL."]
+      sources: [{ evidence: tested }]
+  postgresql:
+    - status: supported
+      template: "TRUNCATE TABLE {{table}}{{#restart_identity}} RESTART IDENTITY{{/restart_identity}}{{#cascade}} CASCADE{{/cascade}}"
+      transactional: true
+      caveats: ["Transactional; takes an ACCESS EXCLUSIVE lock. Without CASCADE it fails when other tables reference this one."]
+      sources: [{ evidence: tested }]

@@ -9,6 +9,7 @@ parameters:
   - { name: schema_name, kind: string-literal, description: "PostgreSQL." }
   - { name: table_name, kind: string-literal, description: "PostgreSQL." }
 
+  - { name: schema, kind: identifier, description: "SQLite: schema (main, temp or an attached database)." }
 implementations:
   mysql:
     - status: supported
@@ -86,4 +87,128 @@ implementations:
         - "Not included: identity / sequence options (START, INCREMENT), partitions (CREATE TABLE ... PARTITION OF), inheritance, tablespace, triggers, row-level security, grants, ownership."
         - "Foreign keys are part of CREATE TABLE: referenced tables must exist first (or move FKs to ALTER TABLE when scripting several tables)."
         - "The output is multiple statements separated by ';'."
+      sources: [{ evidence: tested }]
+  sqlserver:
+    - status: supported
+      requires: [schema_name, table_name]
+      result_column: 1
+      template: |
+        WITH tbl AS (
+            SELECT t.object_id, s.name AS sch, t.name AS tab
+            FROM sys.tables t JOIN sys.schemas s ON s.schema_id = t.schema_id
+            WHERE s.name = {{schema_name}} AND t.name = {{table_name}}
+        ), lines AS (
+            SELECT 1 AS grp, c.column_id AS ord, CAST('    ' + QUOTENAME(c.name) + ' ' +
+                CASE WHEN c.is_computed = 1
+                     THEN 'AS ' + cc.definition + CASE WHEN cc.is_persisted = 1 THEN ' PERSISTED' ELSE '' END
+                     ELSE
+                       CASE WHEN ty.is_user_defined = 1 THEN QUOTENAME(SCHEMA_NAME(ty.schema_id)) + '.' + QUOTENAME(ty.name)
+                            WHEN ty.name IN ('varchar', 'char', 'varbinary', 'binary')
+                                 THEN ty.name + '(' + CASE WHEN c.max_length = -1 THEN 'max' ELSE CAST(c.max_length AS varchar(10)) END + ')'
+                            WHEN ty.name IN ('nvarchar', 'nchar')
+                                 THEN ty.name + '(' + CASE WHEN c.max_length = -1 THEN 'max' ELSE CAST(c.max_length / 2 AS varchar(10)) END + ')'
+                            WHEN ty.name IN ('decimal', 'numeric')
+                                 THEN ty.name + '(' + CAST(c.precision AS varchar(10)) + ',' + CAST(c.scale AS varchar(10)) + ')'
+                            WHEN ty.name IN ('datetime2', 'time', 'datetimeoffset')
+                                 THEN ty.name + '(' + CAST(c.scale AS varchar(10)) + ')'
+                            WHEN ty.name = 'float' AND c.precision <> 53 THEN 'float(' + CAST(c.precision AS varchar(10)) + ')'
+                            ELSE ty.name END
+                       + CASE WHEN c.collation_name IS NOT NULL THEN ' COLLATE ' + c.collation_name ELSE '' END
+                       + CASE WHEN ic.object_id IS NOT NULL
+                              THEN ' IDENTITY(' + CAST(ic.seed_value AS varchar(40)) + ',' + CAST(ic.increment_value AS varchar(40)) + ')'
+                              ELSE '' END
+                       + CASE WHEN c.is_nullable = 1 THEN ' NULL' ELSE ' NOT NULL' END
+                       + CASE WHEN dc.object_id IS NOT NULL
+                              THEN ' CONSTRAINT ' + QUOTENAME(dc.name) + ' DEFAULT ' + dc.definition ELSE '' END
+                END AS nvarchar(max)) AS txt
+            FROM tbl
+            JOIN sys.columns c ON c.object_id = tbl.object_id
+            JOIN sys.types ty  ON ty.user_type_id = c.user_type_id
+            LEFT JOIN sys.computed_columns cc   ON cc.object_id = c.object_id AND cc.column_id = c.column_id
+            LEFT JOIN sys.identity_columns ic   ON ic.object_id = c.object_id AND ic.column_id = c.column_id
+            LEFT JOIN sys.default_constraints dc ON dc.object_id = c.default_object_id
+            UNION ALL
+            SELECT 2, ROW_NUMBER() OVER (ORDER BY CASE kc.type WHEN 'PK' THEN 0 ELSE 1 END, kc.name),
+                CAST('    CONSTRAINT ' + QUOTENAME(kc.name) + CASE kc.type WHEN 'PK' THEN ' PRIMARY KEY ' ELSE ' UNIQUE ' END
+                     + CASE i.type WHEN 1 THEN 'CLUSTERED' ELSE 'NONCLUSTERED' END + ' ('
+                     + (SELECT STRING_AGG(CAST(QUOTENAME(c2.name) + CASE WHEN x.is_descending_key = 1 THEN ' DESC' ELSE '' END AS nvarchar(max)), ', ')
+                               WITHIN GROUP (ORDER BY x.key_ordinal)
+                          FROM sys.index_columns x JOIN sys.columns c2 ON c2.object_id = x.object_id AND c2.column_id = x.column_id
+                         WHERE x.object_id = i.object_id AND x.index_id = i.index_id AND x.key_ordinal > 0)
+                     + ')' AS nvarchar(max))
+            FROM tbl
+            JOIN sys.key_constraints kc ON kc.parent_object_id = tbl.object_id
+            JOIN sys.indexes i ON i.object_id = kc.parent_object_id AND i.index_id = kc.unique_index_id
+            UNION ALL
+            SELECT 3, ROW_NUMBER() OVER (ORDER BY ck.name),
+                CAST('    CONSTRAINT ' + QUOTENAME(ck.name) + ' CHECK ' + ck.definition AS nvarchar(max))
+            FROM tbl JOIN sys.check_constraints ck ON ck.parent_object_id = tbl.object_id
+            UNION ALL
+            SELECT 4, ROW_NUMBER() OVER (ORDER BY fk.name),
+                CAST('    CONSTRAINT ' + QUOTENAME(fk.name) + ' FOREIGN KEY ('
+                     + (SELECT STRING_AGG(CAST(QUOTENAME(pc.name) AS nvarchar(max)), ', ') WITHIN GROUP (ORDER BY f.constraint_column_id)
+                          FROM sys.foreign_key_columns f JOIN sys.columns pc ON pc.object_id = f.parent_object_id AND pc.column_id = f.parent_column_id
+                         WHERE f.constraint_object_id = fk.object_id)
+                     + ') REFERENCES ' + QUOTENAME(SCHEMA_NAME(rt.schema_id)) + '.' + QUOTENAME(rt.name) + ' ('
+                     + (SELECT STRING_AGG(CAST(QUOTENAME(rc.name) AS nvarchar(max)), ', ') WITHIN GROUP (ORDER BY f.constraint_column_id)
+                          FROM sys.foreign_key_columns f JOIN sys.columns rc ON rc.object_id = f.referenced_object_id AND rc.column_id = f.referenced_column_id
+                         WHERE f.constraint_object_id = fk.object_id)
+                     + ') ON DELETE ' + REPLACE(fk.delete_referential_action_desc, '_', ' ')
+                     + ' ON UPDATE ' + REPLACE(fk.update_referential_action_desc, '_', ' ') AS nvarchar(max))
+            FROM tbl
+            JOIN sys.foreign_keys fk ON fk.parent_object_id = tbl.object_id
+            JOIN sys.tables rt ON rt.object_id = fk.referenced_object_id
+        ), extra AS (
+            SELECT 1 AS grp, ROW_NUMBER() OVER (ORDER BY i.name) AS ord,
+                CAST('CREATE ' + CASE WHEN i.is_unique = 1 THEN 'UNIQUE ' ELSE '' END
+                     + CASE i.type WHEN 1 THEN 'CLUSTERED' ELSE 'NONCLUSTERED' END + ' INDEX ' + QUOTENAME(i.name)
+                     + ' ON ' + QUOTENAME(tbl.sch) + '.' + QUOTENAME(tbl.tab) + ' ('
+                     + (SELECT STRING_AGG(CAST(QUOTENAME(c2.name) + CASE WHEN x.is_descending_key = 1 THEN ' DESC' ELSE '' END AS nvarchar(max)), ', ')
+                               WITHIN GROUP (ORDER BY x.key_ordinal)
+                          FROM sys.index_columns x JOIN sys.columns c2 ON c2.object_id = x.object_id AND c2.column_id = x.column_id
+                         WHERE x.object_id = i.object_id AND x.index_id = i.index_id AND x.key_ordinal > 0) + ')'
+                     + COALESCE(' INCLUDE ('
+                         + (SELECT STRING_AGG(CAST(QUOTENAME(c2.name) AS nvarchar(max)), ', ') WITHIN GROUP (ORDER BY x.index_column_id)
+                              FROM sys.index_columns x JOIN sys.columns c2 ON c2.object_id = x.object_id AND c2.column_id = x.column_id
+                             WHERE x.object_id = i.object_id AND x.index_id = i.index_id AND x.is_included_column = 1) + ')', '')
+                     + CASE WHEN i.has_filter = 1 THEN ' WHERE ' + i.filter_definition ELSE '' END AS nvarchar(max)) AS txt
+            FROM tbl JOIN sys.indexes i ON i.object_id = tbl.object_id
+            WHERE i.type IN (1, 2) AND i.is_primary_key = 0 AND i.is_unique_constraint = 0
+            UNION ALL
+            SELECT 2, ep.minor_id,
+                CAST('EXEC sp_addextendedproperty N''MS_Description'', N''' + REPLACE(CAST(ep.value AS nvarchar(max)), '''', '''''')
+                     + ''', N''SCHEMA'', N''' + REPLACE(tbl.sch, '''', '''''') + ''', N''TABLE'', N''' + REPLACE(tbl.tab, '''', '''''') + ''''
+                     + CASE WHEN ep.minor_id > 0
+                            THEN ', N''COLUMN'', N''' + REPLACE(COL_NAME(tbl.object_id, ep.minor_id), '''', '''''') + ''''
+                            ELSE '' END AS nvarchar(max))
+            FROM tbl JOIN sys.extended_properties ep
+              ON ep.class = 1 AND ep.major_id = tbl.object_id AND ep.name = 'MS_Description'
+        )
+        SELECT 'CREATE TABLE ' + QUOTENAME(tbl.sch) + '.' + QUOTENAME(tbl.tab) + ' (' + CHAR(10)
+            + (SELECT STRING_AGG(txt COLLATE DATABASE_DEFAULT, ',
+        ') WITHIN GROUP (ORDER BY grp, ord) FROM lines)
+            + CHAR(10) + ');'
+            + COALESCE((SELECT STRING_AGG(CHAR(10) + txt COLLATE DATABASE_DEFAULT + ';', '') WITHIN GROUP (ORDER BY grp, ord) FROM extra), '')
+            AS ddl
+        FROM tbl
+      caveats:
+        - "There is no SHOW CREATE TABLE (SSMS scripts it client-side); the statement is assembled from sys.* views: columns with exact type, collation, IDENTITY(seed, increment), computed columns, named DEFAULT constraints, primary key / unique (clustered or not), CHECK, foreign keys, other rowstore indexes (INCLUDE, filter) and MS_Description comments."
+        - "Not included: filegroups / partition schemes, data compression and other index options, columnstore / XML / spatial / full-text indexes, temporal tables, memory-optimized tables, triggers, permissions."
+        - "Output is one batch (no GO needed). Catalog texts have different collations; they are aggregated with COLLATE DATABASE_DEFAULT."
+      sources: [{ evidence: tested }]
+  sqlite:
+    - status: supported
+      requires: [schema, table_name]
+      result_column: 1
+      template: |
+        SELECT m.sql || ';'
+            || coalesce((SELECT group_concat(char(10) || i.sql || ';', '')
+                           FROM {{schema}}.sqlite_master i
+                          WHERE i.type = 'index' AND i.tbl_name = m.name AND i.sql IS NOT NULL), '')
+            AS ddl
+        FROM {{schema}}.sqlite_master m
+        WHERE m.type = 'table' AND m.name = {{table_name}}
+      caveats:
+        - "SQLite keeps the original CREATE TABLE / CREATE INDEX text (incl. comments and formatting) - this is exact, not reconstructed. Automatic indexes of UNIQUE / PRIMARY KEY constraints have no text and come back with the table."
+        - "Several statements: run them as a script (sqlite3_exec / executescript), not with a single prepare."
       sources: [{ evidence: tested }]

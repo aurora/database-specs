@@ -37,6 +37,11 @@ variants:
     sources: [{ evidence: tested }]
   - { engine: postgresql, since: "12", until: "18", file: postgresql.sql, sources: [{ evidence: tested }] }
   - { engine: postgresql, since: "18", file: postgresql-18.sql, sources: [{ evidence: tested }] }
-
-gaps:
-  - "SQL Server, SQLite: not yet written (same approach as their list-foreign-keys variants)." 
+  - engine: sqlserver
+    since: "14"
+    file: sqlserver.sql
+  - engine: sqlite
+    since: "3.26"
+    file: sqlite.sql
+    notes:
+      - "There is no reverse lookup: every table of main.sqlite_master is scanned with pragma_foreign_key_list. Constraint names are synthetic (fk_<table>_<id>) as in list-foreign-keys."

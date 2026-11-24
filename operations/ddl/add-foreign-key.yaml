@@ -32,3 +32,14 @@ implementations:
         - "No index is created on the referencing columns (add one for joins / cascading deletes)."
         - "Add NOT VALID to skip checking existing rows, then VALIDATE CONSTRAINT separately."
       sources: [{ evidence: tested }]
+  sqlserver:
+    - status: supported
+      template: "ALTER TABLE {{table}} ADD CONSTRAINT {{constraint}} FOREIGN KEY ({{columns}}) REFERENCES {{referenced_table}} ({{referenced_columns}}){{#on_delete}} ON DELETE {{on_delete}}{{/on_delete}}{{#on_update}} ON UPDATE {{on_update}}{{/on_update}}"
+      transactional: true
+      caveats:
+        - "No RESTRICT (use NO ACTION). Multiple cascade paths to the same table are rejected. No index is created on the referencing columns."
+        - "WITH NOCHECK skips existing rows but leaves the constraint untrusted for the optimizer."
+      sources: [{ evidence: tested }]
+  sqlite:
+    - status: unsupported
+      notes: ["No ALTER for this: rebuild the table (see the emulated steps of ddl.change-column-type)."]

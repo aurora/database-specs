@@ -56,6 +56,13 @@ variants:
       - "As before, plus SQL-standard bodies (BEGIN ATOMIC ...) via pg_get_function_sqlbody()."
       - "Procedure arguments are reported with explicit modes (IN a integer, INOUT b integer)."
     sources: [{ evidence: tested }]
+  - engine: sqlserver
+    since: "14"
+    file: sqlserver.sql
+    notes:
+      - "No overloading: specific_name = routine_name. Parameter types without length (TYPE_NAME)."
+      - "definition is the complete original CREATE statement (sys.sql_modules), not only the body; NULL for encrypted and CLR routines."
+      - "is_deterministic from OBJECTPROPERTY IsDeterministic (only true for schema-bound functions); security_type definer when EXECUTE AS is set."
 
 gaps:
-  - "SQL Server, SQLite: not yet written."
+  - "SQLite has no stored routines (capability schema.stored-routines)."

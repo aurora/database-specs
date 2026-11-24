@@ -4,6 +4,8 @@ title: Rename a table
 parameters:
   - { name: table, kind: qualified-identifier }
   - { name: new_name, kind: identifier, description: "Unqualified new name; the table stays in its schema." }
+  - { name: object_literal, kind: string-literal, description: "SQL Server: the current name as a string, e.g. [dbo].[t]." }
+  - { name: new_name_literal, kind: string-literal, description: "SQL Server: the new name as a plain string." }
 implementations:
   mysql:
     - status: supported
@@ -24,4 +26,17 @@ implementations:
       template: "ALTER TABLE {{table}} RENAME TO {{new_name}}"
       transactional: true
       caveats: ["The new name must be unqualified. Views, foreign keys and triggers follow (by OID); the owned sequences of SERIAL columns keep their old names."]
+      sources: [{ evidence: tested }]
+  sqlserver:
+    - status: supported
+      template: "EXEC sp_rename {{object_literal}}, {{new_name_literal}}"
+      requires: [object_literal, new_name_literal]
+      transactional: true
+      caveats: ["sp_rename with the (bracket-quoted) current name and the new name without schema and without brackets. Constraint and index names are not changed."]
+      sources: [{ evidence: tested }]
+  sqlite:
+    - status: supported
+      template: "ALTER TABLE {{table}} RENAME TO {{new_name}}"
+      transactional: true
+      caveats: ["References in other tables' foreign keys, triggers and views are rewritten (legacy_alter_table = OFF, default since 3.26)."]
       sources: [{ evidence: tested }]

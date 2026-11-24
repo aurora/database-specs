@@ -21,3 +21,15 @@ implementations:
     - status: supported
       template: "INSERT INTO {{table}} ({{columns}}) VALUES ({{values}}){{#returning}} RETURNING {{returning}}{{/returning}}"
       sources: [{ evidence: tested }]
+  sqlserver:
+    - status: supported
+      template: "INSERT INTO {{table}} ({{columns}}){{#returning}} OUTPUT {{returning}}{{/returning}} VALUES ({{values}})"
+      caveats:
+        - "returning uses the OUTPUT clause: inserted.id, inserted.created_at. OUTPUT without INTO fails on tables with enabled triggers; then use SCOPE_IDENTITY()."
+        - "Explicit values for an IDENTITY column need SET IDENTITY_INSERT t ON."
+      sources: [{ evidence: tested }]
+  sqlite:
+    - status: supported
+      template: "INSERT INTO {{table}} ({{columns}}) VALUES ({{values}}){{#returning}} RETURNING {{returning}}{{/returning}}"
+      caveats: ["RETURNING since 3.35; before, read sqlite3_last_insert_rowid() / last_insert_rowid()."]
+      sources: [{ evidence: tested }]

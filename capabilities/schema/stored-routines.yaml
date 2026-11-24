@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=../../schemas/capability.schema.json
+id: schema.stored-routines
+title: Stored functions and procedures
+support:
+  mysql:
+    - status: supported
+      notes: ["Functions and procedures in SQL/PSM style; loadable functions (UDF) are separate."]
+  mariadb:
+    - status: supported
+      notes: ["Also packages in Oracle mode (sql_mode=ORACLE)."]
+  postgresql:
+    - status: supported
+      notes: ["Procedures since 11; many languages (sql, plpgsql, C, extensions)."]
+  sqlserver:
+    - status: supported
+      notes: ["T-SQL and CLR routines."]
+  sqlite:
+    - status: unsupported
+      notes: ["No stored routines; application-defined functions are registered per connection through the C API (sqlite3_create_function)."]
+      sources: [{ evidence: docs, url: "https://sqlite.org/appfunc.html" }]

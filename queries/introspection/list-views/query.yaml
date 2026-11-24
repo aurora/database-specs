@@ -42,6 +42,16 @@ variants:
       - "Materialized views are included (is_materialized); they are also tables in list-tables."
       - "security_type: invoker only with the security_invoker option (15+); otherwise the owner's privileges apply (definer)."
     sources: [{ evidence: tested }]
-
-gaps:
-  - "SQL Server, SQLite: not yet written."
+  - engine: sqlserver
+    since: "14"
+    file: sqlserver.sql
+    notes:
+      - "definition is cut from the original CREATE VIEW text (sys.sql_modules) after the first stand-alone AS; leading comments containing ' AS ' would confuse it. NULL for encrypted views."
+      - "is_updatable and security_type are NULL (INFORMATION_SCHEMA.VIEWS always reports NO; views use ownership chaining). WITH CHECK OPTION is reported as cascaded."
+      - "Indexed views are not flagged as materialized."
+  - engine: sqlite
+    since: "3.26"
+    file: sqlite.sql
+    notes:
+      - "Reads main.sqlite_master (other schemas: no rows). definition is cut from the original text after the first ' AS '."
+      - "Views are read-only unless INSTEAD OF triggers exist: is_updatable false."

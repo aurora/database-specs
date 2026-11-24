@@ -1,0 +1,47 @@
+# yaml-language-server: $schema=../../schemas/test.schema.json
+id: ddl-roundtrip-sqlite
+description: DDL reconstruction on SQLite - drop, re-run the stored DDL, compare introspection.
+engines: [sqlite]
+
+setup:
+  sqlite:
+    - CREATE TABLE t_rt_parent (id INTEGER PRIMARY KEY)
+    - |
+      CREATE TABLE t_rt (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        parent_id INT REFERENCES t_rt_parent (id) ON DELETE SET NULL,
+        code TEXT NOT NULL DEFAULT 'x' UNIQUE,
+        qty INT DEFAULT 0 CHECK (qty >= 0)  -- comments survive
+      )
+    - CREATE INDEX ix_rt_qty ON t_rt (qty DESC) WHERE qty > 0
+    - CREATE VIEW v_rt AS SELECT id FROM t_rt_parent WHERE id > 0
+    - CREATE TRIGGER tr_rt AFTER UPDATE ON t_rt_parent BEGIN SELECT 1; END
+
+cleanup:
+  sqlite:
+    - DROP VIEW IF EXISTS v_rt
+    - DROP TABLE IF EXISTS t_rt
+    - DROP TABLE IF EXISTS t_rt_parent
+
+steps:
+  - roundtrip:
+      operation: introspection.table-ddl
+      params: { schema: "{{schema}}", table_name: t_rt }
+      drop: { sqlite: [DROP TABLE t_rt] }
+      compare:
+        - { query: introspection.list-columns, params: { schema: "{{schema}}", table: t_rt } }
+        - { query: introspection.list-indexes, params: { schema: "{{schema}}", table: t_rt } }
+        - { query: introspection.list-constraints, params: { schema: "{{schema}}", table: t_rt } }
+        - { query: introspection.list-foreign-keys, params: { schema: "{{schema}}", table: t_rt } }
+  - roundtrip:
+      operation: introspection.view-ddl
+      params: { schema: "{{schema}}", view_name: v_rt }
+      drop: { sqlite: [DROP VIEW v_rt] }
+      compare:
+        - { query: introspection.list-views, params: { schema: "{{schema}}" } }
+  - roundtrip:
+      operation: introspection.trigger-ddl
+      params: { schema: "{{schema}}", trigger_name: tr_rt }
+      drop: { sqlite: [DROP TRIGGER tr_rt] }
+      compare:
+        - { query: introspection.list-triggers, params: { schema: "{{schema}}", table: t_rt_parent } }

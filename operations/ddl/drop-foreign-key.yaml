@@ -22,3 +22,11 @@ implementations:
       template: "ALTER TABLE {{table}} DROP CONSTRAINT {{constraint}}"
       transactional: true
       sources: [{ evidence: tested }]
+  sqlserver:
+    - status: supported
+      template: "ALTER TABLE {{table}} DROP CONSTRAINT {{constraint}}"
+      transactional: true
+      sources: [{ evidence: tested }]
+  sqlite:
+    - status: unsupported
+      notes: ["No ALTER for this: rebuild the table (see the emulated steps of ddl.change-column-type)."]

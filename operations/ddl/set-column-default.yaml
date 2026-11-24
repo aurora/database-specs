@@ -5,6 +5,8 @@ parameters:
   - { name: table, kind: qualified-identifier }
   - { name: column, kind: identifier }
   - { name: default, kind: sql-fragment, description: "Default expression; omit to DROP DEFAULT." }
+  - { name: table_literal, kind: string-literal, description: "SQL Server: the quoted table name as a string ([dbo].[t]), for OBJECT_ID / sp_rename." }
+  - { name: column_literal, kind: string-literal, description: "SQL Server: the column name as a plain string." }
 implementations:
   mysql:
     - status: supported
@@ -23,3 +25,26 @@ implementations:
       transactional: true
       caveats: ["Affects only future inserts; existing rows are not changed."]
       sources: [{ evidence: tested }]
+  sqlserver:
+    - status: supported
+      method: emulated
+      requires: [table_literal, column_literal]
+      steps:
+        - |
+          DECLARE @df sysname, @sql nvarchar(max);
+          SELECT @df = dc.name FROM sys.default_constraints dc
+           WHERE dc.parent_object_id = OBJECT_ID({{table_literal}})
+             AND dc.parent_column_id = COLUMNPROPERTY(OBJECT_ID({{table_literal}}), {{column_literal}}, 'ColumnId');
+          IF @df IS NOT NULL
+          BEGIN
+            SET @sql = N'ALTER TABLE ' + {{table_literal}} + N' DROP CONSTRAINT ' + QUOTENAME(@df);
+            EXEC sp_executesql @sql;
+          END
+        - "{{#default}}ALTER TABLE {{table}} ADD DEFAULT {{default}} FOR {{column}}{{/default}}"
+      transactional: true
+      caveats:
+        - "A default is a constraint object with a (usually generated) name: the existing one is looked up and dropped, then a new one added. Name it (ADD CONSTRAINT df_... DEFAULT ...) to make scripts stable."
+      sources: [{ evidence: tested }]
+  sqlite:
+    - status: unsupported
+      notes: ["No ALTER for this: rebuild the table (see the emulated steps of ddl.change-column-type)."]

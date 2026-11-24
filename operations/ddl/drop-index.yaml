@@ -26,3 +26,16 @@ implementations:
       transactional: true
       caveats: ["Indexes backing PRIMARY KEY / UNIQUE constraints must be removed with ALTER TABLE ... DROP CONSTRAINT."]
       sources: [{ evidence: tested }]
+  sqlserver:
+    - status: supported
+      template: "DROP INDEX {{index}} ON {{table}}"
+      requires: [table]
+      transactional: true
+      caveats: ["Indexes backing PRIMARY KEY / UNIQUE constraints are dropped with ALTER TABLE ... DROP CONSTRAINT."]
+      sources: [{ evidence: tested }]
+  sqlite:
+    - status: supported
+      template: "DROP INDEX {{#schema}}{{schema}}.{{/schema}}{{index}}"
+      transactional: true
+      caveats: ["sqlite_autoindex_* indexes of constraints cannot be dropped."]
+      sources: [{ evidence: tested }]

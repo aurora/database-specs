@@ -6,6 +6,9 @@ parameters:
   - { name: column, kind: identifier }
   - { name: new_name, kind: identifier }
   - { name: column_definition, kind: sql-fragment, description: "MySQL < 8.0 / MariaDB < 10.5.2: full column definition (CHANGE COLUMN)." }
+  - { name: table_literal, kind: string-literal, description: "SQL Server: the quoted table name as a string ([dbo].[t]), for OBJECT_ID / sp_rename." }
+  - { name: object_literal, kind: string-literal, description: "SQL Server: sp_rename object as a string, e.g. [dbo].[t].[old]." }
+  - { name: new_name_literal, kind: string-literal, description: "SQL Server: the new name as a plain string (no brackets)." }
 implementations:
   mysql:
     - until: "8.0"
@@ -38,4 +41,20 @@ implementations:
       template: "ALTER TABLE {{table}} RENAME COLUMN {{column}} TO {{new_name}}"
       transactional: true
       caveats: ["Views, constraints and indexes follow the rename (they reference columns by number); function bodies do not."]
+      sources: [{ evidence: tested }]
+  sqlserver:
+    - status: supported
+      template: "EXEC sp_rename {{object_literal}}, {{new_name_literal}}, 'COLUMN'"
+      requires: [object_literal, new_name_literal]
+      transactional: true
+      caveats:
+        - "sp_rename takes strings: the object as a (bracket-quoted) multi-part name, the new name WITHOUT brackets (brackets would become part of the name)."
+        - "Returns a warning that renaming can break scripts and stored procedures; views / routines referencing the column are not updated."
+      sources: [{ evidence: tested }]
+  sqlite:
+    - since: "3.25"
+      status: supported
+      template: "ALTER TABLE {{table}} RENAME COLUMN {{column}} TO {{new_name}}"
+      transactional: true
+      caveats: ["References in indexes, triggers and views are rewritten too."]
       sources: [{ evidence: tested }]

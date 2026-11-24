@@ -55,6 +55,15 @@ variants:
     file: postgresql-18.sql
     notes: ["conenforced (NOT ENFORCED CHECK and FK constraints since 18). NOT NULL constraints (pg_constraint contype n since 18) are not included - see list-columns."]
     sources: [{ evidence: tested }]
-
-gaps:
-  - "SQL Server, SQLite: not yet written."
+  - engine: sqlserver
+    since: "14"
+    file: sqlserver.sql
+    notes:
+      - "check_expression as stored, fully parenthesized with bracket-quoted columns: ([qty]>=(0))."
+      - "is_enforced = false for disabled CHECK constraints (NOCHECK) and for disabled backing indexes. Unique indexes that are not constraints are not listed."
+  - engine: sqlite
+    since: "3.26"
+    file: sqlite.sql
+    notes:
+      - "Primary key and UNIQUE constraints only; CHECK constraints are not exposed by pragmas (only in the CREATE TABLE text)."
+      - "Constraint names are not reported: the primary key is named pk_<table>, unique constraints by their sqlite_autoindex_* index. index_name of a rowid-alias primary key is NULL."

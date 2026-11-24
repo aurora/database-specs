@@ -26,3 +26,12 @@ implementations:
       template: "DELETE FROM {{table}} WHERE {{#no_unique_key}}ctid = (SELECT ctid FROM {{table}} WHERE {{key_predicate}} LIMIT 1){{/no_unique_key}}{{^no_unique_key}}{{key_predicate}}{{/no_unique_key}}"
       caveats: ["See dml.update-row for ctid."]
       sources: [{ evidence: tested }]
+  sqlserver:
+    - status: supported
+      template: "DELETE {{#no_unique_key}}TOP (1) {{/no_unique_key}}FROM {{table}} WHERE {{key_predicate}}"
+      sources: [{ evidence: tested }]
+  sqlite:
+    - status: supported
+      template: "DELETE FROM {{table}} WHERE {{#no_unique_key}}rowid = (SELECT rowid FROM {{table}} WHERE {{key_predicate}} LIMIT 1){{/no_unique_key}}{{^no_unique_key}}{{key_predicate}}{{/no_unique_key}}"
+      caveats: ["See dml.update-row for rowid."]
+      sources: [{ evidence: tested }]

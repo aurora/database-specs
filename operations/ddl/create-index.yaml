@@ -26,3 +26,15 @@ implementations:
       transactional: true
       caveats: ["Blocks writes while building; CREATE INDEX CONCURRENTLY avoids that but cannot run in a transaction."]
       sources: [{ evidence: tested }]
+  sqlserver:
+    - status: supported
+      template: "CREATE {{#unique}}UNIQUE {{/unique}}INDEX {{index}} ON {{table}} ({{columns}})"
+      transactional: true
+      caveats: ["NONCLUSTERED by default. ONLINE = ON (Enterprise / Developer) avoids blocking."]
+      sources: [{ evidence: tested }]
+  sqlite:
+    - status: supported
+      template: "CREATE {{#unique}}UNIQUE {{/unique}}INDEX {{index}} ON {{table}} ({{columns}})"
+      transactional: true
+      caveats: ["The table name must be unqualified; for another schema qualify the index name instead (CREATE INDEX aux.i ON t ...)."]
+      sources: [{ evidence: tested }]

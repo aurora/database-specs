@@ -59,6 +59,7 @@ statements:
   notes:
     - "';' is optional in most places but required before WITH (CTE) / WITH XMLNAMESPACES when another statement precedes it, after MERGE, and before THROW."
     - "GO is a client-side batch separator (sqlcmd/SSMS convention), never sent to the server. It must stand alone on its line (optionally 'GO n' to repeat). A client must split scripts on it."
+    - "The line break before the GO line belongs to the separator: if it stays in the batch, CREATE VIEW / PROCEDURE / FUNCTION / TRIGGER store it as part of their text (observed via sys.sql_modules)."
     - "CREATE PROCEDURE/FUNCTION/TRIGGER/VIEW must be the first statement in a batch, so scripts rely on GO."
     - "Local variables and temp tables live per batch/session; splitting a script differently changes semantics."
 

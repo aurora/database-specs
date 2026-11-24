@@ -1,0 +1,72 @@
+# yaml-language-server: $schema=../../schemas/test.schema.json
+id: introspection-object-tree-sqlite
+description: Object tree queries on SQLite (schemas, views, triggers, constraints, incoming FKs).
+engines: [sqlite]
+
+setup:
+  sqlite:
+    - |
+      CREATE TABLE t_ot (
+        id INT PRIMARY KEY,
+        code TEXT NOT NULL,
+        qty INT,
+        CONSTRAINT uq_ot_code UNIQUE (code),
+        CONSTRAINT chk_ot_qty CHECK (qty >= 0)
+      )
+    - |
+      CREATE TABLE t_ot_child (
+        id INT PRIMARY KEY,
+        ot_id INT,
+        CONSTRAINT fk_ot_child FOREIGN KEY (ot_id) REFERENCES t_ot (id) ON DELETE CASCADE
+      )
+    - CREATE VIEW v_ot AS SELECT id, qty FROM t_ot WHERE qty > 0
+    - |
+      CREATE TRIGGER tr_ot BEFORE INSERT ON t_ot
+      FOR EACH ROW WHEN NEW.qty IS NULL
+      BEGIN
+        SELECT RAISE(ABORT, 'qty required');
+      END
+
+cleanup:
+  sqlite:
+    - DROP VIEW IF EXISTS v_ot
+    - DROP TABLE IF EXISTS t_ot_child
+    - DROP TABLE IF EXISTS t_ot
+
+steps:
+  - query: introspection.list-schemas
+    expect:
+      rows:
+        - match: { schema_name: main }
+          values: { is_system: false, default_charset: UTF-8 }
+  - query: introspection.list-views
+    params: { schema: "{{schema}}" }
+    expect:
+      row_count: 1
+      rows:
+        - match: { view_name: v_ot }
+          values: { definition: "SELECT id, qty FROM t_ot WHERE qty > 0", is_updatable: false }
+  - query: introspection.list-triggers
+    params: { schema: "{{schema}}", table: t_ot }
+    expect:
+      row_count: 1
+      rows:
+        - match: { trigger_name: tr_ot }
+          values: { timing: before, events: insert, level: row, condition: NEW.qty IS NULL, is_enabled: true }
+          matches: { action_statement: "^BEGIN\\n  SELECT RAISE\\(ABORT, 'qty required'\\);\\nEND$" }
+  - query: introspection.list-constraints
+    params: { schema: "{{schema}}", table: t_ot }
+    expect:
+      row_count: 2
+      rows:
+        - match: { constraint_type: primary-key }
+          values: { constraint_name: pk_t_ot, column_name: id, index_name: sqlite_autoindex_t_ot_1 }
+        - match: { constraint_type: unique }
+          values: { constraint_name: sqlite_autoindex_t_ot_2, column_name: code }
+  - query: introspection.list-referencing-foreign-keys
+    params: { schema: "{{schema}}", table: t_ot }
+    expect:
+      row_count: 1
+      rows:
+        - match: { table_name: t_ot_child }
+          values: { constraint_name: fk_t_ot_child_0, column_name: ot_id, referenced_column: id, on_delete: cascade, is_enforced: false }

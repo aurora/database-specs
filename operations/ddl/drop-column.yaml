@@ -24,3 +24,19 @@ implementations:
       transactional: true
       caveats: ["Without CASCADE it fails when views or constraints of other objects depend on the column. The column is only marked dropped (no rewrite)."]
       sources: [{ evidence: tested }]
+  sqlserver:
+    - status: supported
+      template: "ALTER TABLE {{table}} DROP COLUMN {{column}}"
+      transactional: true
+      caveats: ["Fails while a DEFAULT / CHECK constraint, index, statistics or foreign key uses the column: drop those first (the default constraint has a generated name, see ddl.set-column-default)."]
+      sources: [{ evidence: tested }]
+  sqlite:
+    - until: "3.35"
+      status: unsupported
+      notes: ["No ALTER for this: rebuild the table (see the emulated steps of ddl.change-column-type)."]
+    - since: "3.35"
+      status: supported
+      template: "ALTER TABLE {{table}} DROP COLUMN {{column}}"
+      transactional: true
+      caveats: ["Not possible for PRIMARY KEY / UNIQUE / indexed columns, columns in foreign keys, generated column expressions, views, triggers or CHECK constraints - rebuild the table instead."]
+      sources: [{ evidence: tested }]

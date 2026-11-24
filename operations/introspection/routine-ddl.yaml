@@ -11,6 +11,7 @@ parameters:
     kind: string-literal
     description: "PostgreSQL: specific_name from introspection.list-routines, e.g. f(a integer) - identifies the overload."
 
+
 implementations:
   mysql:
     - status: supported
@@ -48,3 +49,25 @@ implementations:
         - "pg_get_functiondef returns CREATE OR REPLACE ...; aggregates and window functions are not supported by it."
         - "Ownership, grants and ALTER FUNCTION ... SET options outside the definition are not included."
       sources: [{ evidence: tested }]
+  sqlserver:
+    - status: supported
+      requires: [schema_name, specific_name]
+      result_column: 1
+      template: |
+        SELECT m.definition
+            + COALESCE(CHAR(10) + 'GO' + CHAR(10) + 'EXEC sp_addextendedproperty N''MS_Description'', N''' + REPLACE(CAST(ep.value AS nvarchar(max)), '''', '''''')
+                 + ''', N''SCHEMA'', N''' + REPLACE(s.name, '''', '''''') + ''', N''' + CASE WHEN o.type = 'P' THEN 'PROCEDURE' ELSE 'FUNCTION' END + ''', N''' + REPLACE(o.name, '''', '''''') + '''', '')
+            AS ddl
+        FROM sys.objects o
+        JOIN sys.schemas s     ON s.schema_id = o.schema_id
+        JOIN sys.sql_modules m ON m.object_id = o.object_id
+        LEFT JOIN sys.extended_properties ep ON ep.class = 1 AND ep.major_id = o.object_id
+                                            AND ep.minor_id = 0 AND ep.name = 'MS_Description'
+        WHERE s.name = {{schema_name}} AND o.name = {{specific_name}}
+          AND o.type IN ('P', 'FN', 'IF', 'TF')
+      caveats:
+        - "The original CREATE text; NULL for encrypted and CLR routines. Comment after a GO line (CREATE must be alone in its batch)."
+      sources: [{ evidence: tested }]
+  sqlite:
+    - status: unsupported
+      notes: ["No stored routines (capability schema.stored-routines)."]

@@ -1,0 +1,115 @@
+# yaml-language-server: $schema=../../schemas/test.schema.json
+id: table-editing-sqlite
+description: >
+  Table editor operations available on SQLite (defaults, nullability and foreign keys need a
+  table rebuild and are covered by ddl.change-column-type), each verified by introspection or SQL.
+engines: [sqlite]
+
+setup:
+  sqlite:
+    - CREATE TABLE t_ed (id INTEGER PRIMARY KEY, name VARCHAR(50))
+    - CREATE TABLE t_dup (a INT, b TEXT)
+    - INSERT INTO t_dup (a, b) VALUES (1, 'x'), (1, 'x')
+
+cleanup:
+  sqlite:
+    - DROP TABLE IF EXISTS t_ed
+    - DROP TABLE IF EXISTS t_ed2
+    - DROP TABLE IF EXISTS t_dup
+
+steps:
+  - operation: ddl.add-column
+    params: { table: t_ed, column: qty, column_definition: INT NOT NULL DEFAULT 0 }
+  - operation: ddl.rename-column
+    params: { table: t_ed, column: name, new_name: title }
+  - query: introspection.list-columns
+    params: { schema: "{{schema}}", table: t_ed }
+    expect:
+      row_count: 3
+      rows:
+        - match: { column_name: qty }
+          values: { ordinal_position: 3, is_nullable: false, default_raw: "0" }
+        - match: { column_name: title }
+          values: { data_type: VARCHAR(50) }
+
+  - operation: ddl.create-index
+    params: { table: t_ed, index: ix_ed_title, columns: title, unique: true }
+  - query: introspection.list-indexes
+    params: { schema: "{{schema}}", table: t_ed }
+    expect:
+      rows:
+        - match: { index_name: ix_ed_title }
+          values: { is_unique: true, column_name: title }
+  - operation: ddl.drop-index
+    params: { index: ix_ed_title, schema: "{{schema}}" }
+  - query: introspection.list-indexes
+    params: { schema: "{{schema}}", table: t_ed }
+    expect: { row_count: 0 }
+
+  - operation: ddl.add-column
+    params: { table: t_ed, column: tmp, column_definition: INT }
+  - operation: ddl.drop-column
+    engines: { sqlite: { since: "3.35" } }
+    params: { table: t_ed, column: tmp }
+  - query: introspection.list-columns
+    engines: { sqlite: { since: "3.35" } }
+    params: { schema: "{{schema}}", table: t_ed }
+    expect:
+      row_count: 3
+      rows:
+        - match: { column_name: tmp }
+          count: 0
+
+  - operation: dml.insert-row
+    params: { table: t_ed, columns: "id, title, qty", values: "1, 'a', 3" }
+  - operation: dml.update-row
+    params: { table: t_ed, assignments: qty = 4, key_predicate: id = 1 }
+  - sql: { sqlite: SELECT qty FROM t_ed WHERE id = 1 }
+    expect:
+      rows:
+        - match: {}
+          values: { qty: 4 }
+  - operation: dml.insert-row
+    engines: { sqlite: { since: "3.35" } }
+    params: { table: t_ed, columns: "id, title, qty", values: "2, 'b', 7", returning: "id, qty" }
+    expect:
+      rows:
+        - match: {}
+          values: { id: 2, qty: 7 }
+
+  - operation: dml.update-row
+    params: { table: t_dup, assignments: b = 'y', key_predicate: a = 1 AND b = 'x', no_unique_key: true }
+  - sql: { sqlite: "SELECT COUNT(*) AS n FROM t_dup WHERE b = 'y'" }
+    expect:
+      rows:
+        - match: {}
+          values: { n: 1 }
+  - operation: dml.delete-row
+    params: { table: t_dup, key_predicate: a = 1 AND b = 'y', no_unique_key: true }
+  - sql: { sqlite: SELECT COUNT(*) AS n FROM t_dup }
+    expect:
+      rows:
+        - match: {}
+          values: { n: 1 }
+
+  - operation: ddl.truncate-table
+    params: { table: t_dup }
+  - sql: { sqlite: SELECT COUNT(*) AS n FROM t_dup }
+    expect:
+      rows:
+        - match: {}
+          values: { n: 0 }
+  - operation: ddl.rename-table
+    params: { table: t_ed, new_name: t_ed2 }
+  - operation: ddl.drop-table
+    params: { table: t_dup }
+  - query: introspection.list-tables
+    params: { schema: "{{schema}}" }
+    expect:
+      rows:
+        - match: { table_name: t_ed2 }
+          values: { table_type: table }
+        - match: { table_name: t_ed }
+          count: 0
+        - match: { table_name: t_dup }
+          count: 0

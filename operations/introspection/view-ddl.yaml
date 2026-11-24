@@ -6,6 +6,7 @@ parameters:
   - { name: schema_name, kind: string-literal, description: "PostgreSQL." }
   - { name: view_name, kind: string-literal, description: "PostgreSQL." }
 
+  - { name: schema, kind: identifier, description: "SQLite: schema (main, temp or an attached database)." }
 implementations:
   mysql:
     - status: supported
@@ -44,4 +45,30 @@ implementations:
         - "check_option and security_invoker are view options (reloptions) and come back as WITH (...)."
         - "Materialized views: indexes on them are not included; the view is populated when the statement runs."
         - "Column references inside the SELECT are qualified as pg_get_viewdef prints them (version dependent)."
+      sources: [{ evidence: tested }]
+  sqlserver:
+    - status: supported
+      requires: [schema_name, view_name]
+      result_column: 1
+      template: |
+        SELECT m.definition
+            + COALESCE(CHAR(10) + 'GO' + CHAR(10) + 'EXEC sp_addextendedproperty N''MS_Description'', N''' + REPLACE(CAST(ep.value AS nvarchar(max)), '''', '''''')
+                 + ''', N''SCHEMA'', N''' + REPLACE(s.name, '''', '''''') + ''', N''VIEW'', N''' + REPLACE(o.name, '''', '''''') + '''', '')
+            AS ddl
+        FROM sys.objects o
+        JOIN sys.schemas s     ON s.schema_id = o.schema_id
+        JOIN sys.sql_modules m ON m.object_id = o.object_id
+        LEFT JOIN sys.extended_properties ep ON ep.class = 1 AND ep.major_id = o.object_id
+                                            AND ep.minor_id = 0 AND ep.name = 'MS_Description'
+        WHERE s.name = {{schema_name}} AND o.name = {{view_name}} AND o.type = 'V'
+      caveats:
+        - "The original CREATE VIEW text as written (sys.sql_modules); NULL for views created WITH ENCRYPTION."
+        - "CREATE VIEW must be alone in its batch: the comment follows after a GO line (split the script on GO, see the lexical spec)."
+      sources: [{ evidence: tested }]
+  sqlite:
+    - status: supported
+      requires: [schema, view_name]
+      result_column: 1
+      template: "SELECT m.sql || ';' AS ddl FROM {{schema}}.sqlite_master m WHERE m.type = 'view' AND m.name = {{view_name}}"
+      caveats: ["The original text, exactly as written."]
       sources: [{ evidence: tested }]

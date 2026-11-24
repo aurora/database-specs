@@ -1,0 +1,137 @@
+# yaml-language-server: $schema=../../schemas/test.schema.json
+id: table-editing-sqlserver
+description: Table editor operations on SQL Server, each verified by introspection or SQL.
+engines: [sqlserver]
+
+setup:
+  sqlserver:
+    - CREATE TABLE t_ed_ref (id INT PRIMARY KEY)
+    - CREATE TABLE t_ed (id INT PRIMARY KEY, name VARCHAR(50))
+    - CREATE TABLE t_dup (a INT, b VARCHAR(10))
+    - INSERT INTO t_ed_ref (id) VALUES (1)
+    - INSERT INTO t_dup (a, b) VALUES (1, 'x'), (1, 'x')
+
+cleanup:
+  sqlserver:
+    - DROP TABLE IF EXISTS t_ed
+    - DROP TABLE IF EXISTS t_ed2
+    - DROP TABLE IF EXISTS t_ed_ref
+    - DROP TABLE IF EXISTS t_dup
+
+steps:
+  - operation: ddl.add-column
+    params: { table: t_ed, column: qty, column_definition: INT NOT NULL CONSTRAINT df_ed_qty DEFAULT 0 }
+  - operation: ddl.rename-column
+    params: { object_literal: "[dbo].[t_ed].[name]", new_name_literal: title }
+  - operation: ddl.set-column-default
+    params: { table: t_ed, column: qty, table_literal: "[dbo].[t_ed]", column_literal: qty, default: "5" }
+  - operation: ddl.set-column-nullable
+    params: { table: t_ed, column: title, column_definition: VARCHAR(50) NOT NULL }
+  - query: introspection.list-columns
+    params: { schema: "{{schema}}", table: t_ed }
+    expect:
+      row_count: 3
+      rows:
+        - match: { column_name: qty }
+          values: { ordinal_position: 3, is_nullable: false, default_raw: "((5))" }
+        - match: { column_name: title }
+          values: { is_nullable: false, data_type: varchar(50) }
+        - match: { column_name: name }
+          count: 0
+
+  - operation: ddl.set-column-default
+    params: { table: t_ed, column: qty, table_literal: "[dbo].[t_ed]", column_literal: qty }
+  - query: introspection.list-columns
+    params: { schema: "{{schema}}", table: t_ed }
+    expect:
+      rows:
+        - match: { column_name: qty }
+          values: { default_raw: null }
+
+  - operation: ddl.create-index
+    params: { table: t_ed, index: ix_ed_title, columns: title, unique: true }
+  - operation: ddl.add-column
+    params: { table: t_ed, column: ref_id, column_definition: INT }
+  - operation: ddl.add-foreign-key
+    params: { table: t_ed, constraint: fk_ed_ref, columns: ref_id, referenced_table: t_ed_ref, referenced_columns: id, on_delete: SET NULL }
+  - query: introspection.list-indexes
+    params: { schema: "{{schema}}", table: t_ed }
+    expect:
+      rows:
+        - match: { index_name: ix_ed_title }
+          values: { is_unique: true, column_name: title, is_clustered: false }
+  - query: introspection.list-foreign-keys
+    params: { schema: "{{schema}}", table: t_ed }
+    expect:
+      row_count: 1
+      rows:
+        - match: { constraint_name: fk_ed_ref }
+          values: { column_name: ref_id, on_delete: set-null }
+  - operation: ddl.drop-foreign-key
+    params: { table: t_ed, constraint: fk_ed_ref }
+  - operation: ddl.drop-index
+    params: { table: t_ed, index: ix_ed_title }
+  - operation: ddl.drop-column
+    params: { table: t_ed, column: ref_id }
+  - query: introspection.list-indexes
+    params: { schema: "{{schema}}", table: t_ed }
+    expect:
+      rows:
+        - match: { index_name: ix_ed_title }
+          count: 0
+  - query: introspection.list-foreign-keys
+    params: { schema: "{{schema}}", table: t_ed }
+    expect: { row_count: 0 }
+
+  - operation: dml.insert-row
+    params: { table: t_ed, columns: "id, title, qty", values: "1, 'a', 3" }
+  - operation: dml.update-row
+    params: { table: t_ed, assignments: qty = 4, key_predicate: id = 1 }
+  - sql: { sqlserver: SELECT qty FROM t_ed WHERE id = 1 }
+    expect:
+      rows:
+        - match: {}
+          values: { qty: 4 }
+  - operation: dml.insert-row
+    params: { table: t_ed, columns: "id, title, qty", values: "2, 'b', 7", returning: "inserted.id, inserted.qty" }
+    expect:
+      rows:
+        - match: {}
+          values: { id: 2, qty: 7 }
+
+  - operation: dml.update-row
+    params: { table: t_dup, assignments: b = 'y', key_predicate: a = 1 AND b = 'x', no_unique_key: true }
+  - sql: { sqlserver: "SELECT COUNT(*) AS n FROM t_dup WHERE b = 'y'" }
+    expect:
+      rows:
+        - match: {}
+          values: { n: 1 }
+  - operation: dml.delete-row
+    params: { table: t_dup, key_predicate: a = 1 AND b = 'y', no_unique_key: true }
+  - sql: { sqlserver: SELECT COUNT(*) AS n FROM t_dup }
+    expect:
+      rows:
+        - match: {}
+          values: { n: 1 }
+
+  - operation: ddl.truncate-table
+    params: { table: t_dup }
+  - sql: { sqlserver: SELECT COUNT(*) AS n FROM t_dup }
+    expect:
+      rows:
+        - match: {}
+          values: { n: 0 }
+  - operation: ddl.rename-table
+    params: { object_literal: "[dbo].[t_ed]", new_name_literal: t_ed2 }
+  - operation: ddl.drop-table
+    params: { table: t_dup }
+  - query: introspection.list-tables
+    params: { schema: "{{schema}}" }
+    expect:
+      rows:
+        - match: { table_name: t_ed2 }
+          values: { table_type: table }
+        - match: { table_name: t_ed }
+          count: 0
+        - match: { table_name: t_dup }
+          count: 0

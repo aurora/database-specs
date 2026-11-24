@@ -32,3 +32,13 @@ implementations:
         - "No UPDATE ... LIMIT: tables without a unique key are addressed by ctid (physical row id). A ctid changes with every update and VACUUM FULL; on partitioned tables it is only unique together with tableoid."
         - "Alternative: select ctid with the grid rows and use WHERE ctid = ? directly."
       sources: [{ evidence: tested }]
+  sqlserver:
+    - status: supported
+      template: "UPDATE {{#no_unique_key}}TOP (1) {{/no_unique_key}}{{table}} SET {{assignments}} WHERE {{key_predicate}}"
+      caveats: ["TOP (1) for tables without a unique key. The affected row count may include rows changed by triggers unless SET NOCOUNT is used inside them."]
+      sources: [{ evidence: tested }]
+  sqlite:
+    - status: supported
+      template: "UPDATE {{table}} SET {{assignments}} WHERE {{#no_unique_key}}rowid = (SELECT rowid FROM {{table}} WHERE {{key_predicate}} LIMIT 1){{/no_unique_key}}{{^no_unique_key}}{{key_predicate}}{{/no_unique_key}}"
+      caveats: ["Rowid tables can always be addressed by rowid (select it with the grid rows: stable as long as the row lives, unless VACUUM renumbers an implicit rowid). WITHOUT ROWID tables always have a primary key. UPDATE ... LIMIT only with SQLITE_ENABLE_UPDATE_DELETE_LIMIT."]
+      sources: [{ evidence: tested }]

@@ -158,6 +158,22 @@ class Server:
     def schema(self) -> str:
         return ENGINE_SETUP[self.engine]["schema"]
 
+    def run_script(self, conn, text: str, batch_separator: str | None = None):
+        """Execute SQL that may contain several statements (e.g. reconstructed DDL)."""
+        if self.engine == "sqlite":
+            resp = conn.worker.request({"op": "script", "conn": conn.conn_id, "sql": text})
+            if not resp["ok"]:
+                raise EmbeddedError(resp["error"])
+            return
+        batches = [text]
+        if batch_separator:  # e.g. T-SQL GO: client-side, on a line of its own
+            # the line break before the separator line belongs to the separator, not to the batch
+            batches = re.split(rf"(?:\r?\n|^)[ \t]*{re.escape(batch_separator)}[ \t]*(?:\r?\n|$)", text, flags=re.I)
+        with conn.cursor() as cur:
+            for batch in batches:
+                if batch.strip():
+                    cur.execute(batch)
+
     def format_sql(self, sql: str) -> str:
         """Placeholders: the spec's :name style -> what the test driver expects."""
         return sql if self.engine == "sqlite" else to_pyformat(sql)

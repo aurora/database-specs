@@ -34,7 +34,14 @@ variants:
     notes:
       - "last_value is NULL until nextval() was called (or without USAGE/SELECT privilege)."
       - "owned_by_*: the column of a SERIAL / IDENTITY column or OWNED BY; identity sequences are listed too."
+  - engine: sqlserver
+    since: "14"
+    file: sqlserver.sql
+    notes:
+      - "Values are sql_variant, cast to bigint (decimal / numeric sequences beyond bigint are not represented). last_value from last_used_value (NULL until first use)."
+      - "IDENTITY columns are not sequences and are not listed."
+      - "Without MINVALUE the minimum is the smallest value of the data type (-2^63 for bigint), unlike PostgreSQL (1)."
 
 gaps:
   - "MariaDB 10.3 - 11.7: sequences exist, but there is no catalog view; list them via information_schema.TABLES (TABLE_TYPE = 'SEQUENCE') and read each with SELECT * FROM <sequence>."
-  - "SQL Server (sys.sequences): not yet written."
+  - "SQLite has no sequences (capability schema.sequences)."

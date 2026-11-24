@@ -23,3 +23,15 @@ implementations:
       transactional: true
       caveats: ["Without CASCADE it fails when views or foreign keys depend on the table."]
       sources: [{ evidence: tested }]
+  sqlserver:
+    - status: supported
+      template: "DROP TABLE {{table}}"
+      transactional: true
+      caveats: ["Fails while foreign keys reference the table. Views on it remain (invalid); schema-bound views block the drop."]
+      sources: [{ evidence: tested }]
+  sqlite:
+    - status: supported
+      template: "DROP TABLE {{table}}"
+      transactional: true
+      caveats: ["With PRAGMA foreign_keys = ON an implicit DELETE checks referencing rows first."]
+      sources: [{ evidence: tested }]

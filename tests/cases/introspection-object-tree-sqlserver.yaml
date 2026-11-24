@@ -1,0 +1,105 @@
+# yaml-language-server: $schema=../../schemas/test.schema.json
+id: introspection-object-tree-sqlserver
+description: Object tree queries on SQL Server (schemas, views, routines, triggers, constraints, incoming FKs, sequences).
+engines: [sqlserver]
+
+setup:
+  sqlserver:
+    - CREATE SCHEMA s_ot
+    - EXEC sp_addextendedproperty N'MS_Description', N'object tree', N'SCHEMA', N's_ot'
+    - |
+      CREATE TABLE t_ot (
+        id INT CONSTRAINT pk_ot PRIMARY KEY,
+        code VARCHAR(20) NOT NULL,
+        qty INT,
+        CONSTRAINT uq_ot_code UNIQUE (code),
+        CONSTRAINT chk_ot_qty CHECK (qty >= 0)
+      )
+    - |
+      CREATE TABLE t_ot_child (
+        id INT PRIMARY KEY,
+        ot_id INT,
+        CONSTRAINT fk_ot_child FOREIGN KEY (ot_id) REFERENCES t_ot (id) ON DELETE CASCADE
+      )
+    - CREATE VIEW v_ot AS SELECT id, qty FROM dbo.t_ot WHERE qty > 0 WITH CHECK OPTION
+    - CREATE FUNCTION f_ot(@a INT) RETURNS INT WITH SCHEMABINDING AS BEGIN RETURN @a * 2 END
+    - EXEC sp_addextendedproperty N'MS_Description', N'doubles', N'SCHEMA', N'dbo', N'FUNCTION', N'f_ot'
+    - CREATE PROCEDURE p_ot @a INT, @b INT OUTPUT AS SET @b = @a * 2
+    - CREATE TRIGGER tr_ot ON t_ot AFTER INSERT, UPDATE AS SET NOCOUNT ON
+    - CREATE SEQUENCE seq_ot START WITH 10 INCREMENT BY 5
+
+cleanup:
+  sqlserver:
+    - DROP VIEW IF EXISTS v_ot
+    - DROP TABLE IF EXISTS t_ot_child
+    - DROP TABLE IF EXISTS t_ot
+    - DROP FUNCTION IF EXISTS f_ot
+    - DROP PROCEDURE IF EXISTS p_ot
+    - DROP SEQUENCE IF EXISTS seq_ot
+    - DROP SCHEMA IF EXISTS s_ot
+
+steps:
+  - query: introspection.list-schemas
+    expect:
+      rows:
+        - match: { schema_name: s_ot }
+          values: { is_system: false, owner: dbo, comment: object tree }
+        - match: { schema_name: dbo }
+          values: { is_system: false }
+        - match: { schema_name: INFORMATION_SCHEMA }
+          values: { is_system: true }
+        - match: { schema_name: db_owner }
+          values: { is_system: true }
+  - query: introspection.list-views
+    params: { schema: "{{schema}}" }
+    expect:
+      row_count: 1
+      rows:
+        - match: { view_name: v_ot }
+          values:
+            definition: SELECT id, qty FROM dbo.t_ot WHERE qty > 0 WITH CHECK OPTION
+            check_option: cascaded
+            is_updatable: null
+            security_type: null
+  - query: introspection.list-routines
+    params: { schema: "{{schema}}" }
+    expect:
+      row_count: 2
+      rows:
+        - match: { routine_name: f_ot }
+          values: { routine_type: function, arguments: "@a int", return_type: int, is_deterministic: true, comment: doubles }
+          matches: { definition: "^CREATE FUNCTION f_ot" }
+        - match: { routine_name: p_ot }
+          values: { routine_type: procedure, arguments: "@a int, @b int OUTPUT", return_type: null, is_deterministic: null }
+  - query: introspection.list-triggers
+    params: { schema: "{{schema}}", table: t_ot }
+    expect:
+      row_count: 1
+      rows:
+        - match: { trigger_name: tr_ot }
+          values: { timing: after, events: "insert,update", level: statement, is_enabled: true }
+          matches: { action_statement: "^CREATE TRIGGER tr_ot" }
+  - query: introspection.list-constraints
+    params: { schema: "{{schema}}", table: t_ot }
+    expect:
+      row_count: 3
+      rows:
+        - match: { constraint_name: pk_ot }
+          values: { constraint_type: primary-key, column_name: id, index_name: pk_ot }
+        - match: { constraint_name: uq_ot_code }
+          values: { constraint_type: unique, column_name: code }
+        - match: { constraint_name: chk_ot_qty }
+          values: { constraint_type: check, check_expression: "([qty]>=(0))", column_name: null, is_enforced: true }
+  - query: introspection.list-referencing-foreign-keys
+    params: { schema: "{{schema}}", table: t_ot }
+    expect:
+      row_count: 1
+      rows:
+        - match: { constraint_name: fk_ot_child }
+          values: { table_name: t_ot_child, column_name: ot_id, referenced_column: id, on_delete: cascade, on_update: no-action }
+  - query: introspection.list-sequences
+    params: { schema: "{{schema}}" }
+    expect:
+      rows:
+        - match: { sequence_name: seq_ot }
+          values: { data_type: bigint, start_value: 10, increment: 5, min_value: -9223372036854775808, is_cycle: false, last_value: null }

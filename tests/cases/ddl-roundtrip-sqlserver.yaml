@@ -1,0 +1,76 @@
+# yaml-language-server: $schema=../../schemas/test.schema.json
+id: ddl-roundtrip-sqlserver
+description: DDL reconstruction on SQL Server - drop, re-run the reconstructed DDL, compare introspection.
+engines: [sqlserver]
+
+setup:
+  sqlserver:
+    - CREATE TABLE t_rt_parent (id INT PRIMARY KEY)
+    - |
+      CREATE TABLE t_rt (
+        id INT IDENTITY(5, 2) NOT NULL,
+        parent_id INT NULL,
+        code NVARCHAR(20) COLLATE Latin1_General_CS_AS NOT NULL CONSTRAINT df_rt_code DEFAULT N'x',
+        qty INT CONSTRAINT df_rt_qty DEFAULT 0,
+        price DECIMAL(10,2) NULL,
+        created DATETIME2(3) NULL,
+        total AS (qty * 2) PERSISTED,
+        CONSTRAINT pk_rt PRIMARY KEY CLUSTERED (id),
+        CONSTRAINT uq_rt_code UNIQUE NONCLUSTERED (code DESC),
+        CONSTRAINT fk_rt_parent FOREIGN KEY (parent_id) REFERENCES t_rt_parent (id) ON DELETE SET NULL,
+        CONSTRAINT chk_rt_qty CHECK (qty >= 0)
+      )
+    - CREATE INDEX ix_rt_qty ON t_rt (qty DESC) INCLUDE (price) WHERE qty > 0
+    - EXEC sp_addextendedproperty N'MS_Description', N'round trip', N'SCHEMA', N'dbo', N'TABLE', N't_rt'
+    - EXEC sp_addextendedproperty N'MS_Description', N'it''s the code', N'SCHEMA', N'dbo', N'TABLE', N't_rt', N'COLUMN', N'code'
+    - CREATE VIEW v_rt AS SELECT id FROM dbo.t_rt_parent WHERE id > 0 WITH CHECK OPTION
+    - EXEC sp_addextendedproperty N'MS_Description', N'positive ids', N'SCHEMA', N'dbo', N'VIEW', N'v_rt'
+    - CREATE FUNCTION f_rt(@a INT) RETURNS INT AS BEGIN RETURN @a * 2 END
+    - EXEC sp_addextendedproperty N'MS_Description', N'doubles', N'SCHEMA', N'dbo', N'FUNCTION', N'f_rt'
+    - CREATE PROCEDURE p_rt @a INT, @b INT OUTPUT AS SET @b = @a * 2
+    - CREATE TRIGGER tr_rt ON t_rt_parent AFTER UPDATE AS SET NOCOUNT ON
+    - DISABLE TRIGGER tr_rt ON t_rt_parent
+
+cleanup:
+  sqlserver:
+    - DROP VIEW IF EXISTS v_rt
+    - DROP TABLE IF EXISTS t_rt
+    - DROP TABLE IF EXISTS t_rt_parent
+    - DROP FUNCTION IF EXISTS f_rt
+    - DROP PROCEDURE IF EXISTS p_rt
+
+steps:
+  - roundtrip:
+      operation: introspection.table-ddl
+      params: { schema_name: "{{schema}}", table_name: t_rt }
+      drop: { sqlserver: [DROP TABLE t_rt] }
+      compare:
+        - { query: introspection.list-columns, params: { schema: "{{schema}}", table: t_rt } }
+        - { query: introspection.list-indexes, params: { schema: "{{schema}}", table: t_rt } }
+        - { query: introspection.list-constraints, params: { schema: "{{schema}}", table: t_rt } }
+        - { query: introspection.list-foreign-keys, params: { schema: "{{schema}}", table: t_rt } }
+        - { query: introspection.list-tables, params: { schema: "{{schema}}" } }
+  - roundtrip:
+      operation: introspection.view-ddl
+      params: { schema_name: "{{schema}}", view_name: v_rt }
+      drop: { sqlserver: [DROP VIEW v_rt] }
+      compare:
+        - { query: introspection.list-views, params: { schema: "{{schema}}" } }
+  - roundtrip:
+      operation: introspection.routine-ddl
+      params: { schema_name: "{{schema}}", specific_name: f_rt }
+      drop: { sqlserver: [DROP FUNCTION f_rt] }
+      compare:
+        - { query: introspection.list-routines, params: { schema: "{{schema}}" } }
+  - roundtrip:
+      operation: introspection.routine-ddl
+      params: { schema_name: "{{schema}}", specific_name: p_rt }
+      drop: { sqlserver: [DROP PROCEDURE p_rt] }
+      compare:
+        - { query: introspection.list-routines, params: { schema: "{{schema}}" } }
+  - roundtrip:
+      operation: introspection.trigger-ddl
+      params: { schema_name: "{{schema}}", table_name: t_rt_parent, trigger_name: tr_rt }
+      drop: { sqlserver: [DROP TRIGGER tr_rt] }
+      compare:
+        - { query: introspection.list-triggers, params: { schema: "{{schema}}", table: t_rt_parent } }

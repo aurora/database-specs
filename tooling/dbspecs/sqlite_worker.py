@@ -7,6 +7,7 @@ Requests:  {"op": "version"}
            {"op": "connect"}                -> {"ok": true, "conn": <id>}  (new connection, same database file)
            {"op": "close", "conn": <id>}
            {"op": "execute", "conn": <id>, "sql": "...", "params": {...} | [...] | null}
+           {"op": "script", "conn": <id>, "sql": "..."}   (several statements, sqlite3.executescript)
 Responses: {"ok": true, "columns": [...] | null, "rows": [[...], ...]}
            {"ok": false, "error": "..."}
 """
@@ -42,6 +43,9 @@ def main():
             elif req["op"] == "close":
                 conns.pop(req["conn"]).close()
                 resp = {"ok": True}
+            elif req["op"] == "script":
+                conns[req["conn"]].executescript(req["sql"])
+                resp = {"ok": True, "columns": None, "rows": []}
             elif req["op"] == "execute":
                 cur = conns[req["conn"]].execute(req["sql"], req.get("params") or ())
                 columns = [d[0] for d in cur.description] if cur.description else None

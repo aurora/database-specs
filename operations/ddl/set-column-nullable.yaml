@@ -27,3 +27,13 @@ implementations:
       transactional: true
       caveats: ["SET NOT NULL scans the table (fails on NULLs). Primary key columns cannot DROP NOT NULL."]
       sources: [{ evidence: tested }]
+  sqlserver:
+    - status: supported
+      template: "ALTER TABLE {{table}} ALTER COLUMN {{column}} {{column_definition}}"
+      requires: [column_definition]
+      transactional: true
+      caveats: ["column_definition is the type (with COLLATE) plus NULL / NOT NULL; the default constraint is kept. Fails if an index or constraint depends on the column."]
+      sources: [{ evidence: tested }]
+  sqlite:
+    - status: unsupported
+      notes: ["No ALTER for this: rebuild the table (see the emulated steps of ddl.change-column-type)."]

@@ -26,3 +26,15 @@ implementations:
       transactional: true
       caveats: ["Transactional; takes an ACCESS EXCLUSIVE lock. Without CASCADE it fails when other tables reference this one."]
       sources: [{ evidence: tested }]
+  sqlserver:
+    - status: supported
+      template: "TRUNCATE TABLE {{table}}"
+      transactional: true
+      caveats: ["Transactional (can be rolled back), resets IDENTITY, does not fire triggers. Fails if any foreign key references the table."]
+      sources: [{ evidence: tested }]
+  sqlite:
+    - status: supported
+      template: "DELETE FROM {{table}}"
+      transactional: true
+      caveats: ["There is no TRUNCATE; DELETE without WHERE uses the truncate optimization (unless triggers exist). AUTOINCREMENT counters in sqlite_sequence are not reset."]
+      sources: [{ evidence: tested }]

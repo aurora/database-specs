@@ -31,3 +31,17 @@ implementations:
         - "No column position; new columns are always last (reordering means recreating the table)."
         - "A non-volatile DEFAULT is instant since 11; a volatile one (random(), clock_timestamp()) rewrites the table."
       sources: [{ evidence: tested }]
+  sqlserver:
+    - status: supported
+      template: "ALTER TABLE {{table}} ADD {{column}} {{column_definition}}"
+      requires: [column_definition]
+      transactional: true
+      caveats: ["No COLUMN keyword and no position. A NOT NULL column needs a DEFAULT when the table has rows; the default becomes a named constraint (DF__...)."]
+      sources: [{ evidence: tested }]
+  sqlite:
+    - status: supported
+      template: "ALTER TABLE {{table}} ADD COLUMN {{column}} {{column_definition}}"
+      requires: [column_definition]
+      transactional: true
+      caveats: ["Always appended. Not allowed: PRIMARY KEY / UNIQUE, a non-constant default (CURRENT_TIMESTAMP, expressions), NOT NULL without a non-NULL default, a STORED generated column."]
+      sources: [{ evidence: tested }]

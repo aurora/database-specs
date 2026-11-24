@@ -207,9 +207,9 @@ def _roundtrip(specs: Specs, server: Server, conn, spec: dict) -> list[str]:
     impl = _operation_impl(specs, spec["operation"], server)
     ddl = _result_text(_run_operation(specs, server, conn, spec["operation"], _step_params(spec, server)), impl)
     _exec_all(conn, _statements(spec["drop"].get(server.engine), server.version))
+    lexical = specs.get("lexical", specs.get("engine", server.engine)["lexical"])
     try:
-        with conn.cursor() as cur:
-            cur.execute(ddl)
+        server.run_script(conn, ddl, lexical["statements"].get("batch_separator"))
     except Exception as exc:
         return [f"reconstructed DDL failed: {exc}".splitlines()[0] + f" -- DDL: {ddl[:300]!r}"]
     problems = []

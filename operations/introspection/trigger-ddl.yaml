@@ -7,6 +7,7 @@ parameters:
   - { name: table_name, kind: string-literal, description: "PostgreSQL." }
   - { name: trigger_name, kind: string-literal, description: "PostgreSQL." }
 
+  - { name: schema, kind: identifier, description: "SQLite: schema (main, temp or an attached database)." }
 implementations:
   mysql:
     - status: supported
@@ -41,4 +42,29 @@ implementations:
           AND NOT t.tgisinternal
       caveats:
         - "The trigger function is a separate object (introspection.routine-ddl) and must exist first."
+      sources: [{ evidence: tested }]
+  sqlserver:
+    - status: supported
+      requires: [schema_name, table_name, trigger_name]
+      result_column: 1
+      template: |
+        SELECT m.definition
+            + CASE WHEN t.is_disabled = 1
+                   THEN CHAR(10) + 'GO' + CHAR(10) + 'DISABLE TRIGGER ' + QUOTENAME(s.name) + '.' + QUOTENAME(t.name)
+                        + ' ON ' + QUOTENAME(s.name) + '.' + QUOTENAME(o.name)
+                   ELSE '' END
+            AS ddl
+        FROM sys.triggers t
+        JOIN sys.objects o     ON o.object_id = t.parent_id
+        JOIN sys.schemas s     ON s.schema_id = o.schema_id
+        JOIN sys.sql_modules m ON m.object_id = t.object_id
+        WHERE s.name = {{schema_name}} AND o.name = {{table_name}} AND t.name = {{trigger_name}}
+      caveats: ["The original CREATE TRIGGER text; trigger firing order (sp_settriggerorder) is not included."]
+      sources: [{ evidence: tested }]
+  sqlite:
+    - status: supported
+      requires: [schema, trigger_name]
+      result_column: 1
+      template: "SELECT m.sql || ';' AS ddl FROM {{schema}}.sqlite_master m WHERE m.type = 'trigger' AND m.name = {{trigger_name}}"
+      caveats: ["The original text; the body contains ';' - execute as one statement or a script, never split on ';'."]
       sources: [{ evidence: tested }]

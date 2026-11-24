@@ -33,6 +33,15 @@ variants:
       - "Since 15 the public schema is owned by pg_database_owner."
       - "Encoding / collation belong to the database, not the schema: NULL."
     sources: [{ evidence: tested }]
-
-gaps:
-  - "SQL Server, SQLite: not yet written."
+  - engine: sqlserver
+    since: "14"
+    file: sqlserver.sql
+    notes:
+      - "Schemas of the current database. Fixed database-role schemas (db_owner, ...; schema_id >= 16384), sys, INFORMATION_SCHEMA and guest are flagged is_system."
+      - "Collation belongs to the database (and columns), not the schema."
+  - engine: sqlite
+    since: "3.26"
+    file: sqlite.sql
+    notes:
+      - "Schemas are the attached databases (main, ATTACH ... AS name, and temp once a temporary object exists); temp is flagged is_system."
+      - "default_charset is the text encoding of the main database (UTF-8 / UTF-16le / UTF-16be)."

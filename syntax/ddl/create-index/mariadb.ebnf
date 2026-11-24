@@ -1,0 +1,29 @@
+/* MariaDB - CREATE INDEX (10.6 - 12.x)
+   Built-ins: identifier, string_literal, integer, expression.
+   Version annotations apply to the item that follows them. */
+
+create_index ::= 'CREATE' ( 'OR' 'REPLACE' )?
+                 ( 'UNIQUE' | 'FULLTEXT' | 'SPATIAL' | /* @since 11.7 */ 'VECTOR' )? 'INDEX'
+                 ( 'IF' 'NOT' 'EXISTS' )? identifier index_type?
+                 'ON' table_name '(' key_part ( ',' key_part )* ')'
+                 wait_option?
+                 index_option* ( algorithm_option | lock_option )*
+
+table_name ::= identifier ( '.' identifier )?
+
+key_part ::= identifier ( '(' integer ')' )? ( 'ASC' | 'DESC' )?
+
+index_type ::= 'USING' ( 'BTREE' | 'HASH' | 'RTREE' )
+
+wait_option ::= 'WAIT' integer | 'NOWAIT'
+
+index_option ::= 'KEY_BLOCK_SIZE' '='? integer
+               | index_type
+               | 'WITH' 'PARSER' identifier
+               | 'COMMENT' string_literal
+               | /* @since 10.6 */ ( 'NOT'? 'IGNORED' )
+               | /* @since 11.7 */ ( ( 'M' | 'DISTANCE' ) '=' ( integer | identifier ) )
+
+algorithm_option ::= 'ALGORITHM' '='? ( 'DEFAULT' | 'INPLACE' | 'COPY' | 'NOCOPY' | 'INSTANT' )
+
+lock_option ::= 'LOCK' '='? ( 'DEFAULT' | 'NONE' | 'SHARED' | 'EXCLUSIVE' )

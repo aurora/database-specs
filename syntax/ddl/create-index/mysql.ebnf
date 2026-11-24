@@ -1,0 +1,27 @@
+/* MySQL - CREATE INDEX (5.7 - 9.x)
+   Built-ins: identifier, string_literal, integer, expression.
+   Version annotations apply to the item that follows them. */
+
+create_index ::= 'CREATE' ( 'UNIQUE' | 'FULLTEXT' | 'SPATIAL' )? 'INDEX' identifier index_type?
+                 'ON' table_name '(' key_part ( ',' key_part )* ')'
+                 index_option* ( algorithm_option | lock_option )*
+
+table_name ::= identifier ( '.' identifier )?
+
+key_part ::= ( identifier ( '(' integer ')' )?
+             | /* @since 8.0.13 */ ( '(' expression ')' ) )
+             ( 'ASC' | 'DESC' )?
+
+index_type ::= 'USING' ( 'BTREE' | 'HASH' )
+
+index_option ::= 'KEY_BLOCK_SIZE' '='? integer
+               | index_type
+               | 'WITH' 'PARSER' identifier
+               | 'COMMENT' string_literal
+               | /* @since 8.0 */ ( 'VISIBLE' | 'INVISIBLE' )
+               | /* @since 8.0.21 */ ( 'ENGINE_ATTRIBUTE' '='? string_literal )
+               | /* @since 8.0.21 */ ( 'SECONDARY_ENGINE_ATTRIBUTE' '='? string_literal )
+
+algorithm_option ::= 'ALGORITHM' '='? ( 'DEFAULT' | 'INPLACE' | 'COPY' )
+
+lock_option ::= 'LOCK' '='? ( 'DEFAULT' | 'NONE' | 'SHARED' | 'EXCLUSIVE' )

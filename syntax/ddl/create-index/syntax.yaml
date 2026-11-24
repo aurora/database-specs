@@ -1,0 +1,189 @@
+# yaml-language-server: $schema=../../../schemas/syntax.schema.json
+id: ddl.create-index
+title: CREATE INDEX
+description: >
+  Curated syntax per engine. Every example is checked offline against the grammar for each
+  engine version series, and by `dbspecs test` against real servers.
+
+grammars:
+  mysql:
+    file: mysql.ebnf
+    start: create_index
+    since: "5.7"
+    notes:
+      - "5.7 parses ASC/DESC but ignores DESC; descending indexes are real since 8.0."
+      - "Functional key parts need their own parentheses: ((expr)), not (lower(b))."
+      - "Prefix length (col(10)) is required for BLOB/TEXT columns."
+    sources: [{ evidence: tested }]
+  mariadb:
+    file: mariadb.ebnf
+    start: create_index
+    since: "10.6"
+    notes:
+      - "No functional key parts; index a (virtual) generated column instead."
+      - "IGNORED / NOT IGNORED (10.6+) is MariaDB's counterpart to MySQL's INVISIBLE / VISIBLE."
+      - "ASC/DESC is parsed always; descending indexes are real since 10.8."
+      - "VECTOR indexes (11.7+) need a NOT NULL VECTOR(n) column; not covered by examples yet."
+    sources: [{ evidence: tested }]
+  postgresql:
+    file: postgresql.ebnf
+    start: create_index
+    since: "12"
+    notes:
+      - "Index name is optional; the server generates one."
+      - "A function call can be used directly as index element; other expressions need parentheses."
+      - "CONCURRENTLY cannot run inside a transaction block."
+      - "The grammar treats opclass, collation and storage parameter names as plain identifiers."
+    sources: [{ evidence: tested }]
+
+setup:
+  mysql: ["CREATE TABLE t_idx (a INT, b VARCHAR(50), c TEXT, d INT, g POINT NOT NULL)"]
+  mariadb: ["CREATE TABLE t_idx (a INT, b VARCHAR(50), c TEXT, d INT, g POINT NOT NULL)"]
+  postgresql: ["CREATE TABLE t_idx (a int, b varchar(50), c text, d int)"]
+cleanup:
+  mysql: [DROP TABLE IF EXISTS t_idx]
+  mariadb: [DROP TABLE IF EXISTS t_idx]
+  postgresql: [DROP TABLE IF EXISTS t_idx]
+
+examples:
+  # --- common ---------------------------------------------------------------
+  - sql: CREATE INDEX i_a ON t_idx (a)
+    expect: valid
+    engines: { mysql: {}, mariadb: {}, postgresql: {} }
+  - sql: CREATE UNIQUE INDEX i_ab ON t_idx (a, b DESC)
+    expect: valid
+    engines: { mysql: {}, mariadb: {}, postgresql: {} }
+  - sql: CREATE INDEX i_x t_idx (a)
+    expect: invalid
+    engines: { mysql: {}, mariadb: {}, postgresql: {} }
+    notes: ["Missing ON."]
+  - sql: CREATE INDEX i_e ON t_idx ()
+    expect: invalid
+    engines: { mysql: {}, mariadb: {}, postgresql: {} }
+
+  # --- MySQL / MariaDB ------------------------------------------------------
+  - sql: CREATE INDEX i_b ON t_idx (b(10))
+    expect: valid
+    engines: { mysql: {}, mariadb: {} }
+  - sql: CREATE INDEX i_b ON t_idx (b(10))
+    expect: semantic-error
+    engines: { postgresql: {} }
+    notes: ["Parsed as a call of function b(); fails because no such function exists."]
+  - sql: CREATE INDEX i_u USING BTREE ON t_idx (a)
+    expect: valid
+    engines: { mysql: {}, mariadb: {} }
+  - sql: CREATE INDEX i_u USING BTREE ON t_idx (a)
+    expect: invalid
+    engines: { postgresql: {} }
+  - sql: CREATE FULLTEXT INDEX i_ft ON t_idx (c)
+    expect: valid
+    engines: { mysql: {}, mariadb: {} }
+  - sql: CREATE FULLTEXT INDEX i_ft ON t_idx (c)
+    expect: invalid
+    engines: { postgresql: {} }
+  - sql: CREATE SPATIAL INDEX i_g ON t_idx (g)
+    expect: valid
+    engines: { mysql: {}, mariadb: {} }
+  - sql: CREATE INDEX i_alg ON t_idx (a) ALGORITHM = INPLACE LOCK = NONE
+    expect: valid
+    engines: { mysql: {}, mariadb: {} }
+  - sql: CREATE INDEX i_ord ON t_idx (a) ALGORITHM = COPY COMMENT 'x'
+    expect: invalid
+    engines: { mysql: {}, mariadb: {} }
+    notes: ["Algorithm/lock options must come after all index options."]
+  - sql: CREATE INDEX i_cmt ON t_idx (a) COMMENT 'lookup by a'
+    expect: valid
+    engines: { mysql: {}, mariadb: {} }
+  - sql: CREATE INDEX i_cmt ON t_idx (a) COMMENT 'lookup by a'
+    expect: invalid
+    engines: { postgresql: {} }
+
+  # --- MySQL only -----------------------------------------------------------
+  - sql: CREATE INDEX i_expr ON t_idx ((a + d))
+    expect: valid
+    engines: { mysql: { since: "8.0.13" }, postgresql: {} }
+  - sql: CREATE INDEX i_expr ON t_idx ((a + d))
+    expect: invalid
+    engines: { mysql: { until: "8.0.13" }, mariadb: {} }
+  - sql: CREATE INDEX i_inv ON t_idx (a) INVISIBLE
+    expect: valid
+    engines: { mysql: { since: "8.0" } }
+  - sql: CREATE INDEX i_inv ON t_idx (a) INVISIBLE
+    expect: invalid
+    engines: { mysql: { until: "8.0" }, mariadb: {}, postgresql: {} }
+  - sql: CREATE INDEX i_lower ON t_idx (lower(b))
+    expect: invalid
+    engines: { mysql: {}, mariadb: {} }
+    notes: ["MySQL needs ((lower(b)))."]
+
+  # --- MariaDB only ---------------------------------------------------------
+  - sql: CREATE OR REPLACE INDEX i_a ON t_idx (a)
+    expect: valid
+    engines: { mariadb: {} }
+  - sql: CREATE OR REPLACE INDEX i_a ON t_idx (a)
+    expect: invalid
+    engines: { mysql: {}, postgresql: {} }
+  - sql: CREATE INDEX i_ign ON t_idx (a) IGNORED
+    expect: valid
+    engines: { mariadb: { since: "10.6" } }
+  - sql: CREATE INDEX i_ign ON t_idx (a) IGNORED
+    expect: invalid
+    engines: { mysql: {}, postgresql: {} }
+  - sql: CREATE INDEX i_w ON t_idx (a) WAIT 5
+    expect: valid
+    engines: { mariadb: {} }
+  - sql: CREATE INDEX i_w ON t_idx (a) WAIT 5
+    expect: invalid
+    engines: { mysql: {} }
+
+  # --- MariaDB + PostgreSQL -------------------------------------------------
+  - sql: CREATE INDEX IF NOT EXISTS i_a ON t_idx (a)
+    expect: valid
+    engines: { mariadb: {}, postgresql: {} }
+  - sql: CREATE INDEX IF NOT EXISTS i_a ON t_idx (a)
+    expect: invalid
+    engines: { mysql: {} }
+
+  # --- PostgreSQL only ------------------------------------------------------
+  - sql: CREATE INDEX ON t_idx (a)
+    expect: valid
+    engines: { postgresql: {} }
+  - sql: CREATE INDEX ON t_idx (a)
+    expect: invalid
+    engines: { mysql: {}, mariadb: {} }
+  - sql: CREATE INDEX CONCURRENTLY i_c ON t_idx (a)
+    expect: valid
+    engines: { postgresql: {} }
+  - sql: CREATE INDEX i_m ON t_idx USING hash (b)
+    expect: valid
+    engines: { postgresql: {} }
+  - sql: CREATE INDEX i_m ON t_idx USING hash (b)
+    expect: invalid
+    engines: { mysql: {}, mariadb: {} }
+  - sql: CREATE INDEX i_lower ON t_idx (lower(b))
+    expect: valid
+    engines: { postgresql: {} }
+  - sql: CREATE INDEX i_ops ON t_idx (b varchar_pattern_ops)
+    expect: valid
+    engines: { postgresql: {} }
+  - sql: CREATE INDEX i_col ON t_idx (b COLLATE "C" DESC NULLS LAST)
+    expect: valid
+    engines: { postgresql: {} }
+  - sql: CREATE INDEX i_inc ON t_idx (a) INCLUDE (b, c)
+    expect: valid
+    engines: { postgresql: {} }
+  - sql: CREATE UNIQUE INDEX i_nnd ON t_idx (a) NULLS NOT DISTINCT
+    expect: valid
+    engines: { postgresql: { since: "15" } }
+  - sql: CREATE UNIQUE INDEX i_nnd ON t_idx (a) NULLS NOT DISTINCT
+    expect: invalid
+    engines: { postgresql: { until: "15" } }
+  - sql: CREATE INDEX i_ff ON t_idx (a) WITH (fillfactor = 70)
+    expect: valid
+    engines: { postgresql: {} }
+  - sql: CREATE INDEX i_part ON t_idx (a) WHERE d > 0 AND b IS NOT NULL
+    expect: valid
+    engines: { postgresql: {} }
+  - sql: CREATE INDEX i_part ON t_idx (a) WHERE d > 0
+    expect: invalid
+    engines: { mysql: {}, mariadb: {} }

@@ -18,6 +18,7 @@ KINDS = {
     "capabilities": "capability",
     "operations": "operation",
     "queries": "query",
+    "syntax": "syntax",
     "tests/cases": "test",
 }
 

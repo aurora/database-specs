@@ -8,7 +8,9 @@ from pathlib import Path
 from jsonschema import Draft202012Validator, FormatChecker
 from referencing import Registry, Resource
 
+from .ebnf import GrammarError
 from .specs import KINDS, Specs
+from .syntax import load_grammar, offline_check
 
 BASE = "https://db-specs.invalid/schemas/"
 
@@ -40,11 +42,14 @@ def validate(specs: Specs) -> list[str]:
         return errors  # cross refs assume valid structure
 
     # 2. ids unique per kind and matching the file location
-    for kind in ("capability", "operation", "query"):
+    for kind in ("capability", "operation", "query", "syntax"):
         for doc_id in specs.docs[kind]:
             path = specs.path(kind, doc_id)
             rel = path.relative_to(specs.root)
-            expected = ".".join(rel.with_suffix("").parts[1:]) if kind != "query" else ".".join(rel.parent.parts[1:])
+            if kind in ("query", "syntax"):
+                expected = ".".join(rel.parent.parts[1:])
+            else:
+                expected = ".".join(rel.with_suffix("").parts[1:])
             if doc_id != expected:
                 errors.append(f"{rel}: id '{doc_id}' should be '{expected}' (derived from path)")
     for kind in ("engine", "protocol", "lexical"):
@@ -96,6 +101,38 @@ def validate(specs: Specs) -> list[str]:
             check_engine(rel, var["engine"])
             if not (path.parent / var["file"]).is_file():
                 errors.append(f"{rel}: variant file '{var['file']}' missing")
+
+    for doc_id, syn in specs.docs["syntax"].items():
+        rel = specs.path("syntax", doc_id).relative_to(specs.root)
+        parse_ok = True
+        for eid, g in syn["grammars"].items():
+            check_engine(rel, eid)
+            if eid not in engines:
+                parse_ok = False
+                continue
+            try:
+                grammar = load_grammar(specs, doc_id, eid)
+            except FileNotFoundError:
+                errors.append(f"{rel}: grammar file '{g['file']}' missing")
+                parse_ok = False
+                continue
+            except GrammarError as exc:
+                errors.append(f"{rel}: {g['file']}: {exc}")
+                parse_ok = False
+                continue
+            if g["start"] not in grammar.rules:
+                errors.append(f"{rel}: {g['file']}: start rule '{g['start']}' not defined")
+                parse_ok = False
+            for name in sorted(grammar.undefined()):
+                errors.append(f"{rel}: {g['file']}: rule '{name}' referenced but not defined")
+                parse_ok = False
+        for i, ex in enumerate(syn["examples"]):
+            for eid in ex["engines"]:
+                if eid not in syn["grammars"]:
+                    errors.append(f"{rel}: example {i} names engine '{eid}' without a grammar")
+                    parse_ok = False
+        if parse_ok:
+            errors += [f"{rel}: {p}" for p in offline_check(specs, doc_id)]
 
     for doc_id, t in specs.docs["test"].items():
         rel = specs.path("test", doc_id).relative_to(specs.root)

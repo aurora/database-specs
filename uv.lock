@@ -20,6 +20,7 @@ dependencies = [
     { name = "psycopg", extra = ["binary"] },
     { name = "pymysql" },
     { name = "pyyaml" },
+    { name = "railroad-diagrams" },
     { name = "referencing" },
 ]
 
@@ -29,6 +30,7 @@ requires-dist = [
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
     { name = "pymysql", specifier = ">=1.1" },
     { name = "pyyaml", specifier = ">=6.0" },
+    { name = "railroad-diagrams", specifier = ">=3.0.1" },
     { name = "referencing", specifier = ">=0.35" },
 ]
 
@@ -219,6 +221,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/bb/85/62d54e223b4bc89ff85f087a5ce2648e5d929d3214d64613dbae17d5e045/pyyaml-6.0.4-cp315-cp315t-musllinux_1_2_x86_64.whl", hash = "sha256:a65339c24f2fb8d4419e06ceec1bda98bdcff727b3b533a81d5af6bb2dd34520", size = 845763, upload-time = "2026-11-20T23:37:01.331Z" },
     { url = "https://files.pythonhosted.org/packages/eb/40/6bd9090368664be984a83fd7fe64f8e044b067a52449679c309706e3199d/pyyaml-6.0.4-cp315-cp315t-win_amd64.whl", hash = "sha256:a3cc63af3d639d1609143711837b926183418260aae89ed95193c07b25b99d33", size = 163170, upload-time = "2026-11-20T23:37:02.3Z" },
     { url = "https://files.pythonhosted.org/packages/0d/22/468d36762a0c650cf2295052998eb1d419053335ea9ff48a043f5ae4d578/pyyaml-6.0.4-cp315-cp315t-win_arm64.whl", hash = "sha256:d276f23e2371deb5ee68dd252cc9c2402b806b54d8d2cc7efbb6c34c3a78d886", size = 156942, upload-time = "2026-11-20T23:37:03.209Z" },
+]
+
+[[package]]
+name = "railroad-diagrams"
+version = "3.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/3a/08/25c49a573ff9c482cc7bc48574440170a6a9ad5562de5c50db8887ecfece/railroad-diagrams-3.0.1.tar.gz", hash = "sha256:a91332bac900cb3c367331fa9b699f0897bcf86b7264f65458675df430d04ce3", size = 22057, upload-time = "2023-02-14T21:23:28.346Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ca/43/fcf01f1ab9f744c545384bacea51016a267162de0b9e7c6fcd4996c84231/railroad_diagrams-3.0.1-py3-none-any.whl", hash = "sha256:d414ff2439ed53345950e197938097548721b5d097926fafeaabc2bb069b44f9", size = 15012, upload-time = "2023-02-14T21:23:26.353Z" },
 ]
 
 [[package]]

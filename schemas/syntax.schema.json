@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://db-specs.invalid/schemas/syntax.schema.json",
+  "title": "Statement syntax",
+  "description": "Curated EBNF per engine for one statement, plus examples that are checked against both the grammar (offline, per version) and real servers. Not a full parser grammar.",
+  "type": "object",
+  "required": ["id", "title", "grammars", "examples"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/id" },
+    "title": { "type": "string" },
+    "description": { "type": "string" },
+    "grammars": {
+      "type": "object",
+      "propertyNames": { "$ref": "common.schema.json#/$defs/engineId" },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["file", "start"],
+        "additionalProperties": false,
+        "properties": {
+          "file": { "type": "string", "pattern": "^[a-z0-9._-]+\\.ebnf$" },
+          "start": { "type": "string" },
+          "since": { "$ref": "common.schema.json#/$defs/version", "description": "Oldest version the grammar describes." },
+          "notes": { "$ref": "common.schema.json#/$defs/notes" },
+          "sources": { "$ref": "common.schema.json#/$defs/sources" }
+        }
+      }
+    },
+    "setup": {
+      "description": "Statements run before every example (per engine).",
+      "type": "object",
+      "additionalProperties": { "type": "array", "items": { "type": "string" } }
+    },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": { "type": "array", "items": { "type": "string" } }
+    },
+    "examples": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["sql", "expect", "engines"],
+        "additionalProperties": false,
+        "properties": {
+          "sql": { "type": "string" },
+          "expect": {
+            "description": "valid: grammar accepts, server executes. invalid: both reject. semantic-error: grammar accepts, server rejects (e.g. unknown function).",
+            "enum": ["valid", "invalid", "semantic-error"]
+          },
+          "engines": {
+            "description": "Engine -> version range ({} = all versions) the expectation holds for.",
+            "type": "object",
+            "propertyNames": { "$ref": "common.schema.json#/$defs/engineId" },
+            "additionalProperties": { "$ref": "common.schema.json#/$defs/rangeFields" }
+          },
+          "notes": { "$ref": "common.schema.json#/$defs/notes" }
+        }
+      }
+    }
+  }
+}

@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 
 from .servers import Server, fetch_dicts, to_pyformat
 from .specs import Specs, in_range, quote_identifier, render, statement_for, variant_for
+from .syntax import examples_for, grammar_accepts, grammar_should_accept, server_should_accept
 
 
 @dataclass
@@ -181,6 +182,39 @@ def run_tests(specs: Specs, server: Server, report: Report):
             _cleanup(server, test.get("cleanup", {}).get(server.engine, []))
         report.add(Result(server.target["id"], server.version, "test", test_id,
                           "fail" if problems else "pass", "; ".join(problems)))
+
+
+def run_syntax(specs: Specs, server: Server, report: Report):
+    """Each example: grammar (for the server's exact version) and server must agree with `expect`."""
+    for syn_id, syn in sorted(specs.docs["syntax"].items()):
+        if server.engine not in syn["grammars"]:
+            continue
+        for i, ex in examples_for(syn, server.engine, server.version):
+            name = f"{syn_id}#{i}"
+            problems = []
+            if grammar_accepts(specs, syn_id, server.engine, server.version, ex["sql"]) != grammar_should_accept(ex["expect"]):
+                problems.append("grammar disagrees")
+            error = ""
+            try:
+                with server.connect() as conn:
+                    _exec_all(conn, syn.get("setup", {}).get(server.engine, []))
+                    try:
+                        _exec_all(conn, [ex["sql"]])
+                        ok = True
+                    except Exception as exc:
+                        ok, error = False, f"{exc}".splitlines()[0]
+            except Exception as exc:
+                problems.append(f"setup failed: {exc}")
+                ok = None
+            finally:
+                _cleanup(server, syn.get("cleanup", {}).get(server.engine, []))
+            if ok is not None and ok != server_should_accept(ex["expect"]):
+                problems.append(f"server {'accepts' if ok else 'rejects'}" + (f" ({error})" if error else ""))
+            detail = "; ".join(problems)
+            if detail:
+                detail = f"expect={ex['expect']}: {detail} - {ex['sql']}"
+            report.add(Result(server.target["id"], server.version, "syntax", name,
+                              "fail" if problems else "pass", detail))
 
 
 def report_json(report: Report) -> dict:

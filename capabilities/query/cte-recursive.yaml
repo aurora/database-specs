@@ -9,10 +9,14 @@ support:
     - since: "8.0"
       status: supported
       notes: ["Recursion depth limited by cte_max_recursion_depth (default 1000)."]
+  mariadb:
+    - since: "10.2.2"
+      status: supported
+      notes: ["Recursion depth limited by max_recursive_iterations; CYCLE ... RESTRICT clause since 10.5.2."]
   postgresql:
     - since: "8.4"
       status: supported
       notes: ["SEARCH and CYCLE clauses since 14."]
 probes:
-  - engines: [mysql, postgresql]
+  - engines: [mysql, mariadb, postgresql]
     statements: ["WITH RECURSIVE r (n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM r WHERE n < 3) SELECT n FROM r"]

@@ -54,7 +54,7 @@ def cmd_test(args) -> int:
                 run_probes(specs, server, report)
                 run_tests(specs, server, report)
                 for r in report.results[n:]:
-                    mark = {"pass": "ok  ", "fail": "FAIL", "observed": "obs "}.get(r.outcome, r.outcome)
+                    mark = {"pass": "ok  ", "fail": "FAIL", "observed": "obs ", "skip": "skip"}.get(r.outcome, r.outcome)
                     print(f"   {mark} {r.kind:5} {r.id}" + (f"  - {r.detail}" if r.detail else ""))
         except Exception as exc:
             print(f"   FAIL could not start/connect: {exc}")

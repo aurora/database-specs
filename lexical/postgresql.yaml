@@ -59,9 +59,7 @@ statements:
     - "Since 14, CREATE FUNCTION ... BEGIN ATOMIC ... END contains ';' without dollar quoting; the splitter must track BEGIN ATOMIC/END nesting."
 
 keywords:
-  server_query:
-    sql: SELECT word, catcode = 'R' AS reserved FROM pg_get_keywords() ORDER BY word
-    notes: ["catcode: U = unreserved, C = unreserved (cannot be function/type name), T = reserved (can be function/type name), R = reserved."]
+  query: lexical.keywords
 
 sources:
   - evidence: unverified

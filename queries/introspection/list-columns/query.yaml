@@ -43,6 +43,15 @@ variants:
       - "default_raw: string literals come back unquoted (DEFAULT 'abc' -> abc) and CURRENT_TIMESTAMP comes back bare, so a string default 'CURRENT_TIMESTAMP' looks like the function. Since 8.0.13 expression defaults are flagged with DEFAULT_GENERATED in EXTRA (unverified)."
       - "collation: reported for every character column (effective collation)."
       - "data_type: integer display width (int(11)) is dropped from 8.0.19 on, except tinyint(1) and ZEROFILL columns."
+  - engine: mariadb
+    since: "10.2.7"
+    file: mariadb.sql
+    notes:
+      - "default_raw: COLUMN_DEFAULT is an SQL expression since 10.2.7 (strings quoted: 'x'; functions as current_timestamp()). MariaDB reports the string NULL both for DEFAULT NULL and for nullable columns without default; both are mapped to SQL NULL (a string default 'NULL' arrives quoted and stays distinguishable)."
+      - "data_type keeps the integer display width (int(11))."
+      - "JSON columns appear as longtext with collation utf8mb4_bin (JSON is an alias plus a json_valid() CHECK constraint)."
+      - "collation: reported for every character column (effective collation)."
+    sources: [{ evidence: observed, verified_at: 2026-11-24, notes: "MariaDB 11.4.13" }]
   - engine: postgresql
     since: "12"
     file: postgresql.sql
@@ -54,3 +63,4 @@ variants:
 gaps:
   - "MySQL < 5.7 (no GENERATION_EXPRESSION column)."
   - "PostgreSQL < 12 (no attgenerated)."
+  - "MariaDB < 10.2.7 (defaults not reported as expressions)."

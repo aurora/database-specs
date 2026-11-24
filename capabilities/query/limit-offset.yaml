@@ -6,9 +6,12 @@ support:
   mysql:
     - status: supported
       notes: ["Also LIMIT m, n (offset first). No 'LIMIT ALL'; use a huge number (18446744073709551615) for offset-only."]
+  mariadb:
+    - status: supported
+      notes: ["Also LIMIT m, n (offset first). LIMIT ROWS EXAMINED n is MariaDB-specific."]
   postgresql:
     - status: supported
       notes: ["LIMIT ALL / LIMIT NULL mean no limit. 'LIMIT m, n' is not supported."]
 probes:
-  - engines: [mysql, postgresql]
+  - engines: [mysql, mariadb, postgresql]
     statements: ["SELECT n FROM (SELECT 1 AS n) t ORDER BY n LIMIT 1 OFFSET 0"]

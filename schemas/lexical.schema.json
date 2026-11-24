@@ -144,12 +144,9 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "server_query": {
-          "description": "Query that returns the keyword list from a live server (preferred source; generated files go to generated/).",
-          "allOf": [{ "$ref": "#/$defs/versioned" }],
-          "type": "object",
-          "required": ["sql"],
-          "properties": { "sql": { "type": "string" } }
+        "query": {
+          "description": "Id of the query contract that returns the keyword list from a live server (see queries/lexical/keywords).",
+          "$ref": "common.schema.json#/$defs/id"
         },
         "notes": { "$ref": "common.schema.json#/$defs/notes" }
       }

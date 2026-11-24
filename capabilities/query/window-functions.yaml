@@ -7,10 +7,14 @@ support:
       status: unsupported
     - since: "8.0"
       status: supported
+  mariadb:
+    - since: "10.2.0"
+      status: supported
+      notes: ["GROUPS frame units are not supported (verify)."]
   postgresql:
     - since: "8.4"
       status: supported
       notes: ["GROUPS frames and EXCLUDE since 11."]
 probes:
-  - engines: [mysql, postgresql]
+  - engines: [mysql, mariadb, postgresql]
     statements: ["SELECT ROW_NUMBER() OVER (ORDER BY n) AS rn FROM (SELECT 1 AS n) t"]

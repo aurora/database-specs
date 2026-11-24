@@ -1,10 +1,22 @@
 # yaml-language-server: $schema=../../schemas/test.schema.json
 id: list-columns-basic
 description: introspection.list-columns on a table covering auto increment, defaults, generated columns, comments.
-engines: [mysql, postgresql]
+engines: [mysql, mariadb, postgresql]
 
 setup:
   mysql:
+    - |
+      CREATE TABLE t_columns (
+        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL COMMENT 'display name',
+        price DECIMAL(10,2) NULL DEFAULT '0.00',
+        qty INT NOT NULL DEFAULT 1,
+        total DECIMAL(12,2) AS (price * qty) STORED,
+        dropped_later INT,
+        note TEXT
+      )
+    - ALTER TABLE t_columns DROP COLUMN dropped_later
+  mariadb:
     - |
       CREATE TABLE t_columns (
         id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -32,6 +44,7 @@ setup:
 
 cleanup:
   mysql: [DROP TABLE IF EXISTS t_columns]
+  mariadb: [DROP TABLE IF EXISTS t_columns]
   postgresql: [DROP TABLE IF EXISTS t_columns]
 
 steps:
@@ -47,6 +60,18 @@ steps:
         - match: { column_name: name }
           engine: mysql
           values: { data_type: varchar(100) }
+        - match: { column_name: name }
+          engine: mariadb
+          values: { data_type: varchar(100) }
+        - match: { column_name: price }
+          engine: mariadb
+          values: { default_raw: "0.00" }
+        - match: { column_name: note }
+          engine: mariadb
+          values: { default_raw: null }
+        - match: { column_name: id }
+          engine: mariadb
+          values: { data_type: int(11) }
         - match: { column_name: name }
           engine: postgresql
           values: { data_type: character varying(100) }

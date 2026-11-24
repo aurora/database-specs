@@ -27,6 +27,14 @@ implementations:
         - "MODIFY replaces the full definition: every attribute not repeated (NOT NULL, DEFAULT, COMMENT, charset/collation, AUTO_INCREMENT, ON UPDATE) is dropped. Build column_definition from introspection.list-columns."
         - "Implicit commit; may rebuild the table (ALGORITHM=COPY) and block writes on large tables."
         - "Values that do not fit are truncated or rejected depending on sql_mode (STRICT_TRANS_TABLES)."
+  mariadb:
+    - status: supported
+      template: "ALTER TABLE {{table}} MODIFY COLUMN {{column}} {{column_definition}}"
+      requires: [column_definition]
+      transactional: false
+      caveats:
+        - "Same full-definition semantics as MySQL: attributes not repeated are dropped."
+        - "Implicit commit. ALGORITHM=INSTANT/NOCOPY possible for some changes (e.g. widening VARCHAR within the same length-byte class)."
   postgresql:
     - status: supported
       template: "ALTER TABLE {{table}} ALTER COLUMN {{column}} TYPE {{new_type}}{{#using}} USING {{using}}{{/using}}"

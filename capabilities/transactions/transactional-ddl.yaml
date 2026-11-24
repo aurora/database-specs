@@ -10,13 +10,17 @@ support:
       notes:
         - "DDL causes an implicit COMMIT before and after the statement (also commits pending DML!)."
         - "8.0 made DDL atomic (crash-safe per statement), which is not the same as transactional."
+  mariadb:
+    - status: unsupported
+      notes:
+        - "DDL causes an implicit COMMIT, as in MySQL. Atomic (crash-safe) DDL since 10.6 is not the same as transactional."
   postgresql:
     - status: supported
       notes:
         - "Exceptions: CREATE/DROP DATABASE, CREATE/DROP TABLESPACE, CREATE INDEX CONCURRENTLY, VACUUM, ALTER SYSTEM, and ALTER TYPE ... ADD VALUE before 12."
 probes:
   - name: rollback-create-table
-    engines: [mysql]
+    engines: [mysql, mariadb]
     statements:
       - "START TRANSACTION"
       - "CREATE TABLE probe_tx_ddl (id INT)"

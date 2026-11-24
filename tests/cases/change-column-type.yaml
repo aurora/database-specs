@@ -1,16 +1,19 @@
 # yaml-language-server: $schema=../../schemas/test.schema.json
 id: change-column-type
 description: Render ddl.change-column-type and verify the result via introspection.list-columns.
-engines: [mysql, postgresql]
+engines: [mysql, mariadb, postgresql]
 
 setup:
   mysql:
+    - "CREATE TABLE t_alter (id INT PRIMARY KEY, code VARCHAR(10) NOT NULL DEFAULT 'x' COMMENT 'keep me')"
+  mariadb:
     - "CREATE TABLE t_alter (id INT PRIMARY KEY, code VARCHAR(10) NOT NULL DEFAULT 'x' COMMENT 'keep me')"
   postgresql:
     - "CREATE TABLE t_alter (id integer PRIMARY KEY, code varchar(10) NOT NULL DEFAULT 'x')"
 
 cleanup:
   mysql: [DROP TABLE IF EXISTS t_alter]
+  mariadb: [DROP TABLE IF EXISTS t_alter]
   postgresql: [DROP TABLE IF EXISTS t_alter]
 
 steps:
@@ -29,6 +32,9 @@ steps:
         - match: { column_name: code }
           engine: mysql
           values: { data_type: varchar(50), default_raw: x, comment: keep me }
+        - match: { column_name: code }
+          engine: mariadb
+          values: { data_type: varchar(50), default_raw: "'x'", comment: keep me }
         - match: { column_name: code }
           engine: postgresql
           values: { data_type: character varying(50), default_raw: "'x'::character varying" }

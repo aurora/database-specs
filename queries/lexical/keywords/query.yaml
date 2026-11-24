@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=../../../schemas/query.schema.json
+id: lexical.keywords
+title: Keyword list as known by the server
+description: >
+  Source for syntax highlighting and for deciding when an identifier must be quoted.
+  Prefer this over static lists: it matches the exact server version.
+result:
+  order: word
+  columns:
+    - { name: word, type: string, nullable: false, description: Upper case keyword. }
+    - name: reserved
+      type: boolean
+      nullable: true
+      description: true = must be quoted when used as an identifier. NULL = the server does not say.
+
+variants:
+  - engine: mysql
+    since: "8.0.13"
+    file: mysql.sql
+  - engine: mariadb
+    since: "10.6"
+    file: mariadb.sql
+    notes: ["information_schema.KEYWORDS has only a WORD column; reserved is always NULL. information_schema.SQL_FUNCTIONS lists function names."]
+  - engine: postgresql
+    file: postgresql.sql
+    notes: ["reserved = catcode R or T. T ('reserved, can be function or type name', e.g. JOIN, LEFT) still requires quoting as a column name."]
+
+gaps:
+  - "MySQL < 8.0.13: no server-side list; needs a static list per version."
+  - "MariaDB < 10.6: KEYWORDS table missing (verify exact version)."

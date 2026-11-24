@@ -8,10 +8,13 @@ support:
       status: unsupported
     - since: "8.0"
       status: supported
+  mariadb:
+    - since: "10.2.1"
+      status: supported
   postgresql:
     - since: "8.4"
       status: supported
       notes: ["Since 12, non-recursive side-effect-free CTEs referenced once are inlined; MATERIALIZED / NOT MATERIALIZED control this."]
 probes:
-  - engines: [mysql, postgresql]
+  - engines: [mysql, mariadb, postgresql]
     statements: ["WITH x AS (SELECT 1 AS n) SELECT n FROM x"]

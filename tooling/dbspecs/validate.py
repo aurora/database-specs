@@ -67,6 +67,13 @@ def validate(specs: Specs) -> list[str]:
                 errors.append(f"{rel}: unknown protocol '{p}'")
         if eng["lexical"] not in specs.docs["lexical"]:
             errors.append(f"{rel}: unknown lexical spec '{eng['lexical']}'")
+        if "extends" in eng and eng["extends"].split("@")[0] == eid:
+            errors.append(f"{rel}: engine cannot extend itself")
+
+    for lid, lex in specs.docs["lexical"].items():
+        kq = lex.get("keywords", {}).get("query")
+        if kq and kq not in specs.docs["query"]:
+            errors.append(f"{specs.path('lexical', lid).relative_to(specs.root)}: unknown query '{kq}'")
         if "extends" in eng:
             check_engine(rel, eng["extends"].split("@")[0])
 

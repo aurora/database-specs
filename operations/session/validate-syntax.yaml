@@ -16,6 +16,14 @@ implementations:
         - "Parses and resolves tables/columns, does not execute. Not every statement type is preparable (see 'SQL Syntax Permitted in Prepared Statements'); those report an error that is NOT a syntax error (ER_UNSUPPORTED_PS, 1295)."
         - "One statement per call; split scripts first using the lexical spec."
       sources: [{ evidence: unverified }]
+  mariadb:
+    - status: partial
+      method: protocol
+      protocol_call: mysql_stmt_prepare (COM_STMT_PREPARE), then mysql_stmt_close
+      caveats:
+        - "Same approach and limits as MySQL; the set of preparable statements differs (MariaDB allows more, e.g. most DDL)."
+        - "Compound statements (BEGIN NOT ATOMIC ... END) cannot be prepared."
+      sources: [{ evidence: unverified }]
   postgresql:
     - status: supported
       method: protocol

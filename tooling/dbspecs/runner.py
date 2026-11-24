@@ -149,6 +149,10 @@ def run_tests(specs: Specs, server: Server, report: Report):
     for test_id, test in sorted(specs.docs["test"].items()):
         if server.engine not in test["engines"]:
             continue
+        if not in_range(server.version, test.get("versions", {}).get(server.engine, {})):
+            report.add(Result(server.target["id"], server.version, "test", test_id, "skip",
+                              "outside the test's version range"))
+            continue
         problems: list[str] = []
         try:
             with server.connect() as conn:

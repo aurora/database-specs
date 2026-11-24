@@ -81,11 +81,7 @@ statements:
     - "Also \\g and \\G act as terminators in the mysql CLI; a client may support them."
 
 keywords:
-  server_query:
-    since: "8.0.13"
-    sql: SELECT WORD AS word, RESERVED = 1 AS reserved FROM information_schema.KEYWORDS ORDER BY WORD
-  notes:
-    - "Before 8.0.13 there is no server-side list; use the reference manual's keyword page per version."
+  query: lexical.keywords
 
 sources:
   - evidence: unverified

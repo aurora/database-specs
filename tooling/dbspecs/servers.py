@@ -21,6 +21,11 @@ ENGINE_SETUP = {
         "env": {"MYSQL_ROOT_PASSWORD": PASSWORD, "MYSQL_DATABASE": DATABASE},
         "schema": DATABASE,
     },
+    "mariadb": {
+        "port": 3306,
+        "env": {"MARIADB_ROOT_PASSWORD": PASSWORD, "MARIADB_DATABASE": DATABASE},
+        "schema": DATABASE,
+    },
     "postgresql": {
         "port": 5432,
         "env": {"POSTGRES_PASSWORD": PASSWORD, "POSTGRES_DB": DATABASE},
@@ -52,7 +57,7 @@ class Server:
         return ENGINE_SETUP[self.engine]["schema"]
 
     def connect(self):
-        if self.engine == "mysql":
+        if self.engine in ("mysql", "mariadb"):  # mysql wire protocol
             return pymysql.connect(host=self.host, port=self.port, user="root", password=PASSWORD,
                                    database=DATABASE, autocommit=True, connect_timeout=3)
         if self.engine == "postgresql":
@@ -62,7 +67,7 @@ class Server:
 
     def detect_version(self) -> str:
         with self.connect() as conn, conn.cursor() as cur:
-            if self.engine == "mysql":
+            if self.engine in ("mysql", "mariadb"):
                 cur.execute("SELECT VERSION()")
                 self.version = re.match(r"\d+\.\d+\.\d+", cur.fetchone()[0]).group(0)
             else:

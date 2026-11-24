@@ -10,8 +10,15 @@ support:
   mysql:
     - status: unsupported
       notes: ["Use LAST_INSERT_ID() / ROW_COUNT(); MariaDB has INSERT/DELETE ... RETURNING."]
+  mariadb:
+    - since: "10.5"
+      status: partial
+      notes:
+        - "INSERT ... RETURNING and REPLACE ... RETURNING since 10.5; DELETE ... RETURNING already since 10.0.5."
+        - "No UPDATE ... RETURNING (verify for 11.x/12.x)."
+        - "RETURNING cannot reference subqueries on the target table and does not support aggregates."
 probes:
-  - engines: [mysql, postgresql]
+  - engines: [mysql, mariadb, postgresql]
     setup: ["CREATE TEMPORARY TABLE probe_returning (id INT)"]
     statements: ["INSERT INTO probe_returning (id) VALUES (1) RETURNING id"]
     cleanup: ["DROP TABLE IF EXISTS probe_returning"]

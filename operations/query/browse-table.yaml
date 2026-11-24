@@ -13,6 +13,9 @@ implementations:
     - status: supported
       template: "SELECT * FROM {{table}}{{#where}} WHERE {{where}}{{/where}}{{#order_by}} ORDER BY {{order_by}}{{/order_by}} LIMIT {{limit}} OFFSET {{offset}}"
       notes: ["Large OFFSETs are slow; for big tables prefer keyset paging on the primary key."]
+  mariadb:
+    - status: supported
+      template: "SELECT * FROM {{table}}{{#where}} WHERE {{where}}{{/where}}{{#order_by}} ORDER BY {{order_by}}{{/order_by}} LIMIT {{limit}} OFFSET {{offset}}"
   postgresql:
     - status: supported
       template: "SELECT * FROM {{table}}{{#where}} WHERE {{where}}{{/where}}{{#order_by}} ORDER BY {{order_by}}{{/order_by}} LIMIT {{limit}} OFFSET {{offset}}"

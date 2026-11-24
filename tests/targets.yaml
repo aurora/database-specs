@@ -8,3 +8,8 @@ targets:
   - { id: postgresql-13,  engine: postgresql, image: docker.io/library/postgres:13 }
   - { id: postgresql-17,  engine: postgresql, image: docker.io/library/postgres:17 }
   - { id: postgresql-18,  engine: postgresql, image: docker.io/library/postgres:18 }
+  - { id: mariadb-10.6,   engine: mariadb,    image: docker.io/library/mariadb:10.6 }
+  - { id: mariadb-10.11,  engine: mariadb,    image: docker.io/library/mariadb:10.11 }
+  - { id: mariadb-11.4,   engine: mariadb,    image: docker.io/library/mariadb:11.4 }
+  - { id: mariadb-11.8,   engine: mariadb,    image: docker.io/library/mariadb:11.8 }
+  - { id: mariadb-12,     engine: mariadb,    image: docker.io/library/mariadb:12 }

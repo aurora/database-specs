@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=../../schemas/test.schema.json
+id: keywords-basic
+description: lexical.keywords returns the server's keyword list.
+engines: [mysql, mariadb, postgresql]
+versions:
+  mysql: { since: "8.0.13" }
+  mariadb: { since: "10.6" }
+
+steps:
+  - query: lexical.keywords
+    expect:
+      rows:
+        - match: { word: SELECT }
+          values: {}
+        - match: { word: SELECT }
+          engine: mysql
+          values: { reserved: true }
+        - match: { word: SELECT }
+          engine: postgresql
+          values: { reserved: true }
+        - match: { word: COMMENT }
+          engine: postgresql
+          values: { reserved: false }
+        - match: { word: SELECT }
+          engine: mariadb
+          values: { reserved: null }

@@ -1,0 +1,95 @@
+# yaml-language-server: $schema=../schemas/lexical.schema.json
+id: mariadb
+description: >
+  Lexical rules of the MariaDB dialect. Largely the same as MySQL; kept as a separate file so
+  differences are explicit rather than inherited.
+
+identifiers:
+  quotes:
+    - { open: "`", close: "`", escape: [double] }
+    - open: '"'
+      close: '"'
+      escape: [double]
+      when: { setting: sql_mode, value: ANSI_QUOTES, effect: enables }
+      notes: ["Only with ANSI_QUOTES (also implied by sql_mode=ORACLE / ANSI)."]
+  preferred_quote: "`"
+  unquoted_pattern: '^[A-Za-z0-9_$\u0080-\uFFFF]+$'
+  case_folding: depends
+  max_length: 64
+  max_length_unit: characters
+  notes:
+    - "Case sensitivity of database and table names depends on lower_case_table_names (and the OS)."
+
+strings:
+  - kind: string
+    open: "'"
+    close: "'"
+    escape: [double, backslash]
+    notes: ["Backslash escapes are disabled by sql_mode NO_BACKSLASH_ESCAPES."]
+  - kind: string
+    open: '"'
+    close: '"'
+    escape: [double, backslash]
+    when: { setting: sql_mode, value: ANSI_QUOTES, effect: disables }
+  - { kind: national, prefix: "N", prefix_case_insensitive: true, open: "'", close: "'", escape: [double, backslash] }
+  - { kind: hex, prefix: "X", prefix_case_insensitive: true, open: "'", close: "'" }
+  - { kind: bit, prefix: "B", prefix_case_insensitive: true, open: "'", close: "'" }
+  - kind: charset-introducer
+    prefix: "_"
+    open: "'"
+    close: "'"
+    escape: [double, backslash]
+
+comments:
+  - kind: line
+    open: "-- "
+    requires_trailing_whitespace: true
+  - { kind: line, open: "#" }
+  - { kind: block, open: "/*", close: "*/", nestable: false }
+  - kind: executable
+    open: "/*!"
+    close: "*/"
+    notes:
+      - "Executed by MariaDB and MySQL. Version-gated form /*!NNNNN ... */ compares against the MariaDB version (e.g. /*!100500 ... */ = 10.5.0)."
+      - "Caveat: MySQL 8-style /*!80013 ... */ is also executed by MariaDB (10.x > 8.0), which breaks dumps from MySQL 8."
+  - kind: executable
+    open: "/*M!"
+    close: "*/"
+    notes: ["MariaDB-only executable comment (MySQL treats it as a plain comment); /*M!100500 ... */ is version-gated."]
+  - kind: block
+    open: "/*+"
+    close: "*/"
+    notes: ["MySQL optimizer hint syntax is NOT recognized; treated as a plain comment (MariaDB 12 introduces its own hints - verify)."]
+
+parameters:
+  - { pattern: '\?', kind: positional, layer: server }
+  - pattern: ':[A-Za-z_][A-Za-z0-9_]*'
+    kind: named
+    layer: server
+    when: { setting: sql_mode, value: ORACLE, effect: enables }
+    notes: ["Only in Oracle mode (stored programs); not a client placeholder."]
+
+variables:
+  - { pattern: '@[A-Za-z0-9_.$]+', kind: user-variable }
+  - { pattern: '@@((global|session|local)\.)?[A-Za-z0-9_]+', kind: system-variable }
+
+operators: [":=", "<=>", "&&", "||", "DIV", "MOD", "XOR"]
+
+statements:
+  terminator: ";"
+  client_delimiter_command:
+    keyword: DELIMITER
+    case_insensitive: true
+    notes: ["Client-side only, same convention as the mysql/mariadb CLI."]
+  body_quoting: ["BEGIN NOT ATOMIC ... END (anonymous compound statements outside stored programs, since 10.1.1)"]
+  notes:
+    - "No '->' / '->>' JSON operators (MySQL only); use JSON_EXTRACT / JSON_UNQUOTE."
+    - "'||' is OR unless sql_mode PIPES_AS_CONCAT (implied by ORACLE / ANSI) is set."
+    - "Compound statements (BEGIN NOT ATOMIC ... END, IF ... END IF) can be sent directly, so a splitter must track block nesting even without DELIMITER."
+
+keywords:
+  query: lexical.keywords
+
+sources:
+  - evidence: unverified
+    url: https://mariadb.com/docs/server/reference/sql-structure/sql-language-structure

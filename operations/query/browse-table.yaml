@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=../../schemas/operation.schema.json
+id: query.browse-table
+title: Fetch one page of table rows for the data grid
+parameters:
+  - { name: table, kind: qualified-identifier }
+  - { name: where, kind: sql-fragment, description: Optional filter expression. }
+  - { name: order_by, kind: sql-fragment, description: "Optional ORDER BY list; use the primary key for stable paging." }
+  - { name: limit, kind: integer }
+  - { name: offset, kind: integer }
+
+implementations:
+  mysql:
+    - status: supported
+      template: "SELECT * FROM {{table}}{{#where}} WHERE {{where}}{{/where}}{{#order_by}} ORDER BY {{order_by}}{{/order_by}} LIMIT {{limit}} OFFSET {{offset}}"
+      notes: ["Large OFFSETs are slow; for big tables prefer keyset paging on the primary key."]
+  postgresql:
+    - status: supported
+      template: "SELECT * FROM {{table}}{{#where}} WHERE {{where}}{{/where}}{{#order_by}} ORDER BY {{order_by}}{{/order_by}} LIMIT {{limit}} OFFSET {{offset}}"
+      notes: ["Without ORDER BY the row order is not stable between pages (no implicit clustering)."]

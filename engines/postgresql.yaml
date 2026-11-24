@@ -1,0 +1,43 @@
+# yaml-language-server: $schema=../schemas/engine.schema.json
+id: postgresql
+name: PostgreSQL
+vendor: PostgreSQL Global Development Group
+protocols: [postgresql]
+lexical: postgresql
+catalogs: [pg_catalog, information_schema]
+
+identification:
+  version_query: SHOW server_version_num
+  version_pattern: '^(?<major>\d+)(?<minor>\d{2})(?<patch>\d{2})$'
+  notes:
+    - "server_version_num is an integer (e.g. 170002 = 17.2). From 10 on the middle two digits are always 00; version 9.6.x was 9060x."
+    - "libpq exposes the same value via PQserverVersion() without a round trip."
+    - "PG-compatible engines (CockroachDB, YugabyteDB, Redshift, ...) report a PG-like version; detect them via version() text."
+
+versions:
+  - series: "13"
+    released: 2020-09-24
+    eol: 2025-11-13
+  - series: "14"
+    released: 2021-09-30
+    eol: 2026-11-12
+  - series: "15"
+    released: 2022-10-13
+    eol: 2027-11-11
+  - series: "16"
+    released: 2023-09-14
+    eol: 2028-11-09
+  - series: "17"
+    released: 2024-09-26
+    eol: 2029-11-08
+  - series: "18"
+    released: 2025-09-25
+    eol: 2030-11-14
+
+documentation:
+  - title: PostgreSQL Documentation
+    url: https://www.postgresql.org/docs/current/
+
+sources:
+  - evidence: unverified
+    notes: Release/EOL dates written from knowledge; verify against https://www.postgresql.org/support/versioning/

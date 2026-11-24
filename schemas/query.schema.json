@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://db-specs.invalid/schemas/query.schema.json",
+  "title": "Query contract",
+  "description": "A normalized query (mostly introspection) with one engine/version-specific SQL variant per file. Every variant must return exactly the declared result columns, so consumers can treat all engines the same. SQL files use :name placeholders; consumers translate them to their driver's style (? / $1 / %(name)s).",
+  "type": "object",
+  "required": ["id", "title", "result", "variants"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/id" },
+    "title": { "type": "string" },
+    "description": { "type": "string" },
+    "parameters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "type"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z_][a-z0-9_]*$" },
+          "type": { "enum": ["string", "integer", "boolean"] },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "result": {
+      "type": "object",
+      "required": ["columns"],
+      "additionalProperties": false,
+      "properties": {
+        "order": { "type": "string" },
+        "columns": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "type", "nullable"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string", "pattern": "^[a-z_][a-z0-9_]*$" },
+              "type": { "enum": ["string", "integer", "boolean"] },
+              "nullable": { "type": "boolean" },
+              "enum": { "type": "array", "items": { "type": "string" } },
+              "description": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "variants": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["engine", "file"],
+        "additionalProperties": false,
+        "properties": {
+          "engine": { "$ref": "common.schema.json#/$defs/engineId" },
+          "since": { "$ref": "common.schema.json#/$defs/version" },
+          "until": { "$ref": "common.schema.json#/$defs/version" },
+          "file": { "type": "string", "pattern": "^[a-z0-9._-]+\\.sql$" },
+          "notes": { "$ref": "common.schema.json#/$defs/notes" },
+          "sources": { "$ref": "common.schema.json#/$defs/sources" }
+        }
+      }
+    },
+    "gaps": {
+      "description": "Known engine/version combinations without a variant yet.",
+      "$ref": "common.schema.json#/$defs/notes"
+    }
+  }
+}

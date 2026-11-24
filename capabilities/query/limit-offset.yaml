@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=../../schemas/capability.schema.json
+id: query.limit-offset
+title: LIMIT n OFFSET m
+related: [query.fetch-first]
+support:
+  mysql:
+    - status: supported
+      notes: ["Also LIMIT m, n (offset first). No 'LIMIT ALL'; use a huge number (18446744073709551615) for offset-only."]
+  postgresql:
+    - status: supported
+      notes: ["LIMIT ALL / LIMIT NULL mean no limit. 'LIMIT m, n' is not supported."]
+probes:
+  - engines: [mysql, postgresql]
+    statements: ["SELECT n FROM (SELECT 1 AS n) t ORDER BY n LIMIT 1 OFFSET 0"]

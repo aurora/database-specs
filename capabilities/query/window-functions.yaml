@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=../../schemas/capability.schema.json
+id: query.window-functions
+title: Window functions (OVER ...)
+support:
+  mysql:
+    - until: "8.0"
+      status: unsupported
+    - since: "8.0"
+      status: supported
+  postgresql:
+    - since: "8.4"
+      status: supported
+      notes: ["GROUPS frames and EXCLUDE since 11."]
+probes:
+  - engines: [mysql, postgresql]
+    statements: ["SELECT ROW_NUMBER() OVER (ORDER BY n) AS rn FROM (SELECT 1 AS n) t"]

@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://db-specs.invalid/schemas/common.schema.json",
+  "title": "Shared definitions",
+  "$defs": {
+    "id": {
+      "description": "Lowercase identifier, dot-separated namespaces allowed (e.g. 'dml.returning').",
+      "type": "string",
+      "pattern": "^[a-z0-9]+([.-][a-z0-9]+)*$"
+    },
+    "engineId": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "version": {
+      "description": "Numeric version: major, major.minor or major.minor.patch. '8' matches every 8.x.",
+      "type": "string",
+      "pattern": "^[0-9]+(\\.[0-9]+){0,2}$"
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "status": {
+      "description": "supported | partial | unsupported | unknown. 'unknown' is the default and means nobody has checked yet - it is NOT the same as 'unsupported'.",
+      "enum": ["supported", "partial", "unsupported", "unknown"]
+    },
+    "evidence": {
+      "description": "How a statement is backed: tested (automated test in this repo), docs (official documentation checked), observed (seen on a live server, no automated test), unverified (written from knowledge, not yet checked).",
+      "enum": ["tested", "docs", "observed", "unverified"]
+    },
+    "source": {
+      "type": "object",
+      "required": ["evidence"],
+      "additionalProperties": false,
+      "properties": {
+        "evidence": { "$ref": "#/$defs/evidence" },
+        "url": { "type": "string", "format": "uri" },
+        "verified_at": { "$ref": "#/$defs/date" },
+        "notes": { "type": "string" }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/source" }
+    },
+    "rangeFields": {
+      "description": "Version range. 'since' is inclusive, 'until' is exclusive. Both optional.",
+      "type": "object",
+      "properties": {
+        "since": { "$ref": "#/$defs/version" },
+        "until": { "$ref": "#/$defs/version" }
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "supportStatement": {
+      "description": "One versioned statement about an engine.",
+      "type": "object",
+      "required": ["status"],
+      "additionalProperties": false,
+      "properties": {
+        "since": { "$ref": "#/$defs/version" },
+        "until": { "$ref": "#/$defs/version" },
+        "status": { "$ref": "#/$defs/status" },
+        "notes": { "$ref": "#/$defs/notes" },
+        "sources": { "$ref": "#/$defs/sources" }
+      }
+    }
+  }
+}

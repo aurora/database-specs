@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://db-specs.invalid/schemas/engine.schema.json",
+  "title": "Database engine",
+  "type": "object",
+  "required": ["id", "name", "protocols", "lexical", "versions"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/engineId" },
+    "name": { "type": "string" },
+    "vendor": { "type": "string" },
+    "description": { "type": "string" },
+    "extends": {
+      "description": "Engine this one derives from (e.g. 'mysql@8.0'). Facts are NOT inherited implicitly; the build only uses this to report gaps and to seed defaults explicitly marked as inherited.",
+      "type": "string",
+      "pattern": "^[a-z0-9-]+(@[0-9]+(\\.[0-9]+){0,2})?$"
+    },
+    "protocols": {
+      "description": "Wire protocols the engine speaks (ids from protocols/).",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "common.schema.json#/$defs/id" }
+    },
+    "lexical": {
+      "description": "Lexical spec id (file in lexical/).",
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "catalogs": {
+      "description": "System catalogs/schemas available for introspection.",
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "identification": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "version_query": { "type": "string" },
+        "version_pattern": { "type": "string", "description": "Regex with groups major, minor, patch." },
+        "notes": { "$ref": "common.schema.json#/$defs/notes" }
+      }
+    },
+    "versions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["series"],
+        "additionalProperties": false,
+        "properties": {
+          "series": { "$ref": "common.schema.json#/$defs/version" },
+          "kind": { "enum": ["lts", "stable", "innovation", "preview"] },
+          "released": { "$ref": "common.schema.json#/$defs/date" },
+          "eol": { "$ref": "common.schema.json#/$defs/date" },
+          "notes": { "$ref": "common.schema.json#/$defs/notes" }
+        }
+      }
+    },
+    "documentation": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["url"],
+        "additionalProperties": false,
+        "properties": {
+          "title": { "type": "string" },
+          "url": { "type": "string", "format": "uri" }
+        }
+      }
+    },
+    "sources": { "$ref": "common.schema.json#/$defs/sources" }
+  }
+}

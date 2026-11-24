@@ -1,0 +1,56 @@
+# yaml-language-server: $schema=../../../schemas/query.schema.json
+id: introspection.list-columns
+title: List the columns of a table or view
+parameters:
+  - { name: schema, type: string, description: "Database (MySQL) / schema (PostgreSQL)." }
+  - { name: table, type: string }
+
+result:
+  order: ordinal_position
+  columns:
+    - { name: schema_name, type: string, nullable: false }
+    - { name: table_name, type: string, nullable: false }
+    - { name: column_name, type: string, nullable: false }
+    - name: ordinal_position
+      type: integer
+      nullable: false
+      description: 1-based position among existing columns, without gaps.
+    - name: data_type
+      type: string
+      nullable: false
+      description: Engine-native full type as the engine renders it (MySQL COLUMN_TYPE, PostgreSQL format_type()).
+    - { name: is_nullable, type: boolean, nullable: false }
+    - name: default_raw
+      type: string
+      nullable: true
+      description: >
+        Default as reported by the engine, NOT normalized. NULL = no default (or generated column).
+        See variant notes - the representation differs between engines.
+    - { name: is_auto_increment, type: boolean, nullable: false, description: "AUTO_INCREMENT / SERIAL / IDENTITY." }
+    - { name: generation_expression, type: string, nullable: true }
+    - { name: generation_kind, type: string, nullable: true, enum: [stored, virtual] }
+    - name: collation
+      type: string
+      nullable: true
+      description: Collation as reported by the engine (see variant notes).
+    - { name: comment, type: string, nullable: true, description: "NULL when there is no comment." }
+
+variants:
+  - engine: mysql
+    since: "5.7"
+    file: mysql.sql
+    notes:
+      - "default_raw: string literals come back unquoted (DEFAULT 'abc' -> abc) and CURRENT_TIMESTAMP comes back bare, so a string default 'CURRENT_TIMESTAMP' looks like the function. Since 8.0.13 expression defaults are flagged with DEFAULT_GENERATED in EXTRA (unverified)."
+      - "collation: reported for every character column (effective collation)."
+      - "data_type: integer display width (int(11)) is dropped from 8.0.19 on, except tinyint(1) and ZEROFILL columns."
+  - engine: postgresql
+    since: "12"
+    file: postgresql.sql
+    notes:
+      - "default_raw: SQL expression as rendered by pg_get_expr(), e.g. 'abc'::character varying. SERIAL columns report nextval('...'::regclass)."
+      - "collation: only set when it differs from the type's default collation."
+      - "ordinal_position is renumbered (attnum has gaps after DROP COLUMN)."
+
+gaps:
+  - "MySQL < 5.7 (no GENERATION_EXPRESSION column)."
+  - "PostgreSQL < 12 (no attgenerated)."

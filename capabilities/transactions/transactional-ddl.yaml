@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=../../schemas/capability.schema.json
+id: transactions.transactional-ddl
+title: DDL can be rolled back inside a transaction
+description: >
+  Decides whether a client (or an AI-generated script) can wrap schema changes in
+  BEGIN ... ROLLBACK as a safety net.
+support:
+  mysql:
+    - status: unsupported
+      notes:
+        - "DDL causes an implicit COMMIT before and after the statement (also commits pending DML!)."
+        - "8.0 made DDL atomic (crash-safe per statement), which is not the same as transactional."
+  postgresql:
+    - status: supported
+      notes:
+        - "Exceptions: CREATE/DROP DATABASE, CREATE/DROP TABLESPACE, CREATE INDEX CONCURRENTLY, VACUUM, ALTER SYSTEM, and ALTER TYPE ... ADD VALUE before 12."
+probes:
+  - name: rollback-create-table
+    engines: [mysql]
+    statements:
+      - "START TRANSACTION"
+      - "CREATE TABLE probe_tx_ddl (id INT)"
+      - "ROLLBACK"
+    check: "SELECT COUNT(*) = 0 FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'probe_tx_ddl'"
+    cleanup: ["DROP TABLE IF EXISTS probe_tx_ddl"]
+  - name: rollback-create-table
+    engines: [postgresql]
+    statements:
+      - "BEGIN"
+      - "CREATE TABLE probe_tx_ddl (id INT)"
+      - "ROLLBACK"
+    check: "SELECT to_regclass('probe_tx_ddl') IS NULL"
+    cleanup: ["DROP TABLE IF EXISTS probe_tx_ddl"]

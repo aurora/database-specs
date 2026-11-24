@@ -1,0 +1,83 @@
+# yaml-language-server: $schema=../schemas/protocol.schema.json
+id: mysql
+name: MySQL client/server protocol
+default_port: 3306
+
+client_libraries:
+  - name: MariaDB Connector/C (libmariadb)
+    url: https://mariadb.com/docs/connectors/mariadb-connector-c/
+    notes:
+      - "Talks to MySQL and MariaDB. Type codes below are MYSQL_FIELD.type; flags are MYSQL_FIELD.flags."
+      - "Newer MySQL-only type codes (e.g. VECTOR) may be unknown to the library; treat unknown codes as opaque binary."
+  - name: MySQL Connector/C (libmysqlclient)
+
+notes:
+  - "TEXT vs BLOB: both arrive as BLOB-family codes; a column is binary only if charsetnr = 63 (binary). Same for CHAR/VARCHAR vs BINARY/VARBINARY."
+  - "ENUM and SET arrive as STRING (254) with ENUM_FLAG / SET_FLAG set, not as their own codes."
+  - "MariaDB JSON is an alias for LONGTEXT with a CHECK(json_valid()) constraint; on the wire it is a BLOB-family text column, not 245."
+
+type_codes:
+  - { code: 0,   name: DECIMAL,     category: decimal }
+  - { code: 1,   name: TINY,        category: integer, notes: ["TINYINT; BOOL/BOOLEAN are aliases of TINYINT(1)."] }
+  - { code: 2,   name: SHORT,       category: integer }
+  - { code: 3,   name: LONG,        category: integer, notes: ["INT"] }
+  - { code: 4,   name: FLOAT,       category: float }
+  - { code: 5,   name: DOUBLE,      category: float }
+  - { code: 6,   name: "NULL",      category: other }
+  - { code: 7,   name: TIMESTAMP,   category: temporal }
+  - { code: 8,   name: LONGLONG,    category: integer, notes: ["BIGINT"] }
+  - { code: 9,   name: INT24,       category: integer, notes: ["MEDIUMINT"] }
+  - { code: 10,  name: DATE,        category: temporal }
+  - { code: 11,  name: TIME,        category: temporal }
+  - { code: 12,  name: DATETIME,    category: temporal }
+  - { code: 13,  name: YEAR,        category: temporal }
+  - { code: 14,  name: NEWDATE,     category: temporal, notes: ["Internal; not sent to clients."] }
+  - { code: 15,  name: VARCHAR,     category: string }
+  - { code: 16,  name: BIT,         category: bit }
+  - { code: 17,  name: TIMESTAMP2,  category: temporal, notes: ["Internal (fractional seconds storage)."] }
+  - { code: 18,  name: DATETIME2,   category: temporal, notes: ["Internal."] }
+  - { code: 19,  name: TIME2,       category: temporal, notes: ["Internal."] }
+  - code: 242
+    name: VECTOR
+    category: vector
+    engines:
+      mysql: [{ since: "9.0", status: supported }]
+      mariadb: [{ status: unsupported, notes: ["MariaDB's VECTOR type (11.7+) is sent differently; verify."] }]
+  - code: 245
+    name: JSON
+    category: json
+    engines:
+      mysql: [{ since: "5.7.8", status: supported }]
+      mariadb: [{ status: unsupported, notes: ["MariaDB JSON is LONGTEXT on the wire."] }]
+  - { code: 246, name: NEWDECIMAL,  category: decimal, notes: ["What DECIMAL columns actually report since 5.0."] }
+  - { code: 247, name: ENUM,        category: string, notes: ["Internal; see ENUM_FLAG."] }
+  - { code: 248, name: SET,         category: string, notes: ["Internal; see SET_FLAG."] }
+  - { code: 249, name: TINY_BLOB,   category: binary }
+  - { code: 250, name: MEDIUM_BLOB, category: binary }
+  - { code: 251, name: LONG_BLOB,   category: binary }
+  - { code: 252, name: BLOB,        category: binary, notes: ["Also all TEXT types; check charsetnr."] }
+  - { code: 253, name: VAR_STRING,  category: string, notes: ["VARCHAR / VARBINARY in result sets."] }
+  - { code: 254, name: STRING,      category: string, notes: ["CHAR / BINARY / ENUM / SET."] }
+  - { code: 255, name: GEOMETRY,    category: spatial }
+
+column_flags:
+  - { bit: 1,     name: NOT_NULL }
+  - { bit: 2,     name: PRI_KEY }
+  - { bit: 4,     name: UNIQUE_KEY }
+  - { bit: 8,     name: MULTIPLE_KEY }
+  - { bit: 16,    name: BLOB }
+  - { bit: 32,    name: UNSIGNED }
+  - { bit: 64,    name: ZEROFILL }
+  - { bit: 128,   name: BINARY }
+  - { bit: 256,   name: ENUM }
+  - { bit: 512,   name: AUTO_INCREMENT }
+  - { bit: 1024,  name: TIMESTAMP }
+  - { bit: 2048,  name: SET }
+  - { bit: 4096,  name: NO_DEFAULT_VALUE }
+  - { bit: 8192,  name: ON_UPDATE_NOW }
+  - { bit: 32768, name: NUM }
+
+sources:
+  - evidence: unverified
+    url: https://dev.mysql.com/doc/dev/mysql-server/latest/field__types_8h.html
+    notes: Codes written from knowledge of enum_field_types; to be verified by a wire-level test.

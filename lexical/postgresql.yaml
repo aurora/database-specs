@@ -1,0 +1,68 @@
+# yaml-language-server: $schema=../schemas/lexical.schema.json
+id: postgresql
+description: Lexical rules of the PostgreSQL dialect.
+
+identifiers:
+  quotes:
+    - { open: '"', close: '"', escape: [double] }
+    - kind: unicode
+      prefix: "U&"
+      prefix_case_insensitive: true
+      open: '"'
+      close: '"'
+      escape: [double]
+  preferred_quote: '"'
+  unquoted_pattern: '^[a-z_\u0080-\uFFFF][a-z0-9_$\u0080-\uFFFF]*$'
+  case_folding: lower
+  max_length: 63
+  max_length_unit: bytes
+  notes:
+    - "Unquoted identifiers are folded to lower case; an identifier containing upper case letters must be quoted to round-trip."
+    - "Longer identifiers are silently truncated to NAMEDATALEN-1 (63) bytes."
+
+strings:
+  - kind: string
+    open: "'"
+    close: "'"
+    escape: [double]
+    notes: ["Backslash is literal while standard_conforming_strings = on (default since 9.1)."]
+  - { kind: escape-string, prefix: "E", prefix_case_insensitive: true, open: "'", close: "'", escape: [double, backslash] }
+  - { kind: unicode, prefix: "U&", prefix_case_insensitive: true, open: "'", close: "'", escape: [double] }
+  - { kind: national, prefix: "N", prefix_case_insensitive: true, open: "'", close: "'", escape: [double] }
+  - { kind: bit, prefix: "B", prefix_case_insensitive: true, open: "'", close: "'" }
+  - { kind: hex, prefix: "X", prefix_case_insensitive: true, open: "'", close: "'" }
+  - kind: dollar-quoted
+    open: "$tag$"
+    close: "$tag$"
+    notes:
+      - "Tag is optional ($$...$$) and follows identifier rules (no '$' inside). Content is fully literal; no escapes."
+      - "Used for function bodies, DO blocks - the reason PG needs no DELIMITER command."
+
+comments:
+  - { kind: line, open: "--" }
+  - kind: block
+    open: "/*"
+    close: "*/"
+    nestable: true
+    notes: ["Block comments nest: /* a /* b */ c */ is one comment."]
+
+parameters:
+  - { pattern: '\$[0-9]+', kind: numbered, layer: server }
+
+operators: ["::", "->", "->>", "#>", "#>>", "@>", "<@", "?", "?|", "?&", "||", "~", "~*", "!~", "!~*", "&&", "<->"]
+
+statements:
+  terminator: ";"
+  body_quoting: [dollar-quoted strings, "BEGIN ATOMIC ... END (SQL-standard function bodies, since 14)"]
+  notes:
+    - "psql meta-commands (\\d, \\i, \\gexec, ...) start with a backslash at line start; a client may choose to support a subset."
+    - "Since 14, CREATE FUNCTION ... BEGIN ATOMIC ... END contains ';' without dollar quoting; the splitter must track BEGIN ATOMIC/END nesting."
+
+keywords:
+  server_query:
+    sql: SELECT word, catcode = 'R' AS reserved FROM pg_get_keywords() ORDER BY word
+    notes: ["catcode: U = unreserved, C = unreserved (cannot be function/type name), T = reserved (can be function/type name), R = reserved."]
+
+sources:
+  - evidence: unverified
+    url: https://www.postgresql.org/docs/current/sql-syntax-lexical.html

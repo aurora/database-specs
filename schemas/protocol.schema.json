@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://db-specs.invalid/schemas/protocol.schema.json",
+  "title": "Wire protocol",
+  "description": "Protocol-level facts as a client library exposes them (type codes, flags, auth). Type codes are the values a client sees per result column (e.g. MYSQL_FIELD.type, PQftype OID, ODBC SQL type).",
+  "type": "object",
+  "required": ["id", "name"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/id" },
+    "name": { "type": "string" },
+    "default_port": { "type": "integer" },
+    "client_libraries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "url": { "type": "string", "format": "uri" },
+          "notes": { "$ref": "common.schema.json#/$defs/notes" }
+        }
+      }
+    },
+    "authentication": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "engines": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": { "$ref": "common.schema.json#/$defs/supportStatement" }
+            }
+          },
+          "notes": { "$ref": "common.schema.json#/$defs/notes" }
+        }
+      }
+    },
+    "type_codes": {
+      "description": "Result column type identifiers on the wire.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "name"],
+        "additionalProperties": false,
+        "properties": {
+          "code": { "type": "integer" },
+          "name": { "type": "string" },
+          "category": {
+            "enum": ["integer", "decimal", "float", "string", "binary", "temporal", "boolean", "json", "spatial", "bit", "uuid", "vector", "interval", "network", "array", "other"]
+          },
+          "stable": {
+            "description": "false when the code is assigned per database (must be resolved at runtime).",
+            "type": "boolean",
+            "default": true
+          },
+          "engines": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": { "$ref": "common.schema.json#/$defs/supportStatement" }
+            }
+          },
+          "notes": { "$ref": "common.schema.json#/$defs/notes" }
+        }
+      }
+    },
+    "column_flags": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["bit", "name"],
+        "additionalProperties": false,
+        "properties": {
+          "bit": { "type": "integer" },
+          "name": { "type": "string" },
+          "notes": { "$ref": "common.schema.json#/$defs/notes" }
+        }
+      }
+    },
+    "notes": { "$ref": "common.schema.json#/$defs/notes" },
+    "sources": { "$ref": "common.schema.json#/$defs/sources" }
+  }
+}

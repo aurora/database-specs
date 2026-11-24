@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://db-specs.invalid/schemas/operation.schema.json",
+  "title": "Client operation",
+  "description": "An operation a client performs by generating SQL (alter column, browse table, ...). Templates use a mustache subset: {{param}} and {{#param}}...{{/param}} (section rendered only if param is set). Parameters of kind identifier / qualified-identifier are quoted by the consumer according to the lexical spec before substitution.",
+  "type": "object",
+  "required": ["id", "title", "parameters", "implementations"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/id" },
+    "title": { "type": "string" },
+    "description": { "type": "string" },
+    "parameters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "kind"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z_][a-z0-9_]*$" },
+          "kind": { "enum": ["identifier", "qualified-identifier", "sql-fragment", "integer", "string-literal"] },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "implementations": {
+      "type": "object",
+      "propertyNames": { "$ref": "common.schema.json#/$defs/engineId" },
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "required": ["status"],
+          "additionalProperties": false,
+          "properties": {
+            "since": { "$ref": "common.schema.json#/$defs/version" },
+            "until": { "$ref": "common.schema.json#/$defs/version" },
+            "status": { "$ref": "common.schema.json#/$defs/status" },
+            "method": {
+              "description": "template (default): render SQL; protocol: use a client-library call instead of SQL; emulated: several statements / table rebuild.",
+              "enum": ["template", "protocol", "emulated"]
+            },
+            "template": { "type": "string" },
+            "steps": {
+              "description": "For emulated operations: ordered templates.",
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "protocol_call": { "type": "string", "description": "For method=protocol: the library call (e.g. mysql_stmt_prepare, PQprepare)." },
+            "requires": { "type": "array", "items": { "type": "string" } },
+            "transactional": {
+              "description": "Can the effect be rolled back inside an explicit transaction?",
+              "type": "boolean"
+            },
+            "caveats": { "$ref": "common.schema.json#/$defs/notes" },
+            "notes": { "$ref": "common.schema.json#/$defs/notes" },
+            "sources": { "$ref": "common.schema.json#/$defs/sources" }
+          }
+        }
+      }
+    }
+  }
+}

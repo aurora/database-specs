@@ -1,0 +1,22 @@
+[project]
+name = "dbspecs"
+version = "0.1.0"
+description = "Validation, build and integration-test tooling for the database specifications"
+requires-python = ">=3.11"
+dependencies = [
+    "pyyaml>=6.0",
+    "jsonschema>=4.23",
+    "referencing>=0.35",
+    "pymysql>=1.1",
+    "psycopg[binary]>=3.2",
+]
+
+[project.scripts]
+dbspecs = "dbspecs.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["tooling/dbspecs"]

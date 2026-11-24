@@ -1,0 +1,10 @@
+# Servers the integration tests run against (one container each).
+# Run a subset with: uv run dbspecs test --target mysql-8.4
+targets:
+  - { id: mysql-5.7,      engine: mysql,      image: docker.io/library/mysql:5.7 }
+  - { id: mysql-8.0,      engine: mysql,      image: docker.io/library/mysql:8.0 }
+  - { id: mysql-8.4,      engine: mysql,      image: docker.io/library/mysql:8.4 }
+  - { id: mysql-9,        engine: mysql,      image: docker.io/library/mysql:9 }
+  - { id: postgresql-13,  engine: postgresql, image: docker.io/library/postgres:13 }
+  - { id: postgresql-17,  engine: postgresql, image: docker.io/library/postgres:17 }
+  - { id: postgresql-18,  engine: postgresql, image: docker.io/library/postgres:18 }

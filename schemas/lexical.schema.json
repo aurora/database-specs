@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://db-specs.invalid/schemas/lexical.schema.json",
+  "title": "Lexical rules of a SQL dialect",
+  "description": "Everything a tokenizer needs: syntax highlighting, statement splitting, identifier quoting, parameter detection.",
+  "type": "object",
+  "required": ["id", "identifiers", "strings", "comments", "statements"],
+  "additionalProperties": false,
+  "$defs": {
+    "conditional": {
+      "description": "Applies only under a session setting / mode, e.g. sql_mode=ANSI_QUOTES.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["setting"],
+      "properties": {
+        "setting": { "type": "string" },
+        "value": { "type": ["string", "boolean", "number"] },
+        "effect": { "enum": ["enables", "disables"] }
+      }
+    },
+    "versioned": {
+      "type": "object",
+      "properties": {
+        "since": { "$ref": "common.schema.json#/$defs/version" },
+        "until": { "$ref": "common.schema.json#/$defs/version" },
+        "when": { "$ref": "#/$defs/conditional" },
+        "notes": { "$ref": "common.schema.json#/$defs/notes" }
+      }
+    },
+    "quote": {
+      "allOf": [{ "$ref": "#/$defs/versioned" }],
+      "type": "object",
+      "required": ["open", "close"],
+      "properties": {
+        "open": { "type": "string" },
+        "close": { "type": "string" },
+        "escape": {
+          "description": "How the closing quote is written inside: 'double' (repeat it) or 'backslash'.",
+          "type": "array",
+          "items": { "enum": ["double", "backslash"] }
+        },
+        "prefix": { "type": "string", "description": "Literal prefix such as N, X, B, E, U&, _utf8mb4." },
+        "prefix_case_insensitive": { "type": "boolean" },
+        "kind": { "type": "string", "description": "What the literal denotes (string, national, hex, bit, escape-string, unicode)." }
+      }
+    }
+  },
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/id" },
+    "description": { "type": "string" },
+    "identifiers": {
+      "type": "object",
+      "required": ["quotes"],
+      "additionalProperties": false,
+      "properties": {
+        "quotes": { "type": "array", "items": { "$ref": "#/$defs/quote" } },
+        "preferred_quote": { "type": "string", "description": "Quote character a client should emit." },
+        "unquoted_pattern": { "type": "string", "description": "Regex for identifiers that need no quoting (keywords aside)." },
+        "case_folding": {
+          "description": "What happens to unquoted identifiers: lower | upper | none | depends.",
+          "enum": ["lower", "upper", "none", "depends"]
+        },
+        "max_length": { "type": "integer" },
+        "max_length_unit": { "enum": ["characters", "bytes"] },
+        "notes": { "$ref": "common.schema.json#/$defs/notes" }
+      }
+    },
+    "strings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/quote" }
+    },
+    "comments": {
+      "type": "array",
+      "items": {
+        "allOf": [{ "$ref": "#/$defs/versioned" }],
+        "type": "object",
+        "required": ["kind", "open"],
+        "properties": {
+          "kind": { "enum": ["line", "block", "executable", "hint"] },
+          "open": { "type": "string" },
+          "close": { "type": "string" },
+          "requires_trailing_whitespace": { "type": "boolean" },
+          "nestable": { "type": "boolean" }
+        }
+      }
+    },
+    "parameters": {
+      "type": "array",
+      "items": {
+        "allOf": [{ "$ref": "#/$defs/versioned" }],
+        "type": "object",
+        "required": ["pattern", "kind"],
+        "properties": {
+          "pattern": { "type": "string" },
+          "kind": { "enum": ["positional", "numbered", "named"] },
+          "layer": { "enum": ["server", "client-library"], "description": "Who interprets the placeholder." }
+        }
+      }
+    },
+    "variables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["pattern", "kind"],
+        "additionalProperties": false,
+        "properties": {
+          "pattern": { "type": "string" },
+          "kind": { "type": "string" },
+          "notes": { "$ref": "common.schema.json#/$defs/notes" }
+        }
+      }
+    },
+    "operators": {
+      "description": "Dialect-specific operators worth highlighting / tokenizing (beyond the SQL standard set).",
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "statements": {
+      "type": "object",
+      "required": ["terminator"],
+      "additionalProperties": false,
+      "properties": {
+        "terminator": { "type": "string" },
+        "client_delimiter_command": {
+          "description": "Client-side command changing the terminator (not sent to the server).",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "keyword": { "type": "string" },
+            "case_insensitive": { "type": "boolean" },
+            "notes": { "$ref": "common.schema.json#/$defs/notes" }
+          }
+        },
+        "batch_separator": { "type": "string", "description": "e.g. GO for T-SQL (client-side)." },
+        "body_quoting": {
+          "description": "Constructs inside which the terminator must not split (function bodies etc.).",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "notes": { "$ref": "common.schema.json#/$defs/notes" }
+      }
+    },
+    "keywords": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "server_query": {
+          "description": "Query that returns the keyword list from a live server (preferred source; generated files go to generated/).",
+          "allOf": [{ "$ref": "#/$defs/versioned" }],
+          "type": "object",
+          "required": ["sql"],
+          "properties": { "sql": { "type": "string" } }
+        },
+        "notes": { "$ref": "common.schema.json#/$defs/notes" }
+      }
+    },
+    "sources": { "$ref": "common.schema.json#/$defs/sources" }
+  }
+}

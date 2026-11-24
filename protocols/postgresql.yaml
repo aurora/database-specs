@@ -1,0 +1,56 @@
+# yaml-language-server: $schema=../schemas/protocol.schema.json
+id: postgresql
+name: PostgreSQL frontend/backend protocol (v3)
+default_port: 5432
+
+client_libraries:
+  - name: libpq
+    url: https://www.postgresql.org/docs/current/libpq.html
+    notes:
+      - "Type codes below are type OIDs as returned by PQftype(); PQfmod() gives the typmod (length/precision)."
+      - "PQftable()/PQftablecol() give the source table OID and column number of a result column - the basis for deciding whether a result grid is editable."
+
+notes:
+  - "Only built-in type OIDs are stable. Enums, domains, composite types and extension types (e.g. PostGIS geometry, pgvector vector, hstore, citext) get per-database OIDs; resolve them via pg_type at runtime and cache per connection."
+  - "Array types have their own OIDs (pg_type.typarray); the list below includes only a few."
+
+type_codes:
+  - { code: 16,   name: bool,        category: boolean }
+  - { code: 17,   name: bytea,       category: binary }
+  - { code: 18,   name: char,        category: string, notes: ["Internal single-byte \"char\", not CHAR(n)."] }
+  - { code: 19,   name: name,        category: string }
+  - { code: 20,   name: int8,        category: integer }
+  - { code: 21,   name: int2,        category: integer }
+  - { code: 23,   name: int4,        category: integer }
+  - { code: 25,   name: text,        category: string }
+  - { code: 26,   name: oid,         category: integer }
+  - { code: 114,  name: json,        category: json }
+  - { code: 142,  name: xml,         category: other }
+  - { code: 600,  name: point,       category: spatial }
+  - { code: 650,  name: cidr,        category: network }
+  - { code: 700,  name: float4,      category: float }
+  - { code: 701,  name: float8,      category: float }
+  - { code: 790,  name: money,       category: decimal }
+  - { code: 829,  name: macaddr,     category: network }
+  - { code: 869,  name: inet,        category: network }
+  - { code: 1007, name: _int4,       category: array }
+  - { code: 1009, name: _text,       category: array }
+  - { code: 1042, name: bpchar,      category: string, notes: ["CHAR(n)"] }
+  - { code: 1043, name: varchar,     category: string }
+  - { code: 1082, name: date,        category: temporal }
+  - { code: 1083, name: time,        category: temporal }
+  - { code: 1114, name: timestamp,   category: temporal }
+  - { code: 1184, name: timestamptz, category: temporal }
+  - { code: 1186, name: interval,    category: interval }
+  - { code: 1266, name: timetz,      category: temporal }
+  - { code: 1560, name: bit,         category: bit }
+  - { code: 1562, name: varbit,      category: bit }
+  - { code: 1700, name: numeric,     category: decimal }
+  - { code: 2950, name: uuid,        category: uuid }
+  - { code: 3802, name: jsonb,       category: json }
+  - { code: 4072, name: jsonpath,    category: json }
+
+sources:
+  - evidence: unverified
+    url: https://github.com/postgres/postgres/blob/master/src/include/catalog/pg_type.dat
+    notes: OIDs written from knowledge; verify with SELECT oid, typname FROM pg_type.

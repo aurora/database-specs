@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=../../schemas/capability.schema.json
+id: query.fetch-first
+title: SQL-standard OFFSET ... ROWS FETCH FIRST ... ROWS ONLY
+related: [query.limit-offset]
+support:
+  mysql:
+    - status: unsupported
+  postgresql:
+    - since: "8.4"
+      status: supported
+      notes: ["FETCH ... WITH TIES since 13."]
+probes:
+  - engines: [mysql, postgresql]
+    statements: ["SELECT n FROM (SELECT 1 AS n) t ORDER BY n OFFSET 0 ROWS FETCH FIRST 1 ROWS ONLY"]

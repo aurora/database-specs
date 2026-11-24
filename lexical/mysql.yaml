@@ -1,0 +1,92 @@
+# yaml-language-server: $schema=../schemas/lexical.schema.json
+id: mysql
+description: Lexical rules of the MySQL dialect (also the base for MariaDB, with differences noted there).
+
+identifiers:
+  quotes:
+    - { open: "`", close: "`", escape: [double] }
+    - open: '"'
+      close: '"'
+      escape: [double]
+      when: { setting: sql_mode, value: ANSI_QUOTES, effect: enables }
+      notes: ["Only with ANSI_QUOTES; otherwise \"...\" is a string literal. A client must read @@sql_mode per session."]
+  preferred_quote: "`"
+  unquoted_pattern: '^[A-Za-z0-9_$\u0080-\uFFFF]+$'
+  case_folding: depends
+  max_length: 64
+  max_length_unit: characters
+  notes:
+    - "Unquoted identifiers may start with a digit but must not consist of digits only (and '1e3' style is ambiguous)."
+    - "Case sensitivity of database and table names depends on lower_case_table_names (and the OS); column names are case-insensitive."
+
+strings:
+  - kind: string
+    open: "'"
+    close: "'"
+    escape: [double, backslash]
+    notes: ["Backslash escapes are disabled by sql_mode NO_BACKSLASH_ESCAPES."]
+  - kind: string
+    open: '"'
+    close: '"'
+    escape: [double, backslash]
+    when: { setting: sql_mode, value: ANSI_QUOTES, effect: disables }
+  - { kind: national, prefix: "N", prefix_case_insensitive: true, open: "'", close: "'", escape: [double, backslash] }
+  - { kind: hex, prefix: "X", prefix_case_insensitive: true, open: "'", close: "'" }
+  - { kind: bit, prefix: "B", prefix_case_insensitive: true, open: "'", close: "'" }
+  - kind: charset-introducer
+    prefix: "_"
+    open: "'"
+    close: "'"
+    escape: [double, backslash]
+    notes: ["_utf8mb4'text', _binary'...'; the prefix is _ followed by a character set name."]
+
+comments:
+  - kind: line
+    open: "-- "
+    requires_trailing_whitespace: true
+    notes: ["'--' must be followed by whitespace or control character; '--x' is not a comment."]
+  - { kind: line, open: "#" }
+  - { kind: block, open: "/*", close: "*/", nestable: false }
+  - kind: executable
+    open: "/*!"
+    close: "*/"
+    notes:
+      - "Content is executed by MySQL. '/*!80013 ... */' runs only on server version >= 8.0.13 (5 or 6 digits)."
+      - "Highlighters should render the content as SQL, not as a comment."
+  - kind: hint
+    open: "/*+"
+    close: "*/"
+    since: "5.7"
+    notes: ["Optimizer hints; only recognized directly after SELECT/INSERT/UPDATE/DELETE/REPLACE keyword."]
+
+parameters:
+  - { pattern: '\?', kind: positional, layer: server }
+
+variables:
+  - { pattern: '@[A-Za-z0-9_.$]+', kind: user-variable, notes: ["Also @'quoted', @\"quoted\", @`quoted`."] }
+  - { pattern: '@@((global|session|local|persist|persist_only)\.)?[A-Za-z0-9_]+', kind: system-variable }
+
+operators: [":=", "<=>", "->", "->>", "&&", "||", "DIV", "MOD", "XOR"]
+
+statements:
+  terminator: ";"
+  client_delimiter_command:
+    keyword: DELIMITER
+    case_insensitive: true
+    notes:
+      - "Client-side only (mysql CLI convention); must be handled by the client and never sent to the server."
+      - "Needed for CREATE PROCEDURE/FUNCTION/TRIGGER/EVENT bodies with BEGIN...END containing ';'."
+  notes:
+    - "'||' is OR unless sql_mode PIPES_AS_CONCAT is set."
+    - "Also \\g and \\G act as terminators in the mysql CLI; a client may support them."
+
+keywords:
+  server_query:
+    since: "8.0.13"
+    sql: SELECT WORD AS word, RESERVED = 1 AS reserved FROM information_schema.KEYWORDS ORDER BY WORD
+  notes:
+    - "Before 8.0.13 there is no server-side list; use the reference manual's keyword page per version."
+
+sources:
+  - evidence: unverified
+    url: https://dev.mysql.com/doc/refman/8.4/en/lexical-structure.html

@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=../../schemas/operation.schema.json
+id: session.validate-syntax
+title: Check a statement without executing it
+description: >
+  Used before running SQL written by a user or an AI assistant: parse (and, where possible,
+  resolve names) so errors can be shown - or fed back to the model - without side effects.
+parameters:
+  - { name: sql, kind: sql-fragment, description: A single statement. }
+
+implementations:
+  mysql:
+    - status: partial
+      method: protocol
+      protocol_call: mysql_stmt_prepare (COM_STMT_PREPARE), then mysql_stmt_close
+      caveats:
+        - "Parses and resolves tables/columns, does not execute. Not every statement type is preparable (see 'SQL Syntax Permitted in Prepared Statements'); those report an error that is NOT a syntax error (ER_UNSUPPORTED_PS, 1295)."
+        - "One statement per call; split scripts first using the lexical spec."
+      sources: [{ evidence: unverified }]
+  postgresql:
+    - status: supported
+      method: protocol
+      protocol_call: PQprepare (Parse message) with an unnamed statement
+      caveats:
+        - "Parse + analyze: reports syntax errors and unknown tables/columns/functions without executing."
+        - "Utility statements (DDL) are only syntax-checked, not analyzed."
+        - "One statement per call."
+      sources: [{ evidence: unverified }]

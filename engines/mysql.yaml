@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=../schemas/engine.schema.json
+id: mysql
+name: MySQL
+vendor: Oracle
+description: Oracle MySQL Community/Enterprise Server.
+protocols: [mysql]
+lexical: mysql
+catalogs: [information_schema, performance_schema, mysql, sys]
+
+identification:
+  version_query: SELECT VERSION()
+  version_pattern: '^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)'
+  notes:
+    - "MariaDB also speaks the mysql protocol; tell them apart by 'MariaDB' in VERSION() (or @@version_comment), not by the handshake version (MariaDB 10.x used to send a '5.5.5-' prefix there)."
+    - "Forks/derivatives (Percona Server, TiDB, ...) need their own detection rules in their engine file."
+
+versions:
+  - series: "5.7"
+    kind: stable
+    released: 2015-10-21
+    eol: 2023-10-31
+  - series: "8.0"
+    kind: stable
+    released: 2018-04-19
+    eol: 2026-04-30
+    notes:
+      - "8.0 changed a lot within the series (e.g. 8.0.13 expression defaults, 8.0.19 dropped integer display width). Use patch-level ranges."
+      - "information_schema is backed by the transactional data dictionary since 8.0; results may be cached (information_schema_stats_expiry)."
+  - series: "8.4"
+    kind: lts
+    released: 2024-04-30
+  - series: "9"
+    kind: innovation
+    released: 2024-07-01
+    notes:
+      - "Innovation releases (9.0, 9.1, ...), each supported until the next one."
+
+documentation:
+  - title: MySQL Reference Manual
+    url: https://dev.mysql.com/doc/refman/8.4/en/
+
+sources:
+  - evidence: unverified
+    notes: Release/EOL dates written from knowledge; verify against https://endoflife.date/mysql

@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=../../schemas/operation.schema.json
+id: ddl.change-column-type
+title: Change the data type of a column
+parameters:
+  - { name: table, kind: qualified-identifier }
+  - { name: column, kind: identifier }
+  - name: new_type
+    kind: sql-fragment
+    description: Target type, e.g. "varchar(200)".
+  - name: column_definition
+    kind: sql-fragment
+    description: >
+      Complete column definition after the name (type, NULL/NOT NULL, DEFAULT, COMMENT,
+      CHARACTER SET/COLLATE, AUTO_INCREMENT, generated expression, ...). Required where the
+      engine replaces the whole definition.
+  - name: using
+    kind: sql-fragment
+    description: Conversion expression for incompatible types.
+
+implementations:
+  mysql:
+    - status: supported
+      template: "ALTER TABLE {{table}} MODIFY COLUMN {{column}} {{column_definition}}"
+      requires: [column_definition]
+      transactional: false
+      caveats:
+        - "MODIFY replaces the full definition: every attribute not repeated (NOT NULL, DEFAULT, COMMENT, charset/collation, AUTO_INCREMENT, ON UPDATE) is dropped. Build column_definition from introspection.list-columns."
+        - "Implicit commit; may rebuild the table (ALGORITHM=COPY) and block writes on large tables."
+        - "Values that do not fit are truncated or rejected depending on sql_mode (STRICT_TRANS_TABLES)."
+  postgresql:
+    - status: supported
+      template: "ALTER TABLE {{table}} ALTER COLUMN {{column}} TYPE {{new_type}}{{#using}} USING {{using}}{{/using}}"
+      requires: [new_type]
+      transactional: true
+      caveats:
+        - "Without an assignment cast between old and new type, USING is required (e.g. text -> integer: USING col::integer)."
+        - "Usually rewrites the table under ACCESS EXCLUSIVE lock (except binary-coercible changes such as varchar(n) -> varchar(m>n) or -> text)."
+        - "Fails if views or rules depend on the column; they must be dropped and recreated."

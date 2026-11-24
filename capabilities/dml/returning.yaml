@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=../../schemas/capability.schema.json
+id: dml.returning
+title: RETURNING clause on INSERT/UPDATE/DELETE
+description: Return rows affected by a DML statement in the same round trip.
+support:
+  postgresql:
+    - since: "8.2"
+      status: supported
+      notes: ["INSERT, UPDATE, DELETE; MERGE ... RETURNING since 17. OLD/NEW aliases in RETURNING since 18."]
+  mysql:
+    - status: unsupported
+      notes: ["Use LAST_INSERT_ID() / ROW_COUNT(); MariaDB has INSERT/DELETE ... RETURNING."]
+probes:
+  - engines: [mysql, postgresql]
+    setup: ["CREATE TEMPORARY TABLE probe_returning (id INT)"]
+    statements: ["INSERT INTO probe_returning (id) VALUES (1) RETURNING id"]
+    cleanup: ["DROP TABLE IF EXISTS probe_returning"]

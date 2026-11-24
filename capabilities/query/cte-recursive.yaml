@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=../../schemas/capability.schema.json
+id: query.cte-recursive
+title: Recursive common table expressions (WITH RECURSIVE)
+related: [query.cte]
+support:
+  mysql:
+    - until: "8.0"
+      status: unsupported
+    - since: "8.0"
+      status: supported
+      notes: ["Recursion depth limited by cte_max_recursion_depth (default 1000)."]
+  postgresql:
+    - since: "8.4"
+      status: supported
+      notes: ["SEARCH and CYCLE clauses since 14."]
+probes:
+  - engines: [mysql, postgresql]
+    statements: ["WITH RECURSIVE r (n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM r WHERE n < 3) SELECT n FROM r"]

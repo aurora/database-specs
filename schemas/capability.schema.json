@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://db-specs.invalid/schemas/capability.schema.json",
+  "title": "Capability",
+  "description": "A yes/no/partial fact about an engine (feature, behaviour, limitation), with version ranges and optional automated probes.",
+  "type": "object",
+  "required": ["id", "title", "support"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/id" },
+    "title": { "type": "string" },
+    "description": { "type": "string" },
+    "related": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/id" } },
+    "support": {
+      "description": "Per engine: list of versioned statements. Engines not listed are 'unknown'.",
+      "type": "object",
+      "propertyNames": { "$ref": "common.schema.json#/$defs/engineId" },
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "items": { "$ref": "common.schema.json#/$defs/supportStatement" }
+      }
+    },
+    "probes": {
+      "description": "Executable checks. A probe succeeds when all statements run without error and 'check' (if given) returns a truthy first column. Success is expected for supported/partial, failure for unsupported.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["engines", "statements"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "engines": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/engineId" } },
+          "setup": { "type": "array", "items": { "type": "string" } },
+          "statements": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+          "check": { "type": "string" },
+          "cleanup": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

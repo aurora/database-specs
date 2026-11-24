@@ -12,7 +12,7 @@ result:
   columns:
     - { name: schema_name, type: string, nullable: false }
     - { name: table_name, type: string, nullable: false }
-    - { name: constraint_name, type: string, nullable: false }
+    - { name: constraint_name, type: string, nullable: false, description: "Synthetic where the engine does not report names (SQLite)." }
     - { name: column_position, type: integer, nullable: false }
     - { name: column_name, type: string, nullable: false }
     - { name: referenced_schema, type: string, nullable: false }
@@ -25,8 +25,8 @@ result:
       nullable: true
       enum: [simple, full, partial]
       description: NULL when the engine does not record it (MySQL/MariaDB report NONE).
-    - { name: is_deferrable, type: boolean, nullable: false }
-    - { name: initially_deferred, type: boolean, nullable: false }
+    - { name: is_deferrable, type: boolean, nullable: true, description: "NULL = not reported by the engine (SQLite)." }
+    - { name: initially_deferred, type: boolean, nullable: true }
     - { name: is_enforced, type: boolean, nullable: false, description: "false = NOT ENFORCED (PostgreSQL 18+)." }
 
 variants:
@@ -58,6 +58,14 @@ variants:
     notes:
       - "Without an explicit action: no-action. No RESTRICT, no MATCH options, not deferrable."
       - "is_enforced = false for disabled constraints (ALTER TABLE ... NOCHECK CONSTRAINT). Constraints created or re-enabled WITH NOCHECK are enforced but not trusted (sys.foreign_keys.is_not_trusted) - not represented here."
+  - engine: sqlite
+    since: "3.26"
+    file: sqlite.sql
+    notes:
+      - "SQLite does not report constraint names; constraint_name is synthetic: fk_<table>_<id> with the pragma's id."
+      - "referenced_column is resolved from the referenced table's primary key when the FK omits the column list."
+      - "is_enforced reflects PRAGMA foreign_keys of the current connection (OFF by default!), not a property of the constraint."
+      - "DEFERRABLE INITIALLY DEFERRED is not exposed by pragmas: is_deferrable / initially_deferred are NULL."
 
 gaps:
   - "Incoming foreign keys (tables referencing this one) need a separate query."

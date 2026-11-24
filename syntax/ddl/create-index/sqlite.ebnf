@@ -1,0 +1,11 @@
+/* SQLite - CREATE INDEX (3.26 - 3.53)
+   Built-ins: identifier, string_literal, integer, expression.
+   Version annotations apply to the item that follows them. */
+
+create_index ::= 'CREATE' 'UNIQUE'? 'INDEX' ( 'IF' 'NOT' 'EXISTS' )?
+                 index_name 'ON' identifier '(' indexed_column ( ',' indexed_column )* ')'
+                 ( 'WHERE' expression )?
+
+index_name ::= identifier ( '.' identifier )?
+
+indexed_column ::= ( identifier | expression ) ( 'COLLATE' identifier )? ( 'ASC' | 'DESC' )?

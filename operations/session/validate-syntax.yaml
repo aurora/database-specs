@@ -37,6 +37,14 @@ implementations:
         - "For a single SELECT, sys.dm_exec_describe_first_result_set(@tsql, NULL, 0) returns either the result columns or the error, without executing."
         - "ODBC SQLPrepare is deferred until execute by default, so it does not validate."
       sources: [{ evidence: unverified }]
+  sqlite:
+    - status: supported
+      method: protocol
+      protocol_call: sqlite3_prepare_v2 (then sqlite3_finalize)
+      caveats:
+        - "Parses and resolves tables, columns and functions without executing - the most complete check of all engines."
+        - "Prepares only the first statement; the tail pointer gives the rest. sqlite3_complete() tells whether input ends with a complete statement."
+      sources: [{ evidence: docs, url: "https://sqlite.org/c3ref/prepare.html" }]
   postgresql:
     - status: supported
       method: protocol

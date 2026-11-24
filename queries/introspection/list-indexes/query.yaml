@@ -85,6 +85,15 @@ variants:
       - "predicate is the filter of a filtered index as stored by the server, e.g. ([region]>(0))."
       - "No expression indexes; index a computed column instead."
       - "Primary key and unique constraints appear as their backing indexes."
+  - engine: sqlite
+    since: "3.26"
+    file: sqlite.sql
+    notes:
+      - "The rowid alias (INTEGER PRIMARY KEY) is not an index and is not listed; other primary keys and UNIQUE constraints appear as sqlite_autoindex_<table>_<n>."
+      - "is_clustered: true for the primary key of WITHOUT ROWID tables."
+      - "Expression elements have column_name NULL; their expression text is not exposed by pragmas (expression is NULL)."
+      - "predicate is cut from the CREATE INDEX text after ' WHERE ' (main schema only)."
 
 gaps:
   - "MySQL 8.0.0 - 8.0.12 (IS_VISIBLE exists, EXPRESSION does not)."
+  - "SQLite: expression text of expression index elements."

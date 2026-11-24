@@ -1,6 +1,6 @@
 # database-specs
 
-Machine-readable, versioned specifications of SQL engines (MySQL, MariaDB, PostgreSQL, SQL Server so far)
+Machine-readable, versioned specifications of SQL engines (MySQL, MariaDB, PostgreSQL, SQL Server, SQLite so far)
 for database clients: lexical rules, wire-protocol type codes, capabilities, introspection
 queries, client operations and curated statement syntax. Implementation-agnostic: nothing in
 here may depend on a particular client, language or driver. Content is written in English.
@@ -26,7 +26,7 @@ version (a documented gap, see `gaps`).
 
 ```bash
 uv run dbspecs validate     # schemas, cross references, offline grammar/example checks - run after every change
-uv run dbspecs test         # real servers in containers (docker/podman); ~10 min for all targets
+uv run dbspecs test         # real servers in containers (docker/podman); ~15 min for all targets
 uv run dbspecs test --target mariadb-10.6 --target postgresql   # subset: target id or engine
 uv run dbspecs build        # dist/db-specs.json + dist/syntax/ (railroad diagrams)
 ```
@@ -38,7 +38,9 @@ uv run dbspecs build        # dist/db-specs.json + dist/syntax/ (railroad diagra
 - `operations/<area>/<name>.yaml`: SQL templates for things a client generates.
 - `queries/<area>/<name>/`: `query.yaml` (contract) + one `.sql` per engine/version variant.
 - `syntax/<area>/<name>/`: `syntax.yaml` (examples) + `<engine>.ebnf`.
-- `tests/targets.yaml` (container images), `tests/cases/` (integration tests).
+- `tests/targets.yaml` (container images), `tests/cases/` (integration tests). Embedded engines
+  (SQLite) run `tooling/dbspecs/sqlite_worker.py` inside a `python:*-slim` image (that Debian's
+  libsqlite3) or locally; setup entries can be `{sql, since, until}` for version-specific DDL.
 - `schemas/` JSON Schemas; `tooling/dbspecs/` Python tooling.
 
 ## Rules for changing specs

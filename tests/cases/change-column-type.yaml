@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=../../schemas/test.schema.json
 id: change-column-type
 description: Render ddl.change-column-type and verify the result via introspection.list-columns.
-engines: [mysql, mariadb, postgresql, sqlserver]
+engines: [mysql, mariadb, postgresql, sqlserver, sqlite]
 
 setup:
   mysql:
@@ -12,12 +12,15 @@ setup:
     - "CREATE TABLE t_alter (id integer PRIMARY KEY, code varchar(10) NOT NULL DEFAULT 'x')"
   sqlserver:
     - "CREATE TABLE t_alter (id INT PRIMARY KEY, code VARCHAR(10) NOT NULL CONSTRAINT df_t_alter_code DEFAULT 'x')"
+  sqlite:
+    - "CREATE TABLE t_alter (id INTEGER PRIMARY KEY, code VARCHAR(10) NOT NULL DEFAULT 'x')"
 
 cleanup:
   mysql: [DROP TABLE IF EXISTS t_alter]
   mariadb: [DROP TABLE IF EXISTS t_alter]
   postgresql: [DROP TABLE IF EXISTS t_alter]
   sqlserver: [DROP TABLE IF EXISTS t_alter]
+  sqlite: [DROP TABLE IF EXISTS t_alter_new, DROP TABLE IF EXISTS t_alter]
 
 steps:
   - operation: ddl.change-column-type
@@ -28,6 +31,10 @@ steps:
       column_definition: "VARCHAR(50) NOT NULL DEFAULT 'x' COMMENT 'keep me'"
     params_by_engine:
       sqlserver: { column_definition: VARCHAR(50) NOT NULL }
+      sqlite:
+        rebuild_table: t_alter_new
+        rebuild_definition: "id INTEGER PRIMARY KEY, code VARCHAR(50) NOT NULL DEFAULT 'x'"
+        rebuild_columns: id, code
   - query: introspection.list-columns
     params: { schema: "{{schema}}", table: t_alter }
     expect:
@@ -46,3 +53,6 @@ steps:
         - match: { column_name: code }
           engine: sqlserver
           values: { data_type: varchar(50), default_raw: "('x')" }
+        - match: { column_name: code }
+          engine: sqlite
+          values: { data_type: VARCHAR(50), default_raw: "'x'" }

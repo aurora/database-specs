@@ -45,33 +45,45 @@ grammars:
       - "A table has at most one CLUSTERED index (the primary key is clustered by default)."
       - "Index options: e.g. FILLFACTOR = n, ONLINE = ON (Enterprise/Developer), DATA_COMPRESSION = PAGE, DROP_EXISTING = ON."
     sources: [{ evidence: tested }]
+  sqlite:
+    file: sqlite.ebnf
+    start: create_index
+    since: "3.26"
+    notes:
+      - "The schema goes on the index name (CREATE INDEX main.i ON t ...); the table name must be unqualified."
+      - "Any expression can be indexed without extra parentheses (since 3.9), e.g. (a + d) or lower(b)."
+      - "Partial indexes (WHERE) since 3.8; the predicate may only reference columns of the table."
+      - "The grammar's expression built-in is loose: it also accepts some invalid indexed-column forms (e.g. 'b varchar_pattern_ops'), so such examples are not asserted for SQLite."
+    sources: [{ evidence: tested }]
 
 setup:
   mysql: ["CREATE TABLE t_idx (a INT, b VARCHAR(50), c TEXT, d INT, g POINT NOT NULL)"]
   mariadb: ["CREATE TABLE t_idx (a INT, b VARCHAR(50), c TEXT, d INT, g POINT NOT NULL)"]
   postgresql: ["CREATE TABLE t_idx (a int, b varchar(50), c text, d int)"]
   sqlserver: ["CREATE TABLE t_idx (a int, b varchar(50), c varchar(200), d int)"]
+  sqlite: ["CREATE TABLE t_idx (a INT, b TEXT, c TEXT, d INT)"]
 cleanup:
   mysql: [DROP TABLE IF EXISTS t_idx]
   mariadb: [DROP TABLE IF EXISTS t_idx]
   postgresql: [DROP TABLE IF EXISTS t_idx]
   sqlserver: [DROP TABLE IF EXISTS t_idx]
+  sqlite: [DROP TABLE IF EXISTS t_idx]
 
 examples:
   # --- common ---------------------------------------------------------------
   - sql: CREATE INDEX i_a ON t_idx (a)
     expect: valid
-    engines: { mysql: {}, mariadb: {}, postgresql: {}, sqlserver: {} }
+    engines: { mysql: {}, mariadb: {}, postgresql: {}, sqlserver: {}, sqlite: {} }
   - sql: CREATE UNIQUE INDEX i_ab ON t_idx (a, b DESC)
     expect: valid
-    engines: { mysql: {}, mariadb: {}, postgresql: {}, sqlserver: {} }
+    engines: { mysql: {}, mariadb: {}, postgresql: {}, sqlserver: {}, sqlite: {} }
   - sql: CREATE INDEX i_x t_idx (a)
     expect: invalid
-    engines: { mysql: {}, mariadb: {}, postgresql: {}, sqlserver: {} }
+    engines: { mysql: {}, mariadb: {}, postgresql: {}, sqlserver: {}, sqlite: {} }
     notes: ["Missing ON."]
   - sql: CREATE INDEX i_e ON t_idx ()
     expect: invalid
-    engines: { mysql: {}, mariadb: {}, postgresql: {}, sqlserver: {} }
+    engines: { mysql: {}, mariadb: {}, postgresql: {}, sqlserver: {}, sqlite: {} }
 
   # --- MySQL / MariaDB ------------------------------------------------------
   - sql: CREATE INDEX i_b ON t_idx (b(10))
@@ -79,20 +91,20 @@ examples:
     engines: { mysql: {}, mariadb: {} }
   - sql: CREATE INDEX i_b ON t_idx (b(10))
     expect: semantic-error
-    engines: { postgresql: {} }
+    engines: { postgresql: {}, sqlite: {} }
     notes: ["Parsed as a call of function b(); fails because no such function exists."]
   - sql: CREATE INDEX i_u USING BTREE ON t_idx (a)
     expect: valid
     engines: { mysql: {}, mariadb: {} }
   - sql: CREATE INDEX i_u USING BTREE ON t_idx (a)
     expect: invalid
-    engines: { postgresql: {}, sqlserver: {} }
+    engines: { postgresql: {}, sqlserver: {}, sqlite: {} }
   - sql: CREATE FULLTEXT INDEX i_ft ON t_idx (c)
     expect: valid
     engines: { mysql: {}, mariadb: {} }
   - sql: CREATE FULLTEXT INDEX i_ft ON t_idx (c)
     expect: invalid
-    engines: { postgresql: {}, sqlserver: {} }
+    engines: { postgresql: {}, sqlserver: {}, sqlite: {} }
   - sql: CREATE SPATIAL INDEX i_g ON t_idx (g)
     expect: valid
     engines: { mysql: {}, mariadb: {} }
@@ -101,19 +113,19 @@ examples:
     engines: { mysql: {}, mariadb: {} }
   - sql: CREATE INDEX i_ord ON t_idx (a) ALGORITHM = COPY COMMENT 'x'
     expect: invalid
-    engines: { mysql: {}, mariadb: {} }
+    engines: { mysql: {}, mariadb: {}, sqlite: {} }
     notes: ["Algorithm/lock options must come after all index options."]
   - sql: CREATE INDEX i_cmt ON t_idx (a) COMMENT 'lookup by a'
     expect: valid
     engines: { mysql: {}, mariadb: {} }
   - sql: CREATE INDEX i_cmt ON t_idx (a) COMMENT 'lookup by a'
     expect: invalid
-    engines: { postgresql: {}, sqlserver: {} }
+    engines: { postgresql: {}, sqlserver: {}, sqlite: {} }
 
   # --- MySQL only -----------------------------------------------------------
   - sql: CREATE INDEX i_expr ON t_idx ((a + d))
     expect: valid
-    engines: { mysql: { since: "8.0.13" }, postgresql: {} }
+    engines: { mysql: { since: "8.0.13", sqlite: {} }, postgresql: {} }
   - sql: CREATE INDEX i_expr ON t_idx ((a + d))
     expect: invalid
     engines: { mysql: { until: "8.0.13" }, mariadb: {}, sqlserver: {} }
@@ -122,7 +134,7 @@ examples:
     engines: { mysql: { since: "8.0" } }
   - sql: CREATE INDEX i_inv ON t_idx (a) INVISIBLE
     expect: invalid
-    engines: { mysql: { until: "8.0" }, mariadb: {}, postgresql: {}, sqlserver: {} }
+    engines: { mysql: { until: "8.0", sqlite: {} }, mariadb: {}, postgresql: {}, sqlserver: {} }
   - sql: CREATE INDEX i_lower ON t_idx (lower(b))
     expect: invalid
     engines: { mysql: {}, mariadb: {}, sqlserver: {} }
@@ -134,24 +146,24 @@ examples:
     engines: { mariadb: {} }
   - sql: CREATE OR REPLACE INDEX i_a ON t_idx (a)
     expect: invalid
-    engines: { mysql: {}, postgresql: {}, sqlserver: {} }
+    engines: { mysql: {}, postgresql: {}, sqlserver: {}, sqlite: {} }
   - sql: CREATE INDEX i_ign ON t_idx (a) IGNORED
     expect: valid
     engines: { mariadb: { since: "10.6" } }
   - sql: CREATE INDEX i_ign ON t_idx (a) IGNORED
     expect: invalid
-    engines: { mysql: {}, postgresql: {}, sqlserver: {} }
+    engines: { mysql: {}, postgresql: {}, sqlserver: {}, sqlite: {} }
   - sql: CREATE INDEX i_w ON t_idx (a) WAIT 5
     expect: valid
     engines: { mariadb: {} }
   - sql: CREATE INDEX i_w ON t_idx (a) WAIT 5
     expect: invalid
-    engines: { mysql: {}, sqlserver: {} }
+    engines: { mysql: {}, sqlserver: {}, sqlite: {} }
 
   # --- MariaDB + PostgreSQL -------------------------------------------------
   - sql: CREATE INDEX IF NOT EXISTS i_a ON t_idx (a)
     expect: valid
-    engines: { mariadb: {}, postgresql: {} }
+    engines: { mariadb: {}, postgresql: {}, sqlite: {} }
   - sql: CREATE INDEX IF NOT EXISTS i_a ON t_idx (a)
     expect: invalid
     engines: { mysql: {}, sqlserver: {} }
@@ -162,7 +174,7 @@ examples:
     engines: { postgresql: {} }
   - sql: CREATE INDEX ON t_idx (a)
     expect: invalid
-    engines: { mysql: {}, mariadb: {}, sqlserver: {} }
+    engines: { mysql: {}, mariadb: {}, sqlserver: {}, sqlite: {} }
   - sql: CREATE INDEX CONCURRENTLY i_c ON t_idx (a)
     expect: valid
     engines: { postgresql: {} }
@@ -171,10 +183,10 @@ examples:
     engines: { postgresql: {} }
   - sql: CREATE INDEX i_m ON t_idx USING hash (b)
     expect: invalid
-    engines: { mysql: {}, mariadb: {}, sqlserver: {} }
+    engines: { mysql: {}, mariadb: {}, sqlserver: {}, sqlite: {} }
   - sql: CREATE INDEX i_lower ON t_idx (lower(b))
     expect: valid
-    engines: { postgresql: {} }
+    engines: { postgresql: {}, sqlite: {} }
   - sql: CREATE INDEX i_ops ON t_idx (b varchar_pattern_ops)
     expect: valid
     engines: { postgresql: {} }
@@ -189,13 +201,13 @@ examples:
     engines: { postgresql: { since: "15" } }
   - sql: CREATE UNIQUE INDEX i_nnd ON t_idx (a) NULLS NOT DISTINCT
     expect: invalid
-    engines: { postgresql: { until: "15" }, sqlserver: {} }
+    engines: { postgresql: { until: "15", sqlite: {} }, sqlserver: {} }
   - sql: CREATE INDEX i_ff ON t_idx (a) WITH (fillfactor = 70)
     expect: valid
     engines: { postgresql: {}, sqlserver: {} }
   - sql: CREATE INDEX i_part ON t_idx (a) WHERE d > 0 AND b IS NOT NULL
     expect: valid
-    engines: { postgresql: {}, sqlserver: {} }
+    engines: { postgresql: {}, sqlserver: {}, sqlite: {} }
   - sql: CREATE INDEX i_part ON t_idx (a) WHERE d > 0
     expect: invalid
     engines: { mysql: {}, mariadb: {} }
@@ -206,7 +218,7 @@ examples:
     engines: { sqlserver: {} }
   - sql: CREATE CLUSTERED INDEX i_cl ON t_idx (a)
     expect: invalid
-    engines: { mysql: {}, mariadb: {}, postgresql: {} }
+    engines: { mysql: {}, mariadb: {}, postgresql: {}, sqlite: {} }
   - sql: CREATE UNIQUE NONCLUSTERED INDEX [i b] ON [dbo].[t_idx] ([b] DESC) WITH (FILLFACTOR = 80, ONLINE = OFF)
     expect: valid
     engines: { sqlserver: {} }
@@ -218,4 +230,18 @@ examples:
     engines: { sqlserver: {} }
   - sql: CREATE INDEX CONCURRENTLY i_c ON t_idx (a)
     expect: invalid
-    engines: { sqlserver: {} }
+    engines: { sqlserver: {}, sqlite: {} }
+
+  # --- SQLite only ------------------------------------------------------------
+  - sql: CREATE INDEX main.i_s ON t_idx (a)
+    expect: valid
+    engines: { sqlite: {} }
+  - sql: CREATE INDEX i_s ON main.t_idx (a)
+    expect: invalid
+    engines: { sqlite: {} }
+  - sql: CREATE INDEX i_sum ON t_idx (a + d DESC, b COLLATE NOCASE)
+    expect: valid
+    engines: { sqlite: {} }
+  - sql: CREATE INDEX i_sum ON t_idx (a + d DESC, b COLLATE NOCASE)
+    expect: invalid
+    engines: { mysql: {}, mariadb: {}, postgresql: {}, sqlserver: {} }

@@ -19,7 +19,7 @@ or driver. Consumers read the bundled JSON (`dist/db-specs.json`).
 | `operations/<area>/` | SQL a client generates itself (alter column, browse table, validate syntax) as templates per engine/version. |
 | `queries/<area>/<name>/` | Query contract (`query.yaml`: parameters + normalized result columns) and one `.sql` file per engine/version variant. |
 | `syntax/<area>/<statement>/` | Curated EBNF per engine (`<engine>.ebnf`) plus `syntax.yaml` with examples; rendered as railroad diagrams. |
-| `tests/` | `targets.yaml` (container images) and `cases/` (integration tests). |
+| `tests/` | `targets.yaml` (container images; SQLite runs a small worker in `python:*-slim` images or locally) and `cases/` (integration tests). |
 | `schemas/` | JSON Schemas for every file kind. |
 | `tooling/` | Python tooling (`dbspecs` CLI). |
 

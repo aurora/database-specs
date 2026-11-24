@@ -46,7 +46,7 @@ def cmd_test(args) -> int:
         targets = [t for t in targets if t["id"] in args.target or t["engine"] in args.target]
     report = Report()
     for target in targets:
-        print(f"== {target['id']} ({target['image']})", flush=True)
+        print(f"== {target['id']} ({target.get('image', 'local Python')})", flush=True)
         try:
             with running(target) as server:
                 print(f"   server version {server.version}", flush=True)

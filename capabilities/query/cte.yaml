@@ -19,6 +19,10 @@ support:
     - since: "8.4"
       status: supported
       notes: ["Since 12, non-recursive side-effect-free CTEs referenced once are inlined; MATERIALIZED / NOT MATERIALIZED control this."]
+  sqlite:
+    - since: "3.8.3"
+      status: supported
+      notes: ["MATERIALIZED / NOT MATERIALIZED hints since 3.35."]
 probes:
-  - engines: [mysql, mariadb, postgresql, sqlserver]
+  - engines: [mysql, mariadb, postgresql, sqlserver, sqlite]
     statements: ["WITH x AS (SELECT 1 AS n) SELECT n FROM x"]

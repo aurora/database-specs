@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=../schemas/protocol.schema.json
+id: sqlite
+name: SQLite C API (embedded, no wire protocol)
+
+client_libraries:
+  - name: SQLite C library (libsqlite3 / amalgamation)
+    url: https://sqlite.org/c3ref/intro.html
+    notes:
+      - "Type codes below are the storage classes returned per VALUE by sqlite3_column_type(); they can differ from row to row in the same column."
+      - "sqlite3_column_decltype() returns the declared type text of a table column (empty for expressions); a client derives editors from it via the affinity rules."
+
+notes:
+  - "Type affinity from the declared type: contains INT -> INTEGER; CHAR, CLOB or TEXT -> TEXT; BLOB or empty -> BLOB; REAL, FLOA or DOUB -> REAL; otherwise NUMERIC. Any value can still be stored in any column unless the table is STRICT (3.37+)."
+  - "There is no date/time or boolean storage class: dates are TEXT (ISO-8601), REAL (Julian day) or INTEGER (Unix time) by convention; booleans are 0/1."
+
+type_codes:
+  - { code: 1, name: SQLITE_INTEGER, category: integer, notes: ["64-bit signed"] }
+  - { code: 2, name: SQLITE_FLOAT,   category: float,   notes: ["64-bit IEEE"] }
+  - { code: 3, name: SQLITE_TEXT,    category: string,  notes: ["UTF-8 or UTF-16 depending on the database encoding"] }
+  - { code: 4, name: SQLITE_BLOB,    category: binary }
+  - { code: 5, name: SQLITE_NULL,    category: other }
+
+sources:
+  - evidence: docs
+    url: https://sqlite.org/datatype3.html

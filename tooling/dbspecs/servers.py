@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import subprocess
+import sys
+import tempfile
 import time
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from pathlib import Path
 
 import psycopg
 import pymssql
@@ -40,7 +44,95 @@ ENGINE_SETUP = {
         "env": {"ACCEPT_EULA": "Y", "MSSQL_SA_PASSWORD": MSSQL_PASSWORD, "MSSQL_PID": "Developer"},
         "schema": "dbo",
     },
+    # embedded: no container port; a worker process (tooling/dbspecs/sqlite_worker.py) runs
+    # locally or inside a python:*-slim image and uses the SQLite linked into that Python
+    "sqlite": {"embedded": True, "schema": "main"},
 }
+
+WORKER_SOURCE = Path(__file__).with_name("sqlite_worker.py")
+
+
+class EmbeddedError(Exception):
+    pass
+
+
+class WorkerProcess:
+    """JSON-lines client for sqlite_worker.py."""
+
+    def __init__(self, args: list[str]):
+        self.proc = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE, text=True, bufsize=1)
+
+    def request(self, req: dict) -> dict:
+        self.proc.stdin.write(json.dumps(req) + "\n")
+        self.proc.stdin.flush()
+        line = self.proc.stdout.readline()
+        if not line:
+            raise RuntimeError("sqlite worker died: " + self.proc.stderr.read()[-2000:])
+        return json.loads(line)
+
+    def close(self):
+        try:
+            self.proc.stdin.close()
+            self.proc.wait(timeout=20)
+        except Exception:
+            self.proc.kill()
+
+
+def _decode(v):
+    return bytes.fromhex(v["$blob"]) if isinstance(v, dict) and "$blob" in v else v
+
+
+class WorkerCursor:
+    def __init__(self, worker: WorkerProcess, conn_id: int):
+        self.worker = worker
+        self.conn_id = conn_id
+        self.description = None
+        self._rows: list = []
+
+    def execute(self, sql, params=None):
+        resp = self.worker.request({"op": "execute", "conn": self.conn_id, "sql": sql, "params": params})
+        if not resp["ok"]:
+            raise EmbeddedError(resp["error"])
+        cols = resp["columns"]
+        self.description = [(c, None, None, None, None, None, None) for c in cols] if cols else None
+        self._rows = [tuple(_decode(v) for v in r) for r in resp["rows"]]
+
+    def fetchone(self):
+        return self._rows.pop(0) if self._rows else None
+
+    def fetchall(self):
+        rows, self._rows = self._rows, []
+        return rows
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+class WorkerConnection:
+    """Minimal DB-API style wrapper: one SQLite connection in the worker (same database file)."""
+
+    def __init__(self, worker: WorkerProcess):
+        self.worker = worker
+        self.conn_id = worker.request({"op": "connect"})["conn"]
+
+    def cursor(self):
+        return WorkerCursor(self.worker, self.conn_id)
+
+    def close(self):
+        if self.conn_id is not None:
+            self.worker.request({"op": "close", "conn": self.conn_id})
+            self.conn_id = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
+        return False
 
 
 def container_cli() -> str:
@@ -56,6 +148,7 @@ class Server:
     host: str
     port: int
     version: str = ""
+    worker: WorkerProcess | None = field(default=None, repr=False)
 
     @property
     def engine(self) -> str:
@@ -65,7 +158,13 @@ class Server:
     def schema(self) -> str:
         return ENGINE_SETUP[self.engine]["schema"]
 
+    def format_sql(self, sql: str) -> str:
+        """Placeholders: the spec's :name style -> what the test driver expects."""
+        return sql if self.engine == "sqlite" else to_pyformat(sql)
+
     def connect(self, database: str = DATABASE):
+        if self.engine == "sqlite":
+            return WorkerConnection(self.worker)
         if self.engine in ("mysql", "mariadb"):  # mysql wire protocol
             return pymysql.connect(host=self.host, port=self.port, user="root", password=PASSWORD,
                                    database=DATABASE, autocommit=True, connect_timeout=3)
@@ -78,6 +177,10 @@ class Server:
         raise ValueError(self.engine)
 
     def detect_version(self) -> str:
+        if self.engine == "sqlite":
+            resp = self.worker.request({"op": "version"})
+            self.version = resp["rows"][0][0]
+            return self.version
         if self.engine == "sqlserver":
             # no database exists yet: connect to master and create it
             with self.connect("master") as conn, conn.cursor() as cur:
@@ -98,8 +201,12 @@ class Server:
 
 @contextmanager
 def running(target: dict, timeout: float = 180):
-    cli = container_cli()
     setup = ENGINE_SETUP[target["engine"]]
+    if setup.get("embedded"):
+        with _running_embedded(target) as server:
+            yield server
+        return
+    cli = container_cli()
     args = [cli, "run", "-d", "--rm", "-p", f"127.0.0.1::{setup['port']}"]
     for k, v in setup["env"].items():
         args += ["-e", f"{k}={v}"]
@@ -122,6 +229,26 @@ def running(target: dict, timeout: float = 180):
         yield server
     finally:
         subprocess.run([cli, "rm", "-f", cid], capture_output=True)
+
+
+@contextmanager
+def _running_embedded(target: dict):
+    source = WORKER_SOURCE.read_text(encoding="utf-8")
+    tmpdir = None
+    if target.get("image"):
+        args = [container_cli(), "run", "-i", "--rm", target["image"], "python", "-c", source]
+    else:  # the SQLite linked into this Python
+        tmpdir = tempfile.mkdtemp(prefix="dbspecs-sqlite-")
+        args = [sys.executable, "-c", source, str(Path(tmpdir) / "test.db")]
+    worker = WorkerProcess(args)
+    try:
+        server = Server(target, "", 0, worker=worker)
+        server.detect_version()
+        yield server
+    finally:
+        worker.close()
+        if tmpdir:
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 _PARAM = re.compile(r"(?<![:\w]):([A-Za-z_]\w*)")

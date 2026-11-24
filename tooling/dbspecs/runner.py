@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime as dt
 from dataclasses import dataclass, field
 
-from .servers import Server, fetch_dicts, to_pyformat
+from .servers import Server, fetch_dicts
 from .specs import Specs, in_range, quote_identifier, render, statement_for, variant_for
 from .syntax import examples_for, grammar_accepts, grammar_should_accept, server_should_accept
 
@@ -39,7 +39,19 @@ class Report:
 def _exec_all(conn, statements):
     with conn.cursor() as cur:
         for sql in statements:
-            cur.execute(sql)
+            if sql.strip():  # rendered templates can leave empty optional steps
+                cur.execute(sql)
+
+
+def _statements(items, version: str) -> list[str]:
+    """Setup/cleanup entries: plain SQL strings or {sql, since, until} objects."""
+    out = []
+    for item in items or []:
+        if isinstance(item, str):
+            out.append(item)
+        elif in_range(version, item):
+            out.append(item["sql"])
+    return out
 
 
 def _cleanup(server: Server, statements):
@@ -182,7 +194,7 @@ def run_tests(specs: Specs, server: Server, report: Report):
         problems: list[str] = []
         try:
             with server.connect() as conn:
-                _exec_all(conn, test.get("setup", {}).get(server.engine, []))
+                _exec_all(conn, _statements(test.get("setup", {}).get(server.engine), server.version))
                 for step in test["steps"]:
                     params = _resolve_params({**step.get("params", {}),
                                               **step.get("params_by_engine", {}).get(server.engine, {})}, server)
@@ -196,7 +208,7 @@ def run_tests(specs: Specs, server: Server, report: Report):
                         break
                     sql = (specs.path("query", step["query"]).parent / var["file"]).read_text(encoding="utf-8")
                     with conn.cursor() as cur:
-                        cur.execute(to_pyformat(sql), params)
+                        cur.execute(server.format_sql(sql), params)
                         rows = fetch_dicts(cur)
                     expected_cols = [c["name"] for c in query["result"]["columns"]]
                     if rows and list(rows[0]) != expected_cols:
@@ -206,7 +218,7 @@ def run_tests(specs: Specs, server: Server, report: Report):
         except Exception as exc:
             problems.append(f"{type(exc).__name__}: {exc}".splitlines()[0])
         finally:
-            _cleanup(server, test.get("cleanup", {}).get(server.engine, []))
+            _cleanup(server, _statements(test.get("cleanup", {}).get(server.engine), server.version))
         report.add(Result(server.target["id"], server.version, "test", test_id,
                           "fail" if problems else "pass", "; ".join(problems)))
 

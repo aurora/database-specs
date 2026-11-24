@@ -15,7 +15,7 @@ result:
     - name: table_type
       type: string
       nullable: false
-      enum: [table, partitioned-table, view, materialized-view, foreign-table]
+      enum: [table, partitioned-table, view, materialized-view, foreign-table, virtual-table]
     - name: partition_of
       type: string
       nullable: true
@@ -54,6 +54,21 @@ variants:
       - "row_estimate is the row count from sys.partitions metadata (usually accurate, not guaranteed)."
       - "data_bytes / index_bytes from sys.allocation_units (used pages * 8 KB); no VIEW DATABASE STATE permission needed."
       - "System-versioned temporal history tables are listed as normal tables."
+  - engine: sqlite
+    since: "3.26"
+    until: "3.37"
+    file: sqlite-3.26.sql
+    notes:
+      - "Reads main.sqlite_master; returns no rows for other (attached) schemas - use 3.37+ or query <schema>.sqlite_master."
+      - "Shadow tables of virtual tables (e.g. FTS5 *_data) are listed as tables; 3.37+ excludes them."
+  - engine: sqlite
+    since: "3.37"
+    file: sqlite.sql
+    notes:
+      - "pragma_table_list (3.37+): all attached schemas, shadow tables excluded."
+      - "storage_engine: rowid or without-rowid for tables (virtual tables: NULL)."
+      - "No statistics without ANALYZE (sqlite_stat1) and no sizes without the dbstat virtual table (compile option); row_estimate, data_bytes and index_bytes are NULL."
+      - "No table comments in SQLite."
   - engine: postgresql
     since: "12"
     file: postgresql.sql

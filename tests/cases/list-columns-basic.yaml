@@ -1,7 +1,9 @@
 # yaml-language-server: $schema=../../schemas/test.schema.json
 id: list-columns-basic
 description: introspection.list-columns on a table covering auto increment, defaults, generated columns, comments.
-engines: [mysql, mariadb, postgresql, sqlserver]
+engines: [mysql, mariadb, postgresql, sqlserver, sqlite]
+versions:
+  sqlite: { since: "3.31" }  # generated columns
 
 setup:
   mysql:
@@ -54,12 +56,37 @@ setup:
       )
     - EXEC sp_addextendedproperty 'MS_Description', 'display name', 'SCHEMA', 'dbo', 'TABLE', 't_columns', 'COLUMN', 'name'
     - ALTER TABLE t_columns DROP COLUMN dropped_later
+  sqlite:
+    - sql: |
+        CREATE TABLE t_columns (
+          id INTEGER PRIMARY KEY,
+          name VARCHAR(100) NOT NULL,
+          price DECIMAL(10,2) DEFAULT 0.00,
+          qty INT NOT NULL DEFAULT 1,
+          total DECIMAL(12,2) GENERATED ALWAYS AS (price * qty) STORED,
+          dropped_later INT,
+          note TEXT
+        )
+      since: "3.35"
+    - sql: ALTER TABLE t_columns DROP COLUMN dropped_later
+      since: "3.35"
+    - sql: |
+        CREATE TABLE t_columns (
+          id INTEGER PRIMARY KEY,
+          name VARCHAR(100) NOT NULL,
+          price DECIMAL(10,2) DEFAULT 0.00,
+          qty INT NOT NULL DEFAULT 1,
+          total DECIMAL(12,2) GENERATED ALWAYS AS (price * qty) STORED,
+          note TEXT
+        )
+      until: "3.35"
 
 cleanup:
   mysql: [DROP TABLE IF EXISTS t_columns]
   mariadb: [DROP TABLE IF EXISTS t_columns]
   postgresql: [DROP TABLE IF EXISTS t_columns]
   sqlserver: [DROP TABLE IF EXISTS t_columns]
+  sqlite: [DROP TABLE IF EXISTS t_columns]
 
 steps:
   - query: introspection.list-columns
@@ -70,13 +97,13 @@ steps:
         - match: { column_name: id }
           values: { ordinal_position: 1, is_nullable: false, is_auto_increment: true, default_raw: null }
         - match: { column_name: name }
-          values: { ordinal_position: 2, is_nullable: false, comment: display name }
+          values: { ordinal_position: 2, is_nullable: false }
         - match: { column_name: name }
           engine: mysql
-          values: { data_type: varchar(100) }
+          values: { comment: display name, data_type: varchar(100) }
         - match: { column_name: name }
           engine: mariadb
-          values: { data_type: varchar(100) }
+          values: { comment: display name, data_type: varchar(100) }
         - match: { column_name: price }
           engine: mariadb
           values: { default_raw: "0.00" }
@@ -88,7 +115,7 @@ steps:
           values: { data_type: int(11) }
         - match: { column_name: name }
           engine: postgresql
-          values: { data_type: character varying(100) }
+          values: { comment: display name, data_type: character varying(100) }
         - match: { column_name: price }
           values: { is_nullable: true, is_auto_increment: false }
         - match: { column_name: qty }
@@ -120,7 +147,7 @@ steps:
           values: { default_raw: "((1))", data_type: int }
         - match: { column_name: name }
           engine: sqlserver
-          values: { data_type: varchar(100) }
+          values: { comment: display name, data_type: varchar(100) }
         - match: { column_name: price }
           engine: sqlserver
           values: { default_raw: "((0.00))", data_type: "decimal(10,2)" }
@@ -130,3 +157,12 @@ steps:
         - match: { column_name: note }
           engine: sqlserver
           values: { data_type: nvarchar(max) }
+        - match: { column_name: id }
+          engine: sqlite
+          values: { data_type: INTEGER, comment: null, collation: null }
+        - match: { column_name: qty }
+          engine: sqlite
+          values: { default_raw: "1", data_type: INT }
+        - match: { column_name: price }
+          engine: sqlite
+          values: { default_raw: "0.00", data_type: "DECIMAL(10,2)" }

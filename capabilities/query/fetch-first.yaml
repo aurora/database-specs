@@ -19,6 +19,9 @@ support:
     - since: "8.4"
       status: supported
       notes: ["FETCH ... WITH TIES since 13."]
+  sqlite:
+    - status: unsupported
+      notes: ["Use LIMIT ... OFFSET."]
 probes:
-  - engines: [mysql, mariadb, postgresql, sqlserver]
+  - engines: [mysql, mariadb, postgresql, sqlserver, sqlite]
     statements: ["SELECT n FROM (SELECT 1 AS n) t ORDER BY n OFFSET 0 ROWS FETCH FIRST 1 ROWS ONLY"]

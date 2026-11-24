@@ -23,6 +23,12 @@ support:
     - since: "8.4"
       status: supported
       notes: ["GROUPS frames and EXCLUDE since 11."]
+  sqlite:
+    - until: "3.25"
+      status: unsupported
+    - since: "3.25"
+      status: supported
+      notes: ["GROUPS frames, EXCLUDE and FILTER on window aggregates since 3.28."]
 probes:
-  - engines: [mysql, mariadb, postgresql, sqlserver]
+  - engines: [mysql, mariadb, postgresql, sqlserver, sqlite]
     statements: ["SELECT ROW_NUMBER() OVER (ORDER BY n) AS rn FROM (SELECT 1 AS n) t"]

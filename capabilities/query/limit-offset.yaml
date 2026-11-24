@@ -15,6 +15,9 @@ support:
   postgresql:
     - status: supported
       notes: ["LIMIT ALL / LIMIT NULL mean no limit. 'LIMIT m, n' is not supported."]
+  sqlite:
+    - status: supported
+      notes: ["Also LIMIT offset, count (offset first, as in MySQL). LIMIT -1 means no limit."]
 probes:
-  - engines: [mysql, mariadb, postgresql, sqlserver]
+  - engines: [mysql, mariadb, postgresql, sqlserver, sqlite]
     statements: ["SELECT n FROM (SELECT 1 AS n) t ORDER BY n LIMIT 1 OFFSET 0"]

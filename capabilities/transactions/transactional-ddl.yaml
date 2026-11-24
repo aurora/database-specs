@@ -23,6 +23,10 @@ support:
       notes:
         - "Most DDL can be rolled back. Exceptions include CREATE/ALTER/DROP DATABASE, full-text catalog/index DDL and some ALTER DATABASE options."
         - "BEGIN alone starts a statement block, not a transaction: use BEGIN TRANSACTION."
+  sqlite:
+    - status: supported
+      notes:
+        - "All DDL is transactional. Exceptions: VACUUM and some PRAGMAs (e.g. journal_mode, foreign_keys) cannot run inside a transaction or are no-ops there."
 probes:
   - name: rollback-create-table
     engines: [mysql, mariadb]
@@ -47,4 +51,12 @@ probes:
       - "CREATE TABLE probe_tx_ddl (id INT)"
       - "ROLLBACK TRANSACTION"
     check: "SELECT CASE WHEN OBJECT_ID('probe_tx_ddl') IS NULL THEN 1 ELSE 0 END"
+    cleanup: ["DROP TABLE IF EXISTS probe_tx_ddl"]
+  - name: rollback-create-table
+    engines: [sqlite]
+    statements:
+      - "BEGIN"
+      - "CREATE TABLE probe_tx_ddl (id INT)"
+      - "ROLLBACK"
+    check: "SELECT COUNT(*) = 0 FROM sqlite_master WHERE name = 'probe_tx_ddl'"
     cleanup: ["DROP TABLE IF EXISTS probe_tx_ddl"]

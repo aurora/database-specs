@@ -68,8 +68,18 @@ variants:
       - "comment comes from the extended property MS_Description (the SSMS convention)."
       - "generation_expression is the computed column definition; persisted = stored, otherwise virtual."
       - "collation: set for every character column."
+  - engine: sqlite
+    since: "3.26"
+    file: sqlite.sql
+    notes:
+      - "data_type is the declared type as written (may be empty); it only determines the column affinity."
+      - "is_auto_increment = rowid alias: the single INTEGER PRIMARY KEY column of a rowid table (AUTOINCREMENT additionally prevents reuse of ids)."
+      - "default_raw is the default expression as written, e.g. 'x', 1, CURRENT_TIMESTAMP."
+      - "generation_kind from pragma_table_xinfo (generated columns since 3.31); generation_expression, collation and comment are not exposed by pragmas (only in the CREATE TABLE text) and are NULL."
 
 gaps:
   - "MySQL < 5.7 (no GENERATION_EXPRESSION column)."
   - "PostgreSQL < 12 (no attgenerated)."
   - "MariaDB < 10.2.7 (defaults not reported as expressions)."
+  - "SQLite < 3.26 (no pragma_table_xinfo)."
+  - "SQLite: generation_expression, collation (needs parsing the CREATE TABLE text)."

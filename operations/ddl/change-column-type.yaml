@@ -16,6 +16,20 @@ parameters:
   - name: using
     kind: sql-fragment
     description: Conversion expression for incompatible types.
+  - name: rebuild_table
+    kind: identifier
+    description: Table rebuild only - name of the temporary new table (e.g. the table name + '_new').
+  - name: rebuild_definition
+    kind: sql-fragment
+    description: >
+      Table rebuild only - the complete column and constraint list of the new table (what goes
+      between the parentheses of CREATE TABLE), with the changed column type.
+  - name: rebuild_columns
+    kind: sql-fragment
+    description: Table rebuild only - comma-separated (quoted) column list copied from the old table.
+  - name: rebuild_objects
+    kind: sql-fragment
+    description: Table rebuild only - statement(s) recreating indexes, triggers and views of the table (optional).
 
 implementations:
   mysql:
@@ -44,6 +58,27 @@ implementations:
         - "column_definition is the type plus NULL / NOT NULL (and COLLATE for strings). Leaving out NOT NULL makes the column nullable (ANSI_NULL_DFLT_ON)."
         - "DEFAULT, CHECK and other constraints are separate objects and are kept; ALTER COLUMN fails if an index, statistics, constraint or computed column depends on the column in an incompatible way - drop and recreate them."
         - "Changing the type of a large table can be a size-of-data operation under a schema modification lock."
+  sqlite:
+    - status: supported
+      method: emulated
+      requires: [rebuild_table, rebuild_definition, rebuild_columns]
+      transactional: true
+      steps:
+        - "PRAGMA foreign_keys = OFF"
+        - "BEGIN"
+        - "CREATE TABLE {{rebuild_table}} ({{rebuild_definition}})"
+        - "INSERT INTO {{rebuild_table}} ({{rebuild_columns}}) SELECT {{rebuild_columns}} FROM {{table}}"
+        - "DROP TABLE {{table}}"
+        - "ALTER TABLE {{rebuild_table}} RENAME TO {{table}}"
+        - "{{#rebuild_objects}}{{rebuild_objects}}{{/rebuild_objects}}"
+        - "PRAGMA foreign_key_check"
+        - "COMMIT"
+        - "PRAGMA foreign_keys = ON"
+      caveats:
+        - "There is no ALTER COLUMN; the table is rebuilt (the procedure from the SQLite documentation on 'Making Other Kinds Of Table Schema Changes'). Indexes, triggers and views on the table are dropped with it and must be recreated (rebuild_objects)."
+        - "PRAGMA foreign_keys cannot change inside a transaction, hence before BEGIN / after COMMIT. Restore the previous setting rather than always ON. foreign_key_check must return no rows before COMMIT."
+        - "Often unnecessary: declared types only set the column affinity, any value fits any column unless the table is STRICT."
+        - "ALTER TABLE ... RENAME rewrites references in other tables' foreign keys, triggers and views since 3.26 (legacy_alter_table=OFF)."
   postgresql:
     - status: supported
       template: "ALTER TABLE {{table}} ALTER COLUMN {{column}} TYPE {{new_type}}{{#using}} USING {{using}}{{/using}}"

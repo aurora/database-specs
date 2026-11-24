@@ -16,6 +16,8 @@ support:
     - status: unsupported
   mariadb:
     - status: unsupported
+  sqlite:
+    - status: unsupported
   postgresql:
     - status: unsupported
       notes: ["Use RETURNING; PostgreSQL 18 adds OLD/NEW in RETURNING."]
@@ -24,7 +26,7 @@ probes:
     setup: ["CREATE TABLE #probe_output (id INT)"]
     statements: ["INSERT INTO #probe_output (id) OUTPUT inserted.id VALUES (1)"]
     cleanup: ["DROP TABLE IF EXISTS #probe_output"]
-  - engines: [mysql, mariadb, postgresql]
+  - engines: [mysql, mariadb, postgresql, sqlite]
     setup: ["CREATE TEMPORARY TABLE probe_output (id INT)"]
     statements: ["INSERT INTO probe_output (id) OUTPUT inserted.id VALUES (1)"]
     cleanup: ["DROP TABLE IF EXISTS probe_output"]

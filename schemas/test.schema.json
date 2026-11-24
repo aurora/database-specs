@@ -7,6 +7,24 @@
   "required": ["id", "engines", "steps"],
   "additionalProperties": false,
   "$defs": {
+    "statements": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "type": "string" },
+          {
+            "type": "object",
+            "required": ["sql"],
+            "additionalProperties": false,
+            "properties": {
+              "sql": { "type": "string" },
+              "since": { "$ref": "common.schema.json#/$defs/version" },
+              "until": { "$ref": "common.schema.json#/$defs/version" }
+            }
+          }
+        ]
+      }
+    },
     "expectation": {
       "type": "object",
       "additionalProperties": false,
@@ -35,12 +53,13 @@
     "description": { "type": "string" },
     "engines": { "type": "array", "minItems": 1, "items": { "$ref": "common.schema.json#/$defs/engineId" } },
     "setup": {
+      "description": "Per engine: SQL strings or {sql, since, until} objects (run only for matching versions).",
       "type": "object",
-      "additionalProperties": { "type": "array", "items": { "type": "string" } }
+      "additionalProperties": { "$ref": "#/$defs/statements" }
     },
     "cleanup": {
       "type": "object",
-      "additionalProperties": { "type": "array", "items": { "type": "string" } }
+      "additionalProperties": { "$ref": "#/$defs/statements" }
     },
     "versions": {
       "description": "Optional version range per engine; targets outside the range are skipped.",

@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=../../schemas/test.schema.json
 id: introspection-schema-objects
 description: list-tables, list-indexes and list-foreign-keys on a shared parent/child fixture.
-engines: [mysql, mariadb, postgresql, sqlserver]
+engines: [mysql, mariadb, postgresql, sqlserver, sqlite]
 
 setup:
   mysql: &mysql_setup
@@ -88,6 +88,29 @@ setup:
     - CREATE PARTITION FUNCTION pf_dbspecs (date) AS RANGE RIGHT FOR VALUES ('2026-01-01')
     - CREATE PARTITION SCHEME ps_dbspecs AS PARTITION pf_dbspecs ALL TO ([PRIMARY])
     - CREATE TABLE t_part (id INT, created DATE) ON ps_dbspecs (created)
+  sqlite:
+    - |
+      CREATE TABLE t_parent (
+        id INT PRIMARY KEY,
+        code VARCHAR(20) NOT NULL,
+        region INT NOT NULL,
+        CONSTRAINT uq_parent_code UNIQUE (code),
+        CONSTRAINT uq_parent_region_code UNIQUE (region, code)
+      )
+    - |
+      CREATE TABLE t_child (
+        id INT PRIMARY KEY,
+        parent_id INT,
+        region INT,
+        code VARCHAR(20),
+        title VARCHAR(200),
+        CONSTRAINT fk_child_parent FOREIGN KEY (parent_id) REFERENCES t_parent (id)
+          ON DELETE CASCADE ON UPDATE SET NULL,
+        CONSTRAINT fk_child_region_code FOREIGN KEY (region, code) REFERENCES t_parent (region, code)
+      )
+    - CREATE INDEX ix_child_title ON t_child (lower(title))
+    - CREATE INDEX ix_child_multi ON t_child (region, parent_id DESC) WHERE region > 0
+    - CREATE VIEW v_child AS SELECT id, title FROM t_child
 
 cleanup:
   mysql: &mysql_cleanup
@@ -109,6 +132,10 @@ cleanup:
     - DROP TABLE IF EXISTS t_part
     - IF EXISTS (SELECT 1 FROM sys.partition_schemes WHERE name = 'ps_dbspecs') DROP PARTITION SCHEME ps_dbspecs
     - IF EXISTS (SELECT 1 FROM sys.partition_functions WHERE name = 'pf_dbspecs') DROP PARTITION FUNCTION pf_dbspecs
+  sqlite:
+    - DROP VIEW IF EXISTS v_child
+    - DROP TABLE IF EXISTS t_child
+    - DROP TABLE IF EXISTS t_parent
 
 steps:
   - query: introspection.list-tables
@@ -116,25 +143,38 @@ steps:
     expect:
       rows:
         - match: { table_name: t_parent }
-          values: { table_type: table, comment: parents, partition_of: null }
+          values: { table_type: table, partition_of: null }
         - match: { table_name: t_child }
           values: { table_type: table, comment: null }
         - match: { table_name: v_child }
           values: { table_type: view, comment: null, storage_engine: null, row_estimate: null }
         - match: { table_name: t_part }
+          engine: mysql
           values: { table_type: partitioned-table }
         - match: { table_name: t_parent }
           engine: mysql
-          values: { storage_engine: InnoDB }
+          values: { comment: parents, storage_engine: InnoDB }
+        - match: { table_name: t_part }
+          engine: mariadb
+          values: { table_type: partitioned-table }
         - match: { table_name: t_parent }
           engine: mariadb
-          values: { storage_engine: InnoDB }
+          values: { comment: parents, storage_engine: InnoDB }
+        - match: { table_name: t_part }
+          engine: postgresql
+          values: { table_type: partitioned-table }
         - match: { table_name: t_parent }
           engine: postgresql
-          values: { storage_engine: heap, collation: null }
+          values: { comment: parents, storage_engine: heap, collation: null }
+        - match: { table_name: t_part }
+          engine: sqlserver
+          values: { table_type: partitioned-table }
         - match: { table_name: t_parent }
           engine: sqlserver
-          values: { storage_engine: null, collation: null, row_estimate: 0 }
+          values: { comment: parents, storage_engine: null, collation: null, row_estimate: 0 }
+        - match: { table_name: t_parent }
+          engine: sqlite
+          values: { storage_engine: rowid, comment: null, row_estimate: null }
         - match: { table_name: mv_child }
           engine: postgresql
           values: { table_type: materialized-view }
@@ -216,6 +256,16 @@ steps:
         - match: { index_name: ix_child_title }
           engine: sqlserver
           values: { column_name: title, is_clustered: false, comment: title index }
+        # SQLite: autoindex for a non-INTEGER primary key, expression element without text
+        - match: { is_primary: true }
+          engine: sqlite
+          values: { index_name: sqlite_autoindex_t_child_1, is_clustered: false }
+        - match: { index_name: ix_child_multi, column_position: 2 }
+          engine: sqlite
+          values: { column_name: parent_id, sort_order: desc, predicate: region > 0 }
+        - match: { index_name: ix_child_title }
+          engine: sqlite
+          values: { column_name: null, expression: null }
         # PostgreSQL: expression, INCLUDE, partial index
         - match: { index_name: ix_child_title }
           engine: postgresql
@@ -231,42 +281,59 @@ steps:
       rows:
         - match: { is_primary: true }
           values: { column_name: id }
-        - match: { index_name: uq_parent_code }
-          values: { is_unique: true, is_primary: false, column_name: code }
-        - match: { index_name: uq_parent_region_code, column_position: 2 }
-          values: { column_name: code, is_unique: true }
+        - match: { column_name: code, column_position: 1 }
+          values: { is_unique: true, is_primary: false }
+        - match: { column_name: code, column_position: 2 }
+          values: { is_unique: true, is_primary: false }
 
   - query: introspection.list-foreign-keys
     params: { schema: "{{schema}}", table: t_child }
     expect:
       row_count: 3
       rows:
-        - match: { constraint_name: fk_child_parent }
+        - match: { column_name: parent_id }
           values:
             column_position: 1
-            column_name: parent_id
             referenced_table: t_parent
             referenced_column: id
             on_update: set-null
             on_delete: cascade
-            is_enforced: true
-        - match: { constraint_name: fk_child_region_code, column_position: 2 }
-          values: { column_name: code, referenced_column: code }
+        - match: { column_name: parent_id }
+          engine: mysql
+          values: { constraint_name: fk_child_parent, is_enforced: true }
+        - match: { column_name: parent_id }
+          engine: mariadb
+          values: { constraint_name: fk_child_parent, is_enforced: true }
+        - match: { column_name: parent_id }
+          engine: postgresql
+          values: { constraint_name: fk_child_parent, is_enforced: true }
+        - match: { column_name: parent_id }
+          engine: sqlserver
+          values: { constraint_name: fk_child_parent, is_enforced: true }
+        - match: { column_name: code }
+          values: { column_position: 2, referenced_column: code }
         # default action when none is given
-        - match: { constraint_name: fk_child_region_code, column_position: 1 }
+        - match: { column_name: region }
           engine: mysql
           until: "8.0"
           values: { on_update: restrict, on_delete: restrict }
-        - match: { constraint_name: fk_child_region_code, column_position: 1 }
+        - match: { column_name: region }
           engine: mysql
           since: "8.0"
           values: { on_update: no-action, on_delete: no-action }
-        - match: { constraint_name: fk_child_region_code, column_position: 1 }
+        - match: { column_name: region }
           engine: mariadb
           values: { on_update: restrict, on_delete: restrict, match_type: null, is_deferrable: false }
-        - match: { constraint_name: fk_child_region_code, column_position: 1 }
+        - match: { column_name: region }
           engine: postgresql
           values: { on_update: no-action, on_delete: no-action, match_type: simple, is_deferrable: true, initially_deferred: true }
-        - match: { constraint_name: fk_child_region_code, column_position: 1 }
+        - match: { column_name: region }
           engine: sqlserver
           values: { on_update: no-action, on_delete: no-action, match_type: null, is_deferrable: false }
+        # SQLite: synthetic names (ids count from the last declared key), enforcement is per connection
+        - match: { column_name: parent_id }
+          engine: sqlite
+          values: { constraint_name: fk_t_child_1, is_enforced: false, is_deferrable: null }
+        - match: { column_name: region }
+          engine: sqlite
+          values: { constraint_name: fk_t_child_0, on_update: no-action, on_delete: no-action, match_type: null }

@@ -3,8 +3,8 @@ id: introspection-version-specific
 description: >
   Introspection of features that exist only in newer versions: MySQL functional and invisible
   indexes, MariaDB ignored indexes, PostgreSQL 18 NOT ENFORCED foreign keys, SQL Server
-  disabled indexes and NOCHECK foreign keys.
-engines: [mysql, mariadb, postgresql, sqlserver]
+  disabled indexes and NOCHECK foreign keys, SQLite WITHOUT ROWID tables.
+engines: [mysql, mariadb, postgresql, sqlserver, sqlite]
 versions:
   mysql: { since: "8.0.13" }
   postgresql: { since: "18" }
@@ -52,12 +52,22 @@ setup:
     - CREATE INDEX ix_hidden ON t_mod (title)
     - ALTER INDEX ix_hidden ON t_mod DISABLE
     - ALTER TABLE t_mod NOCHECK CONSTRAINT fk_mod_ref
+  sqlite:
+    - CREATE TABLE t_ref (id INTEGER PRIMARY KEY)
+    - |
+      CREATE TABLE t_mod (
+        id INT PRIMARY KEY,
+        ref_id INT,
+        title TEXT,
+        CONSTRAINT fk_mod_ref FOREIGN KEY (ref_id) REFERENCES t_ref
+      ) WITHOUT ROWID
 
 cleanup:
   mysql: [DROP TABLE IF EXISTS t_mod, DROP TABLE IF EXISTS t_ref]
   mariadb: [DROP TABLE IF EXISTS t_mod, DROP TABLE IF EXISTS t_ref]
   postgresql: [DROP TABLE IF EXISTS t_mod, DROP TABLE IF EXISTS t_ref]
   sqlserver: [DROP TABLE IF EXISTS t_mod, DROP TABLE IF EXISTS t_ref]
+  sqlite: [DROP TABLE IF EXISTS t_mod, DROP TABLE IF EXISTS t_ref]
 
 steps:
   - query: introspection.list-indexes
@@ -76,6 +86,19 @@ steps:
         - match: { index_name: ix_hidden }
           engine: sqlserver
           values: { column_name: title, is_visible: false }
+        - match: { is_primary: true }
+          engine: sqlite
+          values: { column_name: id, is_clustered: true }
+  - query: introspection.list-tables
+    params: { schema: "{{schema}}" }
+    expect:
+      rows:
+        - match: { table_name: t_mod }
+          engine: sqlite
+          values: { storage_engine: without-rowid }
+        - match: { table_name: t_ref }
+          engine: sqlite
+          values: { storage_engine: rowid }
   - query: introspection.list-foreign-keys
     params: { schema: "{{schema}}", table: t_mod }
     expect:
@@ -93,3 +116,6 @@ steps:
         - match: { constraint_name: fk_mod_ref }
           engine: sqlserver
           values: { is_enforced: false }
+        - match: { column_name: ref_id }
+          engine: sqlite
+          values: { referenced_table: t_ref, referenced_column: id }

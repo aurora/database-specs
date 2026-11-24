@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=../schemas/lexical.schema.json
+id: sqlite
+description: Lexical rules of the SQLite dialect.
+
+identifiers:
+  quotes:
+    - { open: '"', close: '"', escape: [double] }
+    - { open: "[", close: "]", notes: ["MS Access / SQL Server compatibility; no escape for ']'."] }
+    - { open: "`", close: "`", escape: [double], notes: ["MySQL compatibility."] }
+  preferred_quote: '"'
+  unquoted_pattern: '^[A-Za-z_\u0080-\uFFFF][A-Za-z0-9_$\u0080-\uFFFF]*$'
+  case_folding: none
+  notes:
+    - "Identifiers are case-insensitive for ASCII letters (quoted or not) and stored as written."
+    - "No length limit besides SQLITE_MAX_SQL_LENGTH."
+    - "Double-quoted string literal misfeature (DQS): a double-quoted token that does not match any column is taken as a string literal. Builds with SQLITE_DQS=0 (recommended, default of the CLI since 3.41) reject it."
+
+strings:
+  - { kind: string, open: "'", close: "'", escape: [double], notes: ["No backslash escapes."] }
+  - { kind: blob, prefix: "X", prefix_case_insensitive: true, open: "'", close: "'", notes: ["Hex blob literal X'53514C'."] }
+
+comments:
+  - { kind: line, open: "--" }
+  - { kind: block, open: "/*", close: "*/", nestable: false, notes: ["An unterminated block comment runs to the end of the input without error."] }
+
+parameters:
+  - { pattern: '\?[0-9]*', kind: positional, layer: server, notes: ["?NNN binds by number (1-based)."] }
+  - { pattern: '[:@$][A-Za-z_][A-Za-z0-9_]*', kind: named, layer: server, notes: ["$name may contain '::' and a (...) suffix (Tcl syntax)."] }
+
+operators: ["||", "->", "->>", "==", "<>", "!=", "<<", ">>", "GLOB", "REGEXP", "MATCH", "IS", "IS NOT"]
+
+statements:
+  terminator: ";"
+  body_quoting: ["CREATE TRIGGER ... BEGIN ... END (statements inside are terminated with ';')"]
+  notes:
+    - "A splitter must not split inside CREATE TRIGGER ... BEGIN ... END; sqlite3_complete() implements the rule."
+    - "The CLI's dot-commands (.tables, .schema, .read ...) start with '.' at line start and are not SQL."
+
+keywords:
+  notes:
+    - "No SQL interface; the C API sqlite3_keyword_count() / sqlite3_keyword_name() lists them for the linked library."
+
+sources:
+  - evidence: docs
+    url: https://sqlite.org/lang_keywords.html

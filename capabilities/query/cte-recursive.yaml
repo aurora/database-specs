@@ -24,8 +24,12 @@ support:
     - since: "8.4"
       status: supported
       notes: ["SEARCH and CYCLE clauses since 14."]
+  sqlite:
+    - since: "3.8.3"
+      status: supported
+      notes: ["The RECURSIVE keyword is optional; no depth limit besides LIMIT in the recursive query."]
 probes:
-  - engines: [mysql, mariadb, postgresql]
+  - engines: [mysql, mariadb, postgresql, sqlite]
     statements: ["WITH RECURSIVE r (n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM r WHERE n < 3) SELECT n FROM r"]
   - name: tsql
     engines: [sqlserver]

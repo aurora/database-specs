@@ -1,0 +1,61 @@
+# yaml-language-server: $schema=../../../schemas/query.schema.json
+id: introspection.list-routines
+title: List functions and procedures of a schema
+parameters:
+  - { name: schema, type: string }
+result:
+  order: routine_name, specific_name
+  columns:
+    - { name: schema_name, type: string, nullable: false }
+    - { name: routine_name, type: string, nullable: false }
+    - name: specific_name
+      type: string
+      nullable: false
+      description: Unique within the schema; differs from routine_name where overloading exists (PostgreSQL name(argtypes)).
+    - { name: routine_type, type: string, nullable: false, enum: [function, procedure, aggregate, window] }
+    - name: arguments
+      type: string
+      nullable: true
+      description: Parameter list as text, e.g. "IN a int, OUT b int" / "a integer, b text DEFAULT 'x'".
+    - { name: return_type, type: string, nullable: true, description: "NULL for procedures." }
+    - { name: language, type: string, nullable: true, description: "Lower case: sql, plpgsql, c, internal, ..." }
+    - { name: is_deterministic, type: boolean, nullable: true, description: "MySQL DETERMINISTIC / PostgreSQL IMMUTABLE." }
+    - { name: security_type, type: string, nullable: true, enum: [definer, invoker] }
+    - name: definition
+      type: string
+      nullable: true
+      description: Routine body as stored (not a complete CREATE statement). NULL without privilege or for non-SQL routines where the engine has no body text.
+    - { name: comment, type: string, nullable: true }
+variants:
+  - engine: mysql
+    since: "5.7"
+    file: mysql.sql
+    notes:
+      - "No overloading: specific_name = routine_name. Loadable functions (UDFs) are not listed."
+      - "Types follow the server's display rules (int(11) on 5.7, int on 8.0.19+)."
+      - "definition is the body only (BEGIN ... END or a single statement); NULL for routines the user did not create without SHOW_ROUTINE / global SELECT privilege."
+    sources: [{ evidence: tested }]
+  - engine: mariadb
+    since: "10.6"
+    file: mysql.sql
+    notes: ["Oracle-mode PACKAGE / PACKAGE BODY objects are not included."]
+    sources: [{ evidence: tested }]
+  - engine: postgresql
+    since: "12"
+    until: "14"
+    file: postgresql.sql
+    notes:
+      - "Overloads are separate rows; specific_name = name(identity arguments)."
+      - "is_deterministic = IMMUTABLE. Trigger functions appear with return_type trigger."
+      - "definition is prosrc (the text between $$); for C / internal functions NULL."
+    sources: [{ evidence: tested }]
+  - engine: postgresql
+    since: "14"
+    file: postgresql-14.sql
+    notes:
+      - "As before, plus SQL-standard bodies (BEGIN ATOMIC ...) via pg_get_function_sqlbody()."
+      - "Procedure arguments are reported with explicit modes (IN a integer, INOUT b integer)."
+    sources: [{ evidence: tested }]
+
+gaps:
+  - "SQL Server, SQLite: not yet written."

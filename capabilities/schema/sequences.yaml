@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=../../schemas/capability.schema.json
+id: schema.sequences
+title: Sequence objects (CREATE SEQUENCE)
+support:
+  mysql:
+    - status: unsupported
+      notes: ["Only AUTO_INCREMENT columns."]
+  mariadb:
+    - since: "10.3"
+      status: supported
+      notes: ["A sequence is a special table (TABLE_TYPE = 'SEQUENCE'); NEXT VALUE FOR s / NEXTVAL(s)."]
+  postgresql:
+    - status: supported
+      notes: ["SERIAL and IDENTITY columns are backed by sequences owned by the column."]
+  sqlserver:
+    - since: "11"
+      status: supported
+      notes: ["NEXT VALUE FOR s; IDENTITY columns are not sequences."]
+  sqlite:
+    - status: unsupported
+      notes: ["Only rowid / AUTOINCREMENT (sqlite_sequence table)."]
+probes:
+  - engines: [mysql, mariadb, postgresql, sqlserver, sqlite]
+    statements: ["CREATE SEQUENCE probe_seq START WITH 1 INCREMENT BY 1"]
+    cleanup: ["DROP SEQUENCE IF EXISTS probe_seq"]

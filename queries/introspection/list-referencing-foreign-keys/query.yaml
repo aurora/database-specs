@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=../../../schemas/query.schema.json
+id: introspection.list-referencing-foreign-keys
+title: List foreign keys that reference a table
+description: >
+  Incoming foreign keys ("referenced by"). Same columns as introspection.list-foreign-keys;
+  :schema / :table name the referenced table, schema_name / table_name in the result are the
+  referencing tables (which may live in other schemas).
+parameters:
+  - { name: schema, type: string }
+  - { name: table, type: string }
+result:
+  order: schema_name, table_name, constraint_name, column_position
+  columns:
+    - { name: schema_name, type: string, nullable: false }
+    - { name: table_name, type: string, nullable: false }
+    - { name: constraint_name, type: string, nullable: false }
+    - { name: column_position, type: integer, nullable: false }
+    - { name: column_name, type: string, nullable: false }
+    - { name: referenced_schema, type: string, nullable: false }
+    - { name: referenced_table, type: string, nullable: false }
+    - { name: referenced_column, type: string, nullable: false }
+    - { name: on_update, type: string, nullable: false, enum: [no-action, restrict, cascade, set-null, set-default] }
+    - { name: on_delete, type: string, nullable: false, enum: [no-action, restrict, cascade, set-null, set-default] }
+    - { name: match_type, type: string, nullable: true, enum: [simple, full, partial] }
+    - { name: is_deferrable, type: boolean, nullable: true }
+    - { name: initially_deferred, type: boolean, nullable: true }
+    - { name: is_enforced, type: boolean, nullable: false }
+variants:
+  - engine: mysql
+    since: "5.7"
+    file: mysql.sql
+    notes: ["Default actions as in list-foreign-keys (5.7: restrict, 8.x: no-action)."]
+    sources: [{ evidence: tested }]
+  - engine: mariadb
+    since: "10.6"
+    file: mysql.sql
+    sources: [{ evidence: tested }]
+  - { engine: postgresql, since: "12", until: "18", file: postgresql.sql, sources: [{ evidence: tested }] }
+  - { engine: postgresql, since: "18", file: postgresql-18.sql, sources: [{ evidence: tested }] }
+
+gaps:
+  - "SQL Server, SQLite: not yet written (same approach as their list-foreign-keys variants)." 

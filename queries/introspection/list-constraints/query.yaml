@@ -1,0 +1,60 @@
+# yaml-language-server: $schema=../../../schemas/query.schema.json
+id: introspection.list-constraints
+title: List primary key, unique, check and exclusion constraints of a table
+description: >
+  Foreign keys have their own queries (list-foreign-keys, list-referencing-foreign-keys).
+  Key constraints return one row per column; check constraints one row with column_* NULL.
+parameters:
+  - { name: schema, type: string }
+  - { name: table, type: string }
+result:
+  order: constraint_type, constraint_name, column_position
+  columns:
+    - { name: schema_name, type: string, nullable: false }
+    - { name: table_name, type: string, nullable: false }
+    - { name: constraint_name, type: string, nullable: false }
+    - { name: constraint_type, type: string, nullable: false, enum: [primary-key, unique, check, exclusion] }
+    - { name: column_position, type: integer, nullable: true }
+    - { name: column_name, type: string, nullable: true }
+    - { name: check_expression, type: string, nullable: true, description: "Expression as stored by the engine, without the CHECK keyword." }
+    - { name: index_name, type: string, nullable: true, description: "Backing index of key / exclusion constraints." }
+    - { name: is_enforced, type: boolean, nullable: false }
+    - { name: is_deferrable, type: boolean, nullable: false }
+    - { name: initially_deferred, type: boolean, nullable: false }
+variants:
+  - engine: mysql
+    since: "5.7"
+    until: "8.0.16"
+    file: mysql-5.7.sql
+    notes: ["CHECK clauses are parsed and ignored (capability ddl.check-constraints); only PRIMARY KEY and UNIQUE exist."]
+    sources: [{ evidence: tested }]
+  - engine: mysql
+    since: "8.0.16"
+    file: mysql.sql
+    notes:
+      - "The primary key constraint is always named PRIMARY."
+      - "check_expression as stored: backtick-quoted, in parentheses - (`qty` >= 0)."
+    sources: [{ evidence: tested }]
+  - engine: mariadb
+    since: "10.6"
+    file: mariadb.sql
+    notes:
+      - "check_expression without outer parentheses: `qty` >= 0. Column-level CHECKs are named after the column."
+      - "No NOT ENFORCED; is_enforced is always true (check_constraint_checks=0 disables checking per session)."
+    sources: [{ evidence: tested }]
+  - engine: postgresql
+    since: "12"
+    until: "18"
+    file: postgresql.sql
+    notes:
+      - "check_expression from pg_get_expr(): (qty >= 0). NOT VALID constraints are listed and enforced for new rows."
+      - "Primary keys are named <table>_pkey unless named explicitly."
+    sources: [{ evidence: tested }]
+  - engine: postgresql
+    since: "18"
+    file: postgresql-18.sql
+    notes: ["conenforced (NOT ENFORCED CHECK and FK constraints since 18). NOT NULL constraints (pg_constraint contype n since 18) are not included - see list-columns."]
+    sources: [{ evidence: tested }]
+
+gaps:
+  - "SQL Server, SQLite: not yet written."

@@ -76,6 +76,11 @@
           "query": { "$ref": "common.schema.json#/$defs/id" },
           "operation": { "$ref": "common.schema.json#/$defs/id" },
           "params": { "type": "object" },
+          "engines": {
+            "description": "Run this step only for these engines / version ranges ({} = all versions).",
+            "type": "object",
+            "additionalProperties": { "$ref": "common.schema.json#/$defs/rangeFields" }
+          },
           "params_by_engine": {
             "description": "Per-engine parameters merged over params.",
             "type": "object",

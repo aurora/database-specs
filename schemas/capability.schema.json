@@ -34,6 +34,10 @@
           "setup": { "type": "array", "items": { "type": "string" } },
           "statements": { "type": "array", "minItems": 1, "items": { "type": "string" } },
           "check": { "type": "string" },
+          "invert": {
+            "description": "The capability shows as an error: the probe succeeds when the statements FAIL (e.g. a CHECK constraint rejecting a row). Setup must still succeed.",
+            "type": "boolean"
+          },
           "cleanup": { "type": "array", "items": { "type": "string" } }
         }
       }

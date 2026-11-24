@@ -96,6 +96,8 @@ def run_probes(specs: Specs, server: Server, report: Report):
             finally:
                 _cleanup(server, probe.get("cleanup", []))
 
+            if probe.get("invert"):
+                ok, err = (not ok), ("" if not ok else "statements succeeded but should fail")
             observed = "supported" if ok else "unsupported"
             stmt = statement_for(cap["support"].get(server.engine, []), server.version)
             declared = stmt["status"] if stmt else "unknown"
@@ -196,6 +198,9 @@ def run_tests(specs: Specs, server: Server, report: Report):
             with server.connect() as conn:
                 _exec_all(conn, _statements(test.get("setup", {}).get(server.engine), server.version))
                 for step in test["steps"]:
+                    if "engines" in step and not (server.engine in step["engines"]
+                                                  and in_range(server.version, step["engines"][server.engine])):
+                        continue
                     params = _resolve_params({**step.get("params", {}),
                                               **step.get("params_by_engine", {}).get(server.engine, {})}, server)
                     if "operation" in step:

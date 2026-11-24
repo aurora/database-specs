@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=../../schemas/capability.schema.json
+id: ddl.check-constraints
+title: CHECK constraints are enforced
+description: >
+  Some engines accept CHECK in CREATE TABLE but silently ignore it; a client must not show such
+  constraints as protection.
+support:
+  mysql:
+    - until: "8.0.16"
+      status: unsupported
+      notes: ["Parsed and ignored: the clause is accepted, nothing is stored or checked."]
+    - since: "8.0.16"
+      status: supported
+      notes: ["NOT ENFORCED / ENFORCED per constraint. Column-level CHECK becomes a table constraint with a generated name (<table>_chk_<n>)."]
+  mariadb:
+    - since: "10.2.1"
+      status: supported
+      notes: ["Column-level CHECK is named after the column; check_constraint_checks=0 disables checking per session."]
+  postgresql:
+    - status: supported
+      notes: ["NOT VALID skips checking existing rows; NOT ENFORCED since 18."]
+  sqlserver:
+    - status: supported
+      notes: ["WITH NOCHECK skips existing rows; ALTER TABLE ... NOCHECK CONSTRAINT disables it."]
+  sqlite:
+    - status: supported
+      notes: ["PRAGMA ignore_check_constraints = ON disables checking per connection."]
+probes:
+  - engines: [mysql, mariadb, postgresql, sqlite]
+    invert: true
+    setup: ["CREATE TEMPORARY TABLE probe_check (a INT CHECK (a > 0))"]
+    statements: ["INSERT INTO probe_check (a) VALUES (-1)"]
+    cleanup: ["DROP TABLE IF EXISTS probe_check"]
+  - engines: [sqlserver]
+    invert: true
+    setup: ["CREATE TABLE #probe_check (a INT CHECK (a > 0))"]
+    statements: ["INSERT INTO #probe_check (a) VALUES (-1)"]
+    cleanup: ["DROP TABLE IF EXISTS #probe_check"]

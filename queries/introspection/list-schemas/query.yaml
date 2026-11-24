@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=../../../schemas/query.schema.json
+id: introspection.list-schemas
+title: List schemas (MySQL/MariaDB databases)
+description: Top level of the object tree. Only schemas visible to the current user are returned.
+result:
+  order: schema_name
+  columns:
+    - { name: schema_name, type: string, nullable: false }
+    - name: is_system
+      type: boolean
+      nullable: false
+      description: Engine-internal schema (information_schema, mysql, pg_catalog, ...); clients usually hide or group these.
+    - { name: owner, type: string, nullable: true }
+    - { name: default_charset, type: string, nullable: true }
+    - { name: default_collation, type: string, nullable: true }
+    - { name: comment, type: string, nullable: true }
+variants:
+  - engine: mysql
+    since: "5.7"
+    file: mysql.sql
+    notes: ["A schema is a database. No owner and no comment."]
+    sources: [{ evidence: tested }]
+  - engine: mariadb
+    since: "10.6"
+    file: mariadb.sql
+    notes: ["CREATE DATABASE ... COMMENT (since 10.5) is returned as comment."]
+    sources: [{ evidence: tested }]
+  - engine: postgresql
+    since: "12"
+    file: postgresql.sql
+    notes:
+      - "Schemas of the current database only; databases are a separate level (one connection per database). pg_toast and temporary schemas are left out."
+      - "Since 15 the public schema is owned by pg_database_owner."
+      - "Encoding / collation belong to the database, not the schema: NULL."
+    sources: [{ evidence: tested }]
+
+gaps:
+  - "SQL Server, SQLite: not yet written."

@@ -1,0 +1,47 @@
+# yaml-language-server: $schema=../../../schemas/query.schema.json
+id: introspection.list-views
+title: List views of a schema with their definition
+parameters:
+  - { name: schema, type: string }
+result:
+  order: view_name
+  columns:
+    - { name: schema_name, type: string, nullable: false }
+    - { name: view_name, type: string, nullable: false }
+    - name: definition
+      type: string
+      nullable: true
+      description: The SELECT as stored/normalized by the engine (not the original text). NULL without the privilege to see it.
+    - { name: is_materialized, type: boolean, nullable: false }
+    - { name: is_updatable, type: boolean, nullable: true }
+    - { name: check_option, type: string, nullable: true, enum: [local, cascaded] }
+    - name: security_type
+      type: string
+      nullable: true
+      enum: [definer, invoker]
+      description: Whose privileges apply when the view is queried.
+    - { name: comment, type: string, nullable: true }
+variants:
+  - engine: mysql
+    since: "5.7"
+    file: mysql.sql
+    notes:
+      - "definition is rewritten by the server: fully qualified, backtick-quoted names and generated aliases (`db`.`t`.`id` AS `id`), not the original text. Empty (NULL) without SHOW VIEW privilege."
+      - "Views have no comments."
+    sources: [{ evidence: tested }]
+  - engine: mariadb
+    since: "10.6"
+    file: mysql.sql
+    notes: ["Same as MySQL; MariaDB drops the outer parentheses of the WHERE condition."]
+    sources: [{ evidence: tested }]
+  - engine: postgresql
+    since: "12"
+    file: postgresql.sql
+    notes:
+      - "definition from pg_get_viewdef(view, true), trimmed and without the trailing ';'. Up to 15 column references are table-qualified (t.id), since 16 not."
+      - "Materialized views are included (is_materialized); they are also tables in list-tables."
+      - "security_type: invoker only with the security_invoker option (15+); otherwise the owner's privileges apply (definer)."
+    sources: [{ evidence: tested }]
+
+gaps:
+  - "SQL Server, SQLite: not yet written."

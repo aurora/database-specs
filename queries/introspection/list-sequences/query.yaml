@@ -1,0 +1,40 @@
+# yaml-language-server: $schema=../../../schemas/query.schema.json
+id: introspection.list-sequences
+title: List sequences of a schema
+description: See capability schema.sequences for which engines have sequence objects.
+parameters:
+  - { name: schema, type: string }
+result:
+  order: sequence_name
+  columns:
+    - { name: schema_name, type: string, nullable: false }
+    - { name: sequence_name, type: string, nullable: false }
+    - { name: data_type, type: string, nullable: false }
+    - { name: start_value, type: integer, nullable: false }
+    - { name: increment, type: integer, nullable: false }
+    - { name: min_value, type: integer, nullable: false }
+    - { name: max_value, type: integer, nullable: false }
+    - { name: is_cycle, type: boolean, nullable: false }
+    - { name: cache_size, type: integer, nullable: true }
+    - { name: last_value, type: integer, nullable: true, description: "Last value handed out; NULL if never used or not visible." }
+    - { name: owned_by_table, type: string, nullable: true, description: "Table of a column the sequence belongs to (SERIAL / IDENTITY / OWNED BY)." }
+    - { name: owned_by_column, type: string, nullable: true }
+variants:
+  - engine: mariadb
+    since: "11.8"
+    file: mariadb.sql
+    notes:
+      - "information_schema.SEQUENCES exists in 11.8 and 12 but not in 11.4 (exact version in between unverified)."
+      - "The view has no cache size or current value; SELECT * FROM <sequence> returns them (next_not_cached_value, cache_size)."
+      - "Unsigned sequences beyond the signed BIGINT range are not represented."
+    sources: [{ evidence: tested }]
+  - engine: postgresql
+    since: "12"
+    file: postgresql.sql
+    notes:
+      - "last_value is NULL until nextval() was called (or without USAGE/SELECT privilege)."
+      - "owned_by_*: the column of a SERIAL / IDENTITY column or OWNED BY; identity sequences are listed too."
+
+gaps:
+  - "MariaDB 10.3 - 11.7: sequences exist, but there is no catalog view; list them via information_schema.TABLES (TABLE_TYPE = 'SEQUENCE') and read each with SELECT * FROM <sequence>."
+  - "SQL Server (sys.sequences): not yet written."

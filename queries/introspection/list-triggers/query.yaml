@@ -1,0 +1,49 @@
+# yaml-language-server: $schema=../../../schemas/query.schema.json
+id: introspection.list-triggers
+title: List the triggers of a table
+parameters:
+  - { name: schema, type: string }
+  - { name: table, type: string }
+result:
+  order: trigger_name
+  columns:
+    - { name: schema_name, type: string, nullable: false }
+    - { name: table_name, type: string, nullable: false }
+    - { name: trigger_name, type: string, nullable: false }
+    - { name: timing, type: string, nullable: false, enum: [before, after, instead-of] }
+    - name: events
+      type: string
+      nullable: false
+      description: Comma-separated, in this order where present - insert,update,delete,truncate.
+    - { name: level, type: string, nullable: false, enum: [row, statement] }
+    - { name: action_order, type: integer, nullable: true, description: "Firing order among triggers with the same timing/event; NULL where the engine orders by name." }
+    - { name: condition, type: string, nullable: true, description: "WHEN condition." }
+    - name: action_statement
+      type: string
+      nullable: false
+      description: What the trigger executes (MySQL/MariaDB the body, PostgreSQL 'EXECUTE FUNCTION f()'), as in information_schema.TRIGGERS.
+    - { name: is_enabled, type: boolean, nullable: false }
+variants:
+  - engine: mysql
+    since: "5.7"
+    file: mysql.sql
+    notes:
+      - "One event per trigger; several triggers per event/timing are ordered by action_order (FOLLOWS / PRECEDES)."
+      - "No WHEN conditions, no statement-level triggers, cannot be disabled."
+    sources: [{ evidence: tested }]
+  - engine: mariadb
+    since: "10.6"
+    file: mysql.sql
+    notes: ["Same as MySQL."]
+    sources: [{ evidence: tested }]
+  - engine: postgresql
+    since: "12"
+    file: postgresql.sql
+    notes:
+      - "Triggers fire in name order (action_order NULL). Internal triggers (FK checks) are excluded."
+      - "condition and action_statement are cut from pg_get_triggerdef(); condition keeps the server's formatting (new.qty IS NULL)."
+      - "is_enabled = false only for DISABLE TRIGGER; replica / always modes count as enabled."
+    sources: [{ evidence: tested }]
+
+gaps:
+  - "SQL Server, SQLite: not yet written."

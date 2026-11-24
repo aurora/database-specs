@@ -10,6 +10,7 @@ from .specs import Specs, parse_version, statement_for, variant_for
 from .syntax import examples_for, lexical_for, load_grammar
 
 KIND_ALIASES = {
+    "keywords": "keywords", "keyword": "keywords",
     "capability": "capability", "capabilities": "capability", "cap": "capability",
     "query": "query", "queries": "query",
     "operation": "operation", "operations": "operation", "op": "operation",
@@ -169,6 +170,25 @@ def resolve_doc(specs: Specs, kind: str, ident: str) -> dict:
     return {"kind": kind, "id": ident, "document": specs.get(kind, ident)}
 
 
+def resolve_keywords(engine: str, version: str, word: str | None) -> dict:
+    from . import keywords as kw
+
+    found = kw.resolve(engine, version)
+    if found is None:
+        raise ShowError(f"no keyword data for {engine} <= {version}; generated versions: "
+                        + ", ".join(sorted(kw.stored_files().get(engine, {}), key=parse_version)))
+    doc, exact = found
+    res = {"kind": "keywords", "engine": engine, "version": version, "data_version": doc["version"], "exact": exact,
+           "method": doc["method"], "complete": doc["complete"], "notes": doc.get("notes", []),
+           "reserved": doc["reserved"], "nonreserved": doc.get("nonreserved", [])}
+    if word:
+        w = word.upper()
+        res["word"] = {"word": w, "status": "reserved" if w in doc["reserved"]
+                       else "nonreserved" if w in res["nonreserved"]
+                       else ("not a keyword" if doc["complete"] else "not reserved (nonreserved list unknown)")}
+    return res
+
+
 def resolve_profile(specs: Specs, engine: str, version: str) -> dict:
     """Everything relevant for one engine/version at a glance (also usable as LLM context)."""
     eng = specs.get("engine", engine)
@@ -227,6 +247,10 @@ def resolve(specs: Specs, kind: str, ident: str | None, engine: str | None, vers
         if not (engine and version):
             raise ShowError("profile needs --engine and --version")
         return resolve_profile(specs, engine, version)
+    if kind in ("keywords", "keyword"):
+        if not (engine and version):
+            raise ShowError("keywords needs --engine and --version")
+        return resolve_keywords(engine, version, ident)
     if kind not in KIND_ALIASES:
         raise ShowError(f"unknown kind '{kind}'. Use: list, profile, {', '.join(sorted(set(KIND_ALIASES.values())))}")
     kind = KIND_ALIASES[kind]
@@ -264,6 +288,21 @@ def render_text(res: dict) -> str:
             out.append(f"{kind}:")
             width = max((len(i) for i in items), default=0)
             out += [f"  {i.ljust(width)}  {t}" for i, t in items.items()]
+        return "\n".join(out)
+
+    if k == "keywords":
+        state = "complete" if res["complete"] else "reserved words only"
+        approx = "" if res["exact"] else " - approximate: other patch levels / series can differ"
+        out.append(f"{res['engine']} {res['version']}: keyword data from {res['data_version']} ({res['method']}, {state}){approx}")
+        out += _bullets(res["notes"])
+        if "word" in res:
+            out.append(f"{res['word']['word']}: {res['word']['status']}")
+            return "\n".join(out)
+        out.append(f"reserved ({len(res['reserved'])}, must be quoted as identifiers):")
+        out.append("  " + " ".join(res["reserved"]))
+        if res["nonreserved"]:
+            out.append(f"nonreserved ({len(res['nonreserved'])}):")
+            out.append("  " + " ".join(res["nonreserved"]))
         return "\n".join(out)
 
     if k == "profile":

@@ -19,6 +19,7 @@ KINDS = {
     "operations": "operation",
     "queries": "query",
     "syntax": "syntax",
+    "keywords": "keywords",
     "tests/cases": "test",
 }
 

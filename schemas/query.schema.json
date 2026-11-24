@@ -64,6 +64,12 @@
         }
       }
     },
+    "not_applicable": {
+      "description": "Engines that do not have the feature at all (no variant will ever exist), with the reason.",
+      "type": "object",
+      "propertyNames": { "$ref": "common.schema.json#/$defs/engineId" },
+      "additionalProperties": { "type": "string" }
+    },
     "gaps": {
       "description": "Known engine/version combinations without a variant yet.",
       "$ref": "common.schema.json#/$defs/notes"

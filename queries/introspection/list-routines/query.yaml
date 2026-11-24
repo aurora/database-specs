@@ -64,5 +64,5 @@ variants:
       - "definition is the complete original CREATE statement (sys.sql_modules), not only the body; NULL for encrypted and CLR routines."
       - "is_deterministic from OBJECTPROPERTY IsDeterministic (only true for schema-bound functions); security_type definer when EXECUTE AS is set."
 
-gaps:
-  - "SQLite has no stored routines (capability schema.stored-routines)."
+not_applicable:
+  sqlite: "No stored routines (capability schema.stored-routines)."

@@ -42,6 +42,9 @@ variants:
       - "IDENTITY columns are not sequences and are not listed."
       - "Without MINVALUE the minimum is the smallest value of the data type (-2^63 for bigint), unlike PostgreSQL (1)."
 
+not_applicable:
+  mysql: "No sequences, only AUTO_INCREMENT (capability schema.sequences)."
+  sqlite: "No sequences (capability schema.sequences)."
+
 gaps:
   - "MariaDB 10.3 - 11.7: sequences exist, but there is no catalog view; list them via information_schema.TABLES (TABLE_TYPE = 'SEQUENCE') and read each with SELECT * FROM <sequence>."
-  - "SQLite has no sequences (capability schema.sequences)."

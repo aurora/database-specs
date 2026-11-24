@@ -19,9 +19,16 @@ or driver. Consumers read the bundled JSON (`dist/db-specs.json`).
 | `operations/<area>/` | SQL a client generates itself (alter column, browse table, validate syntax) as templates per engine/version. |
 | `queries/<area>/<name>/` | Query contract (`query.yaml`: parameters + normalized result columns) and one `.sql` file per engine/version variant. |
 | `syntax/<area>/<statement>/` | Curated EBNF per engine (`<engine>.ebnf`) plus `syntax.yaml` with examples; rendered as railroad diagrams. |
+| `keywords/<engine>/` | Generated keyword lists per exact server / library version (`dbspecs keywords`): reserved = fails as an unquoted column name, probed on the real server. |
 | `tests/` | `targets.yaml` (container images; SQLite runs a small worker in `python:*-slim` images or locally) and `cases/` (integration tests). |
 | `schemas/` | JSON Schemas for every file kind. |
 | `tooling/` | Python tooling (`dbspecs` CLI). |
+
+## Status
+
+[COVERAGE.md](COVERAGE.md) shows per spec item and engine what is tested against real servers,
+partly covered, only documented, not applicable or missing, followed by the planned items from
+[roadmap.yaml](roadmap.yaml). It is generated (`uv run dbspecs coverage`, and after every test run).
 
 ## Conventions
 
@@ -82,6 +89,7 @@ Requires [uv](https://docs.astral.sh/uv/) and Docker or Podman.
 ```bash
 uv run dbspecs validate            # schemas + cross references
 uv run dbspecs build               # -> dist/db-specs.json, dist/syntax/index.html (+ SVGs)
+uv run dbspecs coverage            # -> COVERAGE.md, dist/coverage.html
 uv run dbspecs test                # all targets in tests/targets.yaml
 uv run dbspecs test --target mysql-8.4 --target postgresql
 ```

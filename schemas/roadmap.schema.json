@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://db-specs.invalid/schemas/roadmap.schema.json",
+  "title": "Roadmap",
+  "description": "Planned specs that do not exist yet. Existing specs appear in COVERAGE.md automatically; remove an item once its spec file exists (validate reports it).",
+  "type": "object",
+  "required": ["items"],
+  "additionalProperties": false,
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "title", "priority"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9]+([.-][a-z0-9]+)*$" },
+          "kind": { "enum": ["capability", "query", "operation", "syntax", "engine", "protocol", "lexical"] },
+          "title": { "type": "string" },
+          "priority": { "enum": ["high", "medium", "low"] },
+          "engines": {
+            "description": "Engines the item applies to (default: all).",
+            "type": "array",
+            "items": { "$ref": "common.schema.json#/$defs/engineId" }
+          },
+          "notes": { "$ref": "common.schema.json#/$defs/notes" }
+        }
+      }
+    }
+  }
+}

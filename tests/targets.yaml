@@ -6,6 +6,9 @@ targets:
   - { id: mysql-8.4,      engine: mysql,      image: docker.io/library/mysql:8.4 }
   - { id: mysql-9,        engine: mysql,      image: docker.io/library/mysql:9 }
   - { id: postgresql-13,  engine: postgresql, image: docker.io/library/postgres:13 }
+  - { id: postgresql-14,  engine: postgresql, image: docker.io/library/postgres:14 }
+  - { id: postgresql-15,  engine: postgresql, image: docker.io/library/postgres:15 }
+  - { id: postgresql-16,  engine: postgresql, image: docker.io/library/postgres:16 }
   - { id: postgresql-17,  engine: postgresql, image: docker.io/library/postgres:17 }
   - { id: postgresql-18,  engine: postgresql, image: docker.io/library/postgres:18 }
   - { id: mariadb-10.6,   engine: mariadb,    image: docker.io/library/mariadb:10.6 }

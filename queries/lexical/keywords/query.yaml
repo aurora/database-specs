@@ -25,7 +25,10 @@ variants:
     file: postgresql.sql
     notes: ["reserved = catcode R or T. T ('reserved, can be function or type name', e.g. JOIN, LEFT) still requires quoting as a column name."]
 
+not_applicable:
+  sqlserver: "No system view lists keywords; probed reserved words are in keywords/sqlserver/."
+  sqlite: "Keywords are only available through the C API (sqlite3_keyword_name); lists in keywords/sqlite/."
+
 gaps:
-  - "SQL Server: no system view lists keywords; needs a static list per version."
   - "MySQL < 8.0.13: no server-side list; needs a static list per version."
   - "MariaDB < 10.6: KEYWORDS table missing (verify exact version)."

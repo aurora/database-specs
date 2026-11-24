@@ -9,7 +9,7 @@ from jsonschema import Draft202012Validator, FormatChecker
 from referencing import Registry, Resource
 
 from .ebnf import GrammarError
-from .specs import KINDS, Specs
+from .specs import KINDS, Specs, load_yaml
 from .syntax import load_grammar, offline_check
 
 BASE = "https://db-specs.invalid/schemas/"
@@ -133,6 +133,38 @@ def validate(specs: Specs) -> list[str]:
                     parse_ok = False
         if parse_ok:
             errors += [f"{rel}: {p}" for p in offline_check(specs, doc_id)]
+
+    for doc_id, kw in specs.docs["keywords"].items():
+        path = specs.path("keywords", doc_id)
+        rel = path.relative_to(specs.root)
+        check_engine(rel, kw["engine"])
+        if path.parent.name != kw["engine"] or path.stem != kw["version"]:
+            errors.append(f"{rel}: must be keywords/{kw['engine']}/{kw['version']}.yaml")
+        if not kw["complete"] and kw.get("nonreserved"):
+            errors.append(f"{rel}: incomplete lists carry reserved words only")
+
+    roadmap = specs.root / "roadmap.yaml"
+    if roadmap.is_file():
+        rm = load_yaml(roadmap)
+        validator = Draft202012Validator(schemas["roadmap"], registry=registry, format_checker=FormatChecker())
+        for err in validator.iter_errors(rm):
+            errors.append(f"roadmap.yaml: {'/'.join(str(p) for p in err.path) or '<root>'}: {err.message}")
+        kinds = {"capability": "capability", "query": "query", "operation": "operation",
+                 "syntax": "syntax", "engine": "engine"}
+        seen = set()
+        for item in rm.get("items", []):
+            if item["id"] in seen:
+                errors.append(f"roadmap.yaml: {item['id']} listed twice")
+            seen.add(item["id"])
+            for eid in item.get("engines", []):
+                check_engine("roadmap.yaml", eid)
+            kind = kinds.get(item["kind"])
+            if kind and item["id"] in specs.docs[kind]:
+                errors.append(f"roadmap.yaml: {item['id']} exists now - remove it from the roadmap")
+
+    for doc_id, q in specs.docs["query"].items():
+        for eid in q.get("not_applicable", {}):
+            check_engine(specs.path("query", doc_id).relative_to(specs.root), eid)
 
     for doc_id, t in specs.docs["test"].items():
         rel = specs.path("test", doc_id).relative_to(specs.root)

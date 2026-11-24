@@ -37,7 +37,10 @@ def build(specs: Specs, out: Path, verification: Path | None = None) -> Path:
         "operations": specs.docs["operation"],
         "queries": queries,
         "syntax": syntax,
+        "keywords": {kw["engine"]: {} for kw in specs.docs["keywords"].values()},
     }
+    for kw in specs.docs["keywords"].values():
+        bundle["keywords"][kw["engine"]][kw["version"]] = kw
     if verification and verification.is_file():
         bundle["verification"] = json.loads(verification.read_text(encoding="utf-8"))
 

@@ -8,6 +8,7 @@ Requests:  {"op": "version"}
            {"op": "close", "conn": <id>}
            {"op": "execute", "conn": <id>, "sql": "...", "params": {...} | [...] | null}
            {"op": "script", "conn": <id>, "sql": "..."}   (several statements, sqlite3.executescript)
+           {"op": "keywords"}               -> {"ok": true, "words": [...] | null}  (C API, if reachable)
 Responses: {"ok": true, "columns": [...] | null, "rows": [[...], ...]}
            {"ok": false, "error": "..."}
 """
@@ -23,6 +24,30 @@ def encode(value):
     return value
 
 
+def c_api_keywords():
+    """sqlite3_keyword_name() of the library this Python uses, or None if it is not reachable."""
+    import ctypes
+    import ctypes.util
+    import _sqlite3
+    want = sqlite3.sqlite_version_info[0] * 1000000 + sqlite3.sqlite_version_info[1] * 1000 + sqlite3.sqlite_version_info[2]
+    for name in (getattr(_sqlite3, "__file__", None), ctypes.util.find_library("sqlite3")):
+        if not name:
+            continue
+        try:
+            lib = ctypes.CDLL(name)
+            if lib.sqlite3_libversion_number() != want:
+                continue  # a different libsqlite3 than the one Python is linked against
+            buf, size = ctypes.c_char_p(), ctypes.c_int()
+            words = []
+            for i in range(lib.sqlite3_keyword_count()):
+                lib.sqlite3_keyword_name(i, ctypes.byref(buf), ctypes.byref(size))
+                words.append(ctypes.string_at(buf, size.value).decode())
+            return words
+        except (OSError, AttributeError):
+            continue
+    return None
+
+
 def main():
     path = "/tmp/dbspecs-sqlite.db" if len(sys.argv) < 2 else sys.argv[1]
     conns = {}
@@ -35,6 +60,8 @@ def main():
         try:
             if req["op"] == "version":
                 resp = {"ok": True, "columns": ["version"], "rows": [[sqlite3.sqlite_version]]}
+            elif req["op"] == "keywords":
+                resp = {"ok": True, "words": c_api_keywords()}
             elif req["op"] == "connect":
                 next_id[0] += 1
                 # autocommit: BEGIN/COMMIT are explicit, as with the server engines

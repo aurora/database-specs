@@ -38,7 +38,7 @@ statements:
 
 keywords:
   notes:
-    - "No SQL interface; the C API sqlite3_keyword_count() / sqlite3_keyword_name() lists them for the linked library."
+    - "No SQL interface; the C API sqlite3_keyword_count() / sqlite3_keyword_name() lists them for the linked library. keywords/sqlite/ holds these lists (reserved = probed as column name; most SQLite keywords are allowed as identifiers)."
 
 sources:
   - evidence: docs

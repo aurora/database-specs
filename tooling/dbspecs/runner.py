@@ -354,6 +354,23 @@ def run_syntax(specs: Specs, server: Server, report: Report):
                               "fail" if problems else "pass", detail))
 
 
+def run_keywords(specs: Specs, server: Server, report: Report):
+    """The stored keyword file for this exact version must still match the server."""
+    from . import keywords as kw
+
+    stored = kw.stored_files().get(server.engine, {}).get(server.version)
+    if stored is None:
+        report.add(Result(server.target["id"], server.version, "keywords", server.engine, "observed",
+                          f"no keywords/{server.engine}/{server.version}.yaml - run `dbspecs keywords --target {server.target['id']}`"))
+        return
+    try:
+        problems = kw.compare(stored, kw.generate(specs, server))
+    except Exception as exc:
+        problems = [f"{type(exc).__name__}: {exc}".splitlines()[0]]
+    report.add(Result(server.target["id"], server.version, "keywords", server.engine,
+                      "fail" if problems else "pass", "; ".join(problems)))
+
+
 def report_json(report: Report) -> dict:
     return {
         "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),

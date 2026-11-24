@@ -82,6 +82,8 @@ statements:
 
 keywords:
   query: lexical.keywords
+  notes:
+    - "Generated lists per version: keywords/<engine>/<version>.yaml (dbspecs keywords); look up with dbspecs show keywords."
 
 sources:
   - evidence: unverified

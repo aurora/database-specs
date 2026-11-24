@@ -16,6 +16,7 @@ uv run dbspecs show capability returning -e mysql -v 8.0.13
 uv run dbspecs show query list-indexes -e postgresql -v 16       # contract + exact SQL variant
 uv run dbspecs show operation change-column-type -e mysql -v 8.4
 uv run dbspecs show syntax create-index -e mysql -v 5.7 --sql "CREATE INDEX i ON t ((a+1))"
+uv run dbspecs show keywords rank -e mysql -v 8.0.30              # is a word reserved? (or the full lists)
 uv run dbspecs show list                                          # all ids
 ```
 
@@ -29,6 +30,8 @@ uv run dbspecs validate     # schemas, cross references, offline grammar/example
 uv run dbspecs test         # real servers in containers (docker/podman); ~15 min for all targets
 uv run dbspecs test --target mariadb-10.6 --target postgresql   # subset: target id or engine
 uv run dbspecs build        # dist/db-specs.json + dist/syntax/ (railroad diagrams)
+uv run dbspecs keywords     # regenerate keywords/<engine>/<version>.yaml from the test targets
+uv run dbspecs coverage     # COVERAGE.md + dist/coverage.html (also written after every test run)
 ```
 
 ## Layout
@@ -38,6 +41,10 @@ uv run dbspecs build        # dist/db-specs.json + dist/syntax/ (railroad diagra
 - `operations/<area>/<name>.yaml`: SQL templates for things a client generates.
 - `queries/<area>/<name>/`: `query.yaml` (contract) + one `.sql` per engine/version variant.
 - `syntax/<area>/<name>/`: `syntax.yaml` (examples) + `<engine>.ebnf`.
+- `COVERAGE.md` (generated, checked in): matrix spec x engine - tested / partial / documented /
+  not applicable / missing. `roadmap.yaml`: planned specs that do not exist yet.
+- `keywords/<engine>/<version>.yaml`: generated keyword lists (never edit by hand; `test` fails
+  when a stored list no longer matches its server version).
 - `tests/targets.yaml` (container images), `tests/cases/` (integration tests). Embedded engines
   (SQLite) run `tooling/dbspecs/sqlite_worker.py` inside a `python:*-slim` image (that Debian's
   libsqlite3) or locally; setup entries can be `{sql, since, until}` for version-specific DDL.
@@ -64,6 +71,12 @@ uv run dbspecs build        # dist/db-specs.json + dist/syntax/ (railroad diagra
   introspection queries or an ad-hoc `sql` step. Operations that return DDL (`result_column`)
   need a `roundtrip` step (snapshot, drop, re-run the DDL, compare) - that is what proves the
   reconstruction is complete.
+- **Planning**: new work starts from `roadmap.yaml`; once a spec file exists, remove its roadmap
+  item (`validate` complains otherwise) and regenerate COVERAGE.md. Where an engine lacks a feature
+  entirely, say so explicitly (`status: unsupported`, or `not_applicable` in query contracts) so
+  the matrix shows ➖ instead of a gap.
+- Test results are kept per target (`dist/verification/<target>.json`); a run with `--target`
+  only replaces those targets, the matrix uses the latest result of every target.
 - **Derived engines** get their own files; `extends` is lineage only, nothing is inherited.
 - **No vendor documentation prose** (MySQL docs are not freely licensed): facts in our own
   words, link the source.

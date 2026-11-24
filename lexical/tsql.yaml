@@ -65,7 +65,7 @@ statements:
 
 keywords:
   notes:
-    - "SQL Server has no system view listing reserved keywords; a static list per version is needed (documented as 'Reserved Keywords')."
+    - "SQL Server has no system view listing reserved keywords. keywords/sqlserver/ holds the reserved words found by probing candidate words as column names (nonreserved keywords are not known)."
 
 sources:
   - evidence: unverified

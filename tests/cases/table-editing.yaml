@@ -153,6 +153,23 @@ steps:
         - match: {}
           values: { id: 2, qty: 7 }
 
+  - operation: dml.insert-row
+    params: { table: t_ed, columns: "id, title, qty", values: "3, 'c', 1" }
+  - operation: query.browse-table
+    params: { table: t_ed, where: id >= 1, order_by: id DESC, limit: 1, offset: 0 }
+    expect:
+      row_count: 1
+      rows:
+        - match: {}
+          values: { id: 3, title: c }
+  - operation: query.browse-table
+    params: { table: t_ed, where: id = 3, limit: 1, offset: 0 }
+    expect:
+      row_count: 1
+      rows:
+        - match: {}
+          values: { id: 3 }
+
   - operation: dml.update-row
     params: { table: t_dup, assignments: b = 'y', key_predicate: a = 1 AND b = 'x', no_unique_key: true }
   - sql:

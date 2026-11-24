@@ -1,0 +1,55 @@
+# yaml-language-server: $schema=../schemas/protocol.schema.json
+id: tds
+name: Tabular Data Stream (TDS)
+default_port: 1433
+
+client_libraries:
+  - name: Microsoft ODBC Driver for SQL Server (msodbcsql 17/18)
+    url: https://learn.microsoft.com/sql/connect/odbc/microsoft-odbc-driver-for-sql-server
+    notes:
+      - "Type codes below are the ODBC SQL types reported by SQLDescribeCol / SQLColAttribute (SQL_DESC_CONCISE_TYPE), not raw TDS type tokens."
+      - "Driver 18 defaults to Encrypt=yes and validates the server certificate; local/dev servers with self-signed certificates need TrustServerCertificate=yes."
+      - "SQLPrepare does not round-trip to the server by default (prepare is deferred to execute), so it cannot be used to validate syntax."
+  - name: FreeTDS (dblib / ODBC)
+    url: https://www.freetds.org/
+    notes: ["Used by this repository's test runner (pymssql). Reports its own type mapping; newer types may arrive as varbinary/nvarchar."]
+
+notes:
+  - "(max) types (varchar(max), nvarchar(max), varbinary(max)) report column size 0 and must be fetched with SQLGetData in chunks."
+  - "money/smallmoney arrive as SQL_DECIMAL; datetime, datetime2 and smalldatetime all as SQL_TYPE_TIMESTAMP (precision differs)."
+  - "rowversion/timestamp is binary(8), not a date/time type."
+  - "json (2025) and vector (2025) type codes are not listed yet (verify with msodbcsql 18)."
+
+type_codes:
+  - { code: 1,    name: SQL_CHAR,           category: string,   notes: ["char"] }
+  - { code: 2,    name: SQL_NUMERIC,        category: decimal,  notes: ["numeric"] }
+  - { code: 3,    name: SQL_DECIMAL,        category: decimal,  notes: ["decimal, money, smallmoney"] }
+  - { code: 4,    name: SQL_INTEGER,        category: integer,  notes: ["int"] }
+  - { code: 5,    name: SQL_SMALLINT,       category: integer }
+  - { code: 6,    name: SQL_FLOAT,          category: float,    notes: ["float"] }
+  - { code: 7,    name: SQL_REAL,           category: float,    notes: ["real"] }
+  - { code: 12,   name: SQL_VARCHAR,        category: string,   notes: ["varchar, varchar(max)"] }
+  - { code: 91,   name: SQL_TYPE_DATE,      category: temporal, notes: ["date"] }
+  - { code: 93,   name: SQL_TYPE_TIMESTAMP, category: temporal, notes: ["datetime, datetime2, smalldatetime"] }
+  - { code: -1,   name: SQL_LONGVARCHAR,    category: string,   notes: ["text (deprecated)"] }
+  - { code: -2,   name: SQL_BINARY,         category: binary,   notes: ["binary, rowversion/timestamp"] }
+  - { code: -3,   name: SQL_VARBINARY,      category: binary,   notes: ["varbinary, varbinary(max)"] }
+  - { code: -4,   name: SQL_LONGVARBINARY,  category: binary,   notes: ["image (deprecated)"] }
+  - { code: -5,   name: SQL_BIGINT,         category: integer }
+  - { code: -6,   name: SQL_TINYINT,        category: integer,  notes: ["tinyint is unsigned 0..255"] }
+  - { code: -7,   name: SQL_BIT,            category: boolean }
+  - { code: -8,   name: SQL_WCHAR,          category: string,   notes: ["nchar"] }
+  - { code: -9,   name: SQL_WVARCHAR,       category: string,   notes: ["nvarchar, nvarchar(max), sysname"] }
+  - { code: -10,  name: SQL_WLONGVARCHAR,   category: string,   notes: ["ntext (deprecated)"] }
+  - { code: -11,  name: SQL_GUID,           category: uuid,     notes: ["uniqueidentifier"] }
+  - { code: -150, name: SQL_SS_VARIANT,     category: other,    notes: ["sql_variant"] }
+  - { code: -151, name: SQL_SS_UDT,         category: other,    notes: ["CLR types incl. geometry, geography, hierarchyid"] }
+  - { code: -152, name: SQL_SS_XML,         category: other,    notes: ["xml"] }
+  - { code: -153, name: SQL_SS_TABLE,       category: other,    notes: ["table-valued parameters"] }
+  - { code: -154, name: SQL_SS_TIME2,       category: temporal, notes: ["time"] }
+  - { code: -155, name: SQL_SS_TIMESTAMPOFFSET, category: temporal, notes: ["datetimeoffset"] }
+
+sources:
+  - evidence: unverified
+    url: https://learn.microsoft.com/sql/relational-databases/native-client-odbc-date-time/data-type-support-for-odbc-date-and-time-improvements
+    notes: Codes written from knowledge of sql.h / msodbcsql.h; to be verified with a test against msodbcsql.

@@ -184,7 +184,8 @@ def run_tests(specs: Specs, server: Server, report: Report):
             with server.connect() as conn:
                 _exec_all(conn, test.get("setup", {}).get(server.engine, []))
                 for step in test["steps"]:
-                    params = _resolve_params(step.get("params", {}), server)
+                    params = _resolve_params({**step.get("params", {}),
+                                              **step.get("params_by_engine", {}).get(server.engine, {})}, server)
                     if "operation" in step:
                         _exec_all(conn, _render_operation(specs, step["operation"], server, params))
                         continue

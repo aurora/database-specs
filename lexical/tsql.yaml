@@ -1,0 +1,71 @@
+# yaml-language-server: $schema=../schemas/lexical.schema.json
+id: tsql
+description: Lexical rules of Transact-SQL (SQL Server, Azure SQL).
+
+identifiers:
+  quotes:
+    - { open: "[", close: "]", escape: [double], notes: ["']' inside is written as ']]'."] }
+    - open: '"'
+      close: '"'
+      escape: [double]
+      when: { setting: QUOTED_IDENTIFIER, value: "OFF", effect: disables }
+      notes: ["Delimited identifier while QUOTED_IDENTIFIER is ON (default for ODBC and most drivers); a string literal when OFF."]
+  preferred_quote: "["
+  unquoted_pattern: '^[A-Za-z_@#\u0080-\uFFFF][A-Za-z0-9_@#$\u0080-\uFFFF]*$'
+  case_folding: none
+  max_length: 128
+  max_length_unit: characters
+  notes:
+    - "Case sensitivity of identifiers (and data) depends on the database/column collation (e.g. _CI_ vs _CS_), not on quoting."
+    - "Names starting with # are local temporary objects, ## global temporary; @ starts a variable or parameter."
+    - "Temporary table names are limited to 116 characters."
+    - "Objects are addressed as [server].[database].[schema].[object]; leading parts can be omitted (db..obj uses the default schema)."
+
+strings:
+  - kind: string
+    open: "'"
+    close: "'"
+    escape: [double]
+    notes: ["No backslash escapes. A backslash followed by a newline is a line continuation inside the literal."]
+  - { kind: national, prefix: "N", prefix_case_insensitive: true, open: "'", close: "'", escape: [double] }
+  - kind: string
+    open: '"'
+    close: '"'
+    escape: [double]
+    when: { setting: QUOTED_IDENTIFIER, value: "OFF", effect: enables }
+
+comments:
+  - { kind: line, open: "--" }
+  - kind: block
+    open: "/*"
+    close: "*/"
+    nestable: true
+    notes: ["Block comments nest."]
+
+parameters:
+  - { pattern: '\?', kind: positional, layer: client-library, notes: ["ODBC / OLE DB placeholders, rewritten by the driver."] }
+  - { pattern: '@[A-Za-z_][A-Za-z0-9_@#$]*', kind: named, layer: server, notes: ["Parameters of sp_executesql / stored procedures; same syntax as local variables."] }
+
+variables:
+  - { pattern: '@[A-Za-z_][A-Za-z0-9_@#$]*', kind: local-variable }
+  - { pattern: '@@[A-Za-z_]+', kind: system-function, notes: ["@@ROWCOUNT, @@IDENTITY, @@TRANCOUNT, ... (functions, not variables)."] }
+
+operators: ["+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "!<", "!>", "::"]
+
+statements:
+  terminator: ";"
+  batch_separator: GO
+  body_quoting: ["BEGIN ... END blocks inside procedures/functions/triggers (run as one batch)"]
+  notes:
+    - "';' is optional in most places but required before WITH (CTE) / WITH XMLNAMESPACES when another statement precedes it, after MERGE, and before THROW."
+    - "GO is a client-side batch separator (sqlcmd/SSMS convention), never sent to the server. It must stand alone on its line (optionally 'GO n' to repeat). A client must split scripts on it."
+    - "CREATE PROCEDURE/FUNCTION/TRIGGER/VIEW must be the first statement in a batch, so scripts rely on GO."
+    - "Local variables and temp tables live per batch/session; splitting a script differently changes semantics."
+
+keywords:
+  notes:
+    - "SQL Server has no system view listing reserved keywords; a static list per version is needed (documented as 'Reserved Keywords')."
+
+sources:
+  - evidence: unverified
+    url: https://learn.microsoft.com/sql/t-sql/language-elements/language-elements-transact-sql

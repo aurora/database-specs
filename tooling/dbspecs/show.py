@@ -187,8 +187,14 @@ def resolve_profile(specs: Specs, engine: str, version: str) -> dict:
         impl = statement_for(op["implementations"].get(engine, []), version)
         ops[op_id] = impl["status"] if impl else "unknown"
     syntax = [s for s, d in sorted(specs.docs["syntax"].items()) if engine in d["grammars"]]
-    ident_quotes = [f"{q['open']}...{q['close']}" + (f" (if {q['when']['setting']}={q['when'].get('value')})"
-                    if "when" in q else "") for q in lex["identifiers"]["quotes"] if "prefix" not in q]
+    def _cond(q):
+        if "when" not in q:
+            return ""
+        w = q["when"]
+        word = "unless" if w.get("effect") == "disables" else "if"
+        return f" ({word} {w['setting']}={w.get('value')})"
+
+    ident_quotes = [f"{q['open']}...{q['close']}{_cond(q)}" for q in lex["identifiers"]["quotes"] if "prefix" not in q]
     return {
         "kind": "profile", "engine": engine, "name": eng["name"], "version": version,
         "protocols": eng["protocols"],

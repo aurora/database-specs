@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=../../schemas/capability.schema.json
+id: dml.output-clause
+title: OUTPUT clause on INSERT/UPDATE/DELETE/MERGE
+description: >
+  T-SQL counterpart of RETURNING. OUTPUT inserted.* / deleted.* returns affected rows
+  (for UPDATE both old and new values).
+related: [dml.returning]
+support:
+  sqlserver:
+    - since: "9"
+      status: supported
+      notes:
+        - "Placed before VALUES / FROM / WHERE: INSERT INTO t (a) OUTPUT inserted.id VALUES (1)."
+        - "Not allowed without INTO when the target table has enabled triggers."
+  mysql:
+    - status: unsupported
+  mariadb:
+    - status: unsupported
+  postgresql:
+    - status: unsupported
+      notes: ["Use RETURNING; PostgreSQL 18 adds OLD/NEW in RETURNING."]
+probes:
+  - engines: [sqlserver]
+    setup: ["CREATE TABLE #probe_output (id INT)"]
+    statements: ["INSERT INTO #probe_output (id) OUTPUT inserted.id VALUES (1)"]
+    cleanup: ["DROP TABLE IF EXISTS #probe_output"]
+  - engines: [mysql, mariadb, postgresql]
+    setup: ["CREATE TEMPORARY TABLE probe_output (id INT)"]
+    statements: ["INSERT INTO probe_output (id) OUTPUT inserted.id VALUES (1)"]
+    cleanup: ["DROP TABLE IF EXISTS probe_output"]

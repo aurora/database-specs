@@ -24,6 +24,19 @@ implementations:
         - "Same approach and limits as MySQL; the set of preparable statements differs (MariaDB allows more, e.g. most DDL)."
         - "Compound statements (BEGIN NOT ATOMIC ... END) cannot be prepared."
       sources: [{ evidence: unverified }]
+  sqlserver:
+    - status: partial
+      method: emulated
+      steps:
+        - "SET PARSEONLY ON"
+        - "{{sql}}"
+        - "SET PARSEONLY OFF"
+      caveats:
+        - "PARSEONLY checks syntax only. SET NOEXEC ON (instead) also compiles and resolves names, but deferred name resolution means a missing table in a SELECT inside a batch is not always reported."
+        - "Each step must be sent as its own batch; a whole script can be checked (GO-split first)."
+        - "For a single SELECT, sys.dm_exec_describe_first_result_set(@tsql, NULL, 0) returns either the result columns or the error, without executing."
+        - "ODBC SQLPrepare is deferred until execute by default, so it does not validate."
+      sources: [{ evidence: unverified }]
   postgresql:
     - status: supported
       method: protocol

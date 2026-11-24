@@ -16,6 +16,13 @@ implementations:
   mariadb:
     - status: supported
       template: "SELECT * FROM {{table}}{{#where}} WHERE {{where}}{{/where}}{{#order_by}} ORDER BY {{order_by}}{{/order_by}} LIMIT {{limit}} OFFSET {{offset}}"
+  sqlserver:
+    - since: "11"
+      status: supported
+      template: "SELECT * FROM {{table}}{{#where}} WHERE {{where}}{{/where}} ORDER BY {{#order_by}}{{order_by}}{{/order_by}}{{^order_by}}(SELECT NULL){{/order_by}} OFFSET {{offset}} ROWS FETCH NEXT {{limit}} ROWS ONLY"
+      notes:
+        - "OFFSET/FETCH needs ORDER BY; ORDER BY (SELECT NULL) means no particular (and no stable) order."
+        - "Before 2012 (11) paging needs TOP / ROW_NUMBER() - not covered."
   postgresql:
     - status: supported
       template: "SELECT * FROM {{table}}{{#where}} WHERE {{where}}{{/where}}{{#order_by}} ORDER BY {{order_by}}{{/order_by}} LIMIT {{limit}} OFFSET {{offset}}"

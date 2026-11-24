@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=../../schemas/test.schema.json
 id: change-column-type
 description: Render ddl.change-column-type and verify the result via introspection.list-columns.
-engines: [mysql, mariadb, postgresql]
+engines: [mysql, mariadb, postgresql, sqlserver]
 
 setup:
   mysql:
@@ -10,11 +10,14 @@ setup:
     - "CREATE TABLE t_alter (id INT PRIMARY KEY, code VARCHAR(10) NOT NULL DEFAULT 'x' COMMENT 'keep me')"
   postgresql:
     - "CREATE TABLE t_alter (id integer PRIMARY KEY, code varchar(10) NOT NULL DEFAULT 'x')"
+  sqlserver:
+    - "CREATE TABLE t_alter (id INT PRIMARY KEY, code VARCHAR(10) NOT NULL CONSTRAINT df_t_alter_code DEFAULT 'x')"
 
 cleanup:
   mysql: [DROP TABLE IF EXISTS t_alter]
   mariadb: [DROP TABLE IF EXISTS t_alter]
   postgresql: [DROP TABLE IF EXISTS t_alter]
+  sqlserver: [DROP TABLE IF EXISTS t_alter]
 
 steps:
   - operation: ddl.change-column-type
@@ -23,6 +26,8 @@ steps:
       column: code
       new_type: varchar(50)
       column_definition: "VARCHAR(50) NOT NULL DEFAULT 'x' COMMENT 'keep me'"
+    params_by_engine:
+      sqlserver: { column_definition: VARCHAR(50) NOT NULL }
   - query: introspection.list-columns
     params: { schema: "{{schema}}", table: t_alter }
     expect:
@@ -38,3 +43,6 @@ steps:
         - match: { column_name: code }
           engine: postgresql
           values: { data_type: character varying(50), default_raw: "'x'::character varying" }
+        - match: { column_name: code }
+          engine: sqlserver
+          values: { data_type: varchar(50), default_raw: "('x')" }

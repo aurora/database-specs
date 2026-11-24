@@ -9,9 +9,12 @@ support:
   mariadb:
     - status: supported
       notes: ["Also LIMIT m, n (offset first). LIMIT ROWS EXAMINED n is MariaDB-specific."]
+  sqlserver:
+    - status: unsupported
+      notes: ["Use OFFSET ... FETCH (query.fetch-first) or SELECT TOP (n)."]
   postgresql:
     - status: supported
       notes: ["LIMIT ALL / LIMIT NULL mean no limit. 'LIMIT m, n' is not supported."]
 probes:
-  - engines: [mysql, mariadb, postgresql]
+  - engines: [mysql, mariadb, postgresql, sqlserver]
     statements: ["SELECT n FROM (SELECT 1 AS n) t ORDER BY n LIMIT 1 OFFSET 0"]

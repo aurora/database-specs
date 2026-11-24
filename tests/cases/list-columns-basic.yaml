@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=../../schemas/test.schema.json
 id: list-columns-basic
 description: introspection.list-columns on a table covering auto increment, defaults, generated columns, comments.
-engines: [mysql, mariadb, postgresql]
+engines: [mysql, mariadb, postgresql, sqlserver]
 
 setup:
   mysql:
@@ -41,11 +41,25 @@ setup:
       )
     - COMMENT ON COLUMN t_columns.name IS 'display name'
     - ALTER TABLE t_columns DROP COLUMN dropped_later
+  sqlserver:
+    - |
+      CREATE TABLE t_columns (
+        id INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        price DECIMAL(10,2) NULL DEFAULT 0.00,
+        qty INT NOT NULL DEFAULT 1,
+        total AS (price * qty) PERSISTED,
+        dropped_later INT,
+        note NVARCHAR(MAX)
+      )
+    - EXEC sp_addextendedproperty 'MS_Description', 'display name', 'SCHEMA', 'dbo', 'TABLE', 't_columns', 'COLUMN', 'name'
+    - ALTER TABLE t_columns DROP COLUMN dropped_later
 
 cleanup:
   mysql: [DROP TABLE IF EXISTS t_columns]
   mariadb: [DROP TABLE IF EXISTS t_columns]
   postgresql: [DROP TABLE IF EXISTS t_columns]
+  sqlserver: [DROP TABLE IF EXISTS t_columns]
 
 steps:
   - query: introspection.list-columns
@@ -78,6 +92,13 @@ steps:
         - match: { column_name: price }
           values: { is_nullable: true, is_auto_increment: false }
         - match: { column_name: qty }
+          engine: mysql
+          values: { default_raw: "1" }
+        - match: { column_name: qty }
+          engine: mariadb
+          values: { default_raw: "1" }
+        - match: { column_name: qty }
+          engine: postgresql
           values: { default_raw: "1" }
         - match: { column_name: total }
           values: { generation_kind: stored, default_raw: null }
@@ -94,3 +115,18 @@ steps:
         - match: { column_name: id }
           engine: postgresql
           values: { data_type: integer }
+        - match: { column_name: qty }
+          engine: sqlserver
+          values: { default_raw: "((1))", data_type: int }
+        - match: { column_name: name }
+          engine: sqlserver
+          values: { data_type: varchar(100) }
+        - match: { column_name: price }
+          engine: sqlserver
+          values: { default_raw: "((0.00))", data_type: "decimal(10,2)" }
+        - match: { column_name: total }
+          engine: sqlserver
+          values: { generation_expression: "([price]*[qty])" }
+        - match: { column_name: note }
+          engine: sqlserver
+          values: { data_type: nvarchar(max) }

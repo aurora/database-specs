@@ -13,3 +13,7 @@ targets:
   - { id: mariadb-11.4,   engine: mariadb,    image: docker.io/library/mariadb:11.4 }
   - { id: mariadb-11.8,   engine: mariadb,    image: docker.io/library/mariadb:11.8 }
   - { id: mariadb-12,     engine: mariadb,    image: docker.io/library/mariadb:12 }
+  - { id: sqlserver-2017, engine: sqlserver,  image: mcr.microsoft.com/mssql/server:2017-latest }
+  - { id: sqlserver-2019, engine: sqlserver,  image: mcr.microsoft.com/mssql/server:2019-latest }
+  - { id: sqlserver-2022, engine: sqlserver,  image: mcr.microsoft.com/mssql/server:2022-latest }
+  - { id: sqlserver-2025, engine: sqlserver,  image: mcr.microsoft.com/mssql/server:2025-latest }

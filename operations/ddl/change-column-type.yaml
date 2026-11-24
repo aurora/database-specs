@@ -35,6 +35,15 @@ implementations:
       caveats:
         - "Same full-definition semantics as MySQL: attributes not repeated are dropped."
         - "Implicit commit. ALGORITHM=INSTANT/NOCOPY possible for some changes (e.g. widening VARCHAR within the same length-byte class)."
+  sqlserver:
+    - status: supported
+      template: "ALTER TABLE {{table}} ALTER COLUMN {{column}} {{column_definition}}"
+      requires: [column_definition]
+      transactional: true
+      caveats:
+        - "column_definition is the type plus NULL / NOT NULL (and COLLATE for strings). Leaving out NOT NULL makes the column nullable (ANSI_NULL_DFLT_ON)."
+        - "DEFAULT, CHECK and other constraints are separate objects and are kept; ALTER COLUMN fails if an index, statistics, constraint or computed column depends on the column in an incompatible way - drop and recreate them."
+        - "Changing the type of a large table can be a size-of-data operation under a schema modification lock."
   postgresql:
     - status: supported
       template: "ALTER TABLE {{table}} ALTER COLUMN {{column}} TYPE {{new_type}}{{#using}} USING {{using}}{{/using}}"

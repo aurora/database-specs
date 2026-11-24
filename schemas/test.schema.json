@@ -57,6 +57,11 @@
           "query": { "$ref": "common.schema.json#/$defs/id" },
           "operation": { "$ref": "common.schema.json#/$defs/id" },
           "params": { "type": "object" },
+          "params_by_engine": {
+            "description": "Per-engine parameters merged over params.",
+            "type": "object",
+            "additionalProperties": { "type": "object" }
+          },
           "expect": { "$ref": "#/$defs/expectation" }
         },
         "oneOf": [{ "required": ["query"] }, { "required": ["operation"] }]

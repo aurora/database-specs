@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://db-specs.invalid/schemas/operation.schema.json",
   "title": "Client operation",
-  "description": "An operation a client performs by generating SQL (alter column, browse table, ...). Templates use a mustache subset: {{param}} and {{#param}}...{{/param}} (section rendered only if param is set). Parameters of kind identifier / qualified-identifier are quoted by the consumer according to the lexical spec before substitution.",
+  "description": "An operation a client performs by generating SQL (alter column, browse table, ...). Templates use a mustache subset: {{param}} and {{#param}}...{{/param}} (rendered only if param is set) and {{^param}}...{{/param}} (only if not set). Parameters of kind identifier / qualified-identifier are quoted by the consumer according to the lexical spec before substitution.",
   "type": "object",
   "required": ["id", "title", "parameters", "implementations"],
   "additionalProperties": false,

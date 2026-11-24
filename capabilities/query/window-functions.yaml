@@ -11,10 +11,18 @@ support:
     - since: "10.2.0"
       status: supported
       notes: ["GROUPS frame units are not supported (verify)."]
+  sqlserver:
+    - since: "9"
+      until: "11"
+      status: partial
+      notes: ["2005/2008: ranking functions and aggregates with PARTITION BY only, no ORDER BY in aggregate windows, no frames."]
+    - since: "11"
+      status: supported
+      notes: ["Frames (ROWS/RANGE), LAG/LEAD, FIRST_VALUE etc. since 2012. Named WINDOW clause since 2022 (compatibility level 160)."]
   postgresql:
     - since: "8.4"
       status: supported
       notes: ["GROUPS frames and EXCLUDE since 11."]
 probes:
-  - engines: [mysql, mariadb, postgresql]
+  - engines: [mysql, mariadb, postgresql, sqlserver]
     statements: ["SELECT ROW_NUMBER() OVER (ORDER BY n) AS rn FROM (SELECT 1 AS n) t"]

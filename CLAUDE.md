@@ -1,6 +1,6 @@
 # database-specs
 
-Machine-readable, versioned specifications of SQL engines (MySQL, MariaDB, PostgreSQL so far)
+Machine-readable, versioned specifications of SQL engines (MySQL, MariaDB, PostgreSQL, SQL Server so far)
 for database clients: lexical rules, wire-protocol type codes, capabilities, introspection
 queries, client operations and curated statement syntax. Implementation-agnostic: nothing in
 here may depend on a particular client, language or driver. Content is written in English.

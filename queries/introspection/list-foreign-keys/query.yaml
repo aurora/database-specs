@@ -52,6 +52,12 @@ variants:
     since: "18"
     file: postgresql-18.sql
     notes: ["pg_constraint.conenforced since 18 (NOT ENFORCED foreign keys)."]
+  - engine: sqlserver
+    since: "14"
+    file: sqlserver.sql
+    notes:
+      - "Without an explicit action: no-action. No RESTRICT, no MATCH options, not deferrable."
+      - "is_enforced = false for disabled constraints (ALTER TABLE ... NOCHECK CONSTRAINT). Constraints created or re-enabled WITH NOCHECK are enforced but not trusted (sys.foreign_keys.is_not_trusted) - not represented here."
 
 gaps:
   - "Incoming foreign keys (tables referencing this one) need a separate query."

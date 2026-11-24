@@ -5,6 +5,7 @@ SELECT
     i.indisunique                                         AS is_unique,
     i.indisprimary                                        AS is_primary,
     am.amname::text                                       AS index_type,
+    NULL::boolean                                         AS is_clustered,
     k.ord::integer                                        AS column_position,
     a.attname::text                                       AS column_name,
     CASE WHEN k.attnum = 0

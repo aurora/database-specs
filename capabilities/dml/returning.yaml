@@ -3,6 +3,9 @@ id: dml.returning
 title: RETURNING clause on INSERT/UPDATE/DELETE
 description: Return rows affected by a DML statement in the same round trip.
 support:
+  sqlserver:
+    - status: unsupported
+      notes: ["Use the OUTPUT clause instead (see dml.output-clause): INSERT ... OUTPUT inserted.id VALUES (...)."]
   postgresql:
     - since: "8.2"
       status: supported
@@ -22,3 +25,7 @@ probes:
     setup: ["CREATE TEMPORARY TABLE probe_returning (id INT)"]
     statements: ["INSERT INTO probe_returning (id) VALUES (1) RETURNING id"]
     cleanup: ["DROP TABLE IF EXISTS probe_returning"]
+  - engines: [sqlserver]
+    setup: ["CREATE TABLE #probe_returning (id INT)"]
+    statements: ["INSERT INTO #probe_returning (id) VALUES (1) RETURNING id"]
+    cleanup: ["DROP TABLE IF EXISTS #probe_returning"]

@@ -2,8 +2,9 @@
 id: introspection-version-specific
 description: >
   Introspection of features that exist only in newer versions: MySQL functional and invisible
-  indexes, MariaDB ignored indexes, PostgreSQL 18 NOT ENFORCED foreign keys.
-engines: [mysql, mariadb, postgresql]
+  indexes, MariaDB ignored indexes, PostgreSQL 18 NOT ENFORCED foreign keys, SQL Server
+  disabled indexes and NOCHECK foreign keys.
+engines: [mysql, mariadb, postgresql, sqlserver]
 versions:
   mysql: { since: "8.0.13" }
   postgresql: { since: "18" }
@@ -39,11 +40,24 @@ setup:
         title varchar(100),
         CONSTRAINT fk_mod_ref FOREIGN KEY (ref_id) REFERENCES t_ref (id) NOT ENFORCED
       )
+  sqlserver:
+    - CREATE TABLE t_ref (id INT PRIMARY KEY)
+    - |
+      CREATE TABLE t_mod (
+        id INT PRIMARY KEY,
+        ref_id INT,
+        title VARCHAR(100),
+        CONSTRAINT fk_mod_ref FOREIGN KEY (ref_id) REFERENCES t_ref (id)
+      )
+    - CREATE INDEX ix_hidden ON t_mod (title)
+    - ALTER INDEX ix_hidden ON t_mod DISABLE
+    - ALTER TABLE t_mod NOCHECK CONSTRAINT fk_mod_ref
 
 cleanup:
   mysql: [DROP TABLE IF EXISTS t_mod, DROP TABLE IF EXISTS t_ref]
   mariadb: [DROP TABLE IF EXISTS t_mod, DROP TABLE IF EXISTS t_ref]
   postgresql: [DROP TABLE IF EXISTS t_mod, DROP TABLE IF EXISTS t_ref]
+  sqlserver: [DROP TABLE IF EXISTS t_mod, DROP TABLE IF EXISTS t_ref]
 
 steps:
   - query: introspection.list-indexes
@@ -59,6 +73,9 @@ steps:
         - match: { index_name: ix_hidden }
           engine: mariadb
           values: { column_name: title, is_visible: false }
+        - match: { index_name: ix_hidden }
+          engine: sqlserver
+          values: { column_name: title, is_visible: false }
   - query: introspection.list-foreign-keys
     params: { schema: "{{schema}}", table: t_mod }
     expect:
@@ -72,4 +89,7 @@ steps:
           values: { is_enforced: true }
         - match: { constraint_name: fk_mod_ref }
           engine: postgresql
+          values: { is_enforced: false }
+        - match: { constraint_name: fk_mod_ref }
+          engine: sqlserver
           values: { is_enforced: false }

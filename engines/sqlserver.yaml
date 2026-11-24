@@ -1,0 +1,48 @@
+# yaml-language-server: $schema=../schemas/engine.schema.json
+id: sqlserver
+name: Microsoft SQL Server
+vendor: Microsoft
+description: >
+  SQL Server (box product, also on Linux/containers). Azure SQL Database / Managed Instance
+  share the T-SQL dialect but differ in features and get their own engine files.
+protocols: [tds]
+lexical: tsql
+catalogs: [sys, INFORMATION_SCHEMA]
+
+identification:
+  version_query: SELECT CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(128))
+  version_pattern: '^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)'
+  notes:
+    - "ProductVersion has four parts (e.g. 16.0.4135.4); the first three are used for version ranges."
+    - "Major version -> product: 13 = 2016, 14 = 2017, 15 = 2019, 16 = 2022, 17 = 2025."
+    - "SERVERPROPERTY('EngineEdition'): 5 = Azure SQL Database, 8 = Azure SQL Managed Instance; treat those as separate engines."
+    - "Database compatibility level (sys.databases.compatibility_level) can be lower than the server version and disables newer syntax/behaviour per database."
+
+versions:
+  - series: "13"
+    notes: ["SQL Server 2016"]
+    released: 2016-06-01
+    eol: 2026-07-14
+  - series: "14"
+    notes: ["SQL Server 2017 - first release on Linux"]
+    released: 2017-10-02
+    eol: 2027-10-12
+  - series: "15"
+    notes: ["SQL Server 2019"]
+    released: 2019-11-04
+    eol: 2030-01-08
+  - series: "16"
+    notes: ["SQL Server 2022"]
+    released: 2022-11-16
+    eol: 2033-01-11
+  - series: "17"
+    notes: ["SQL Server 2025"]
+    released: 2025-11-18
+
+documentation:
+  - title: SQL Server technical documentation
+    url: https://learn.microsoft.com/sql/sql-server/
+
+sources:
+  - evidence: unverified
+    notes: Release/EOL dates written from knowledge; verify against https://learn.microsoft.com/lifecycle/products/

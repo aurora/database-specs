@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=../../schemas/test.schema.json
 id: introspection-schema-objects
 description: list-tables, list-indexes and list-foreign-keys on a shared parent/child fixture.
-engines: [mysql, mariadb, postgresql]
+engines: [mysql, mariadb, postgresql, sqlserver]
 
 setup:
   mysql: &mysql_setup
@@ -60,6 +60,34 @@ setup:
     - CREATE MATERIALIZED VIEW mv_child AS SELECT id FROM t_child
     - CREATE TABLE t_part (id int, created date) PARTITION BY RANGE (created)
     - CREATE TABLE t_part_2026 PARTITION OF t_part FOR VALUES FROM ('2026-01-01') TO ('2027-01-01')
+  sqlserver:
+    - |
+      CREATE TABLE t_parent (
+        id INT CONSTRAINT pk_parent PRIMARY KEY,
+        code VARCHAR(20) NOT NULL,
+        region INT NOT NULL,
+        CONSTRAINT uq_parent_code UNIQUE (code),
+        CONSTRAINT uq_parent_region_code UNIQUE (region, code)
+      )
+    - EXEC sp_addextendedproperty 'MS_Description', 'parents', 'SCHEMA', 'dbo', 'TABLE', 't_parent'
+    - |
+      CREATE TABLE t_child (
+        id INT CONSTRAINT pk_child PRIMARY KEY,
+        parent_id INT,
+        region INT,
+        code VARCHAR(20),
+        title VARCHAR(200),
+        CONSTRAINT fk_child_parent FOREIGN KEY (parent_id) REFERENCES t_parent (id)
+          ON DELETE CASCADE ON UPDATE SET NULL,
+        CONSTRAINT fk_child_region_code FOREIGN KEY (region, code) REFERENCES t_parent (region, code)
+      )
+    - CREATE INDEX ix_child_title ON t_child (title)
+    - EXEC sp_addextendedproperty 'MS_Description', 'title index', 'SCHEMA', 'dbo', 'TABLE', 't_child', 'INDEX', 'ix_child_title'
+    - CREATE INDEX ix_child_multi ON t_child (region, parent_id DESC) INCLUDE (code) WHERE region > 0
+    - CREATE VIEW v_child AS SELECT id, title FROM t_child
+    - CREATE PARTITION FUNCTION pf_dbspecs (date) AS RANGE RIGHT FOR VALUES ('2026-01-01')
+    - CREATE PARTITION SCHEME ps_dbspecs AS PARTITION pf_dbspecs ALL TO ([PRIMARY])
+    - CREATE TABLE t_part (id INT, created DATE) ON ps_dbspecs (created)
 
 cleanup:
   mysql: &mysql_cleanup
@@ -74,6 +102,13 @@ cleanup:
     - DROP TABLE IF EXISTS t_child
     - DROP TABLE IF EXISTS t_parent
     - DROP TABLE IF EXISTS t_part
+  sqlserver:
+    - DROP VIEW IF EXISTS v_child
+    - DROP TABLE IF EXISTS t_child
+    - DROP TABLE IF EXISTS t_parent
+    - DROP TABLE IF EXISTS t_part
+    - IF EXISTS (SELECT 1 FROM sys.partition_schemes WHERE name = 'ps_dbspecs') DROP PARTITION SCHEME ps_dbspecs
+    - IF EXISTS (SELECT 1 FROM sys.partition_functions WHERE name = 'pf_dbspecs') DROP PARTITION FUNCTION pf_dbspecs
 
 steps:
   - query: introspection.list-tables
@@ -97,6 +132,9 @@ steps:
         - match: { table_name: t_parent }
           engine: postgresql
           values: { storage_engine: heap, collation: null }
+        - match: { table_name: t_parent }
+          engine: sqlserver
+          values: { storage_engine: null, collation: null, row_estimate: 0 }
         - match: { table_name: mv_child }
           engine: postgresql
           values: { table_type: materialized-view }
@@ -119,7 +157,19 @@ steps:
         - match: { is_primary: true }
           values: { column_name: id, column_position: 1, is_unique: true, index_type: btree, sort_order: asc }
         - match: { index_name: ix_child_multi, column_position: 1 }
-          values: { column_name: region, is_unique: false, sort_order: asc, is_included: false }
+          values: { column_name: region, is_unique: false, sort_order: asc, is_included: false, index_type: btree }
+        - match: { is_primary: true }
+          engine: mysql
+          values: { is_clustered: true }
+        - match: { index_name: ix_child_multi, column_position: 1 }
+          engine: mysql
+          values: { is_clustered: false }
+        - match: { is_primary: true }
+          engine: mariadb
+          values: { is_clustered: true }
+        - match: { is_primary: true }
+          engine: postgresql
+          values: { is_clustered: null }
         # DESC: ignored by MySQL 5.7 and MariaDB < 10.8
         - match: { index_name: ix_child_multi, column_position: 2 }
           engine: mysql
@@ -153,6 +203,19 @@ steps:
         - match: { index_name: fk_child_parent }
           engine: mariadb
           values: { column_name: parent_id }
+        # SQL Server: clustered primary key, INCLUDE, filtered index, index comment
+        - match: { is_primary: true }
+          engine: sqlserver
+          values: { index_name: pk_child, is_clustered: true }
+        - match: { index_name: ix_child_multi, column_position: 2 }
+          engine: sqlserver
+          values: { column_name: parent_id, sort_order: desc, nulls_first: null }
+        - match: { index_name: ix_child_multi, column_position: 3 }
+          engine: sqlserver
+          values: { column_name: code, is_included: true, sort_order: null, predicate: "([region]>(0))" }
+        - match: { index_name: ix_child_title }
+          engine: sqlserver
+          values: { column_name: title, is_clustered: false, comment: title index }
         # PostgreSQL: expression, INCLUDE, partial index
         - match: { index_name: ix_child_title }
           engine: postgresql
@@ -204,3 +267,6 @@ steps:
         - match: { constraint_name: fk_child_region_code, column_position: 1 }
           engine: postgresql
           values: { on_update: no-action, on_delete: no-action, match_type: simple, is_deferrable: true, initially_deferred: true }
+        - match: { constraint_name: fk_child_region_code, column_position: 1 }
+          engine: sqlserver
+          values: { on_update: no-action, on_delete: no-action, match_type: null, is_deferrable: false }

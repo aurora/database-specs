@@ -10,9 +10,11 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 
 import psycopg
+import pymssql
 import pymysql
 
 PASSWORD = "dbspecs-test"
+MSSQL_PASSWORD = "Dbspecs-test1"  # SQL Server enforces password complexity
 DATABASE = "dbspecs"
 
 ENGINE_SETUP = {
@@ -30,6 +32,13 @@ ENGINE_SETUP = {
         "port": 5432,
         "env": {"POSTGRES_PASSWORD": PASSWORD, "POSTGRES_DB": DATABASE},
         "schema": "public",
+    },
+    "sqlserver": {
+        "port": 1433,
+        # ACCEPT_EULA: accepting the SQL Server Developer Edition license for local tests was
+        # approved by the repository owner (Developer Edition is licensed for dev/test only).
+        "env": {"ACCEPT_EULA": "Y", "MSSQL_SA_PASSWORD": MSSQL_PASSWORD, "MSSQL_PID": "Developer"},
+        "schema": "dbo",
     },
 }
 
@@ -56,16 +65,26 @@ class Server:
     def schema(self) -> str:
         return ENGINE_SETUP[self.engine]["schema"]
 
-    def connect(self):
+    def connect(self, database: str = DATABASE):
         if self.engine in ("mysql", "mariadb"):  # mysql wire protocol
             return pymysql.connect(host=self.host, port=self.port, user="root", password=PASSWORD,
                                    database=DATABASE, autocommit=True, connect_timeout=3)
+        if self.engine == "sqlserver":
+            return pymssql.connect(server=self.host, port=self.port, user="sa", password=MSSQL_PASSWORD,
+                                   database=database, autocommit=True, login_timeout=3)
         if self.engine == "postgresql":
             return psycopg.connect(host=self.host, port=self.port, user="postgres", password=PASSWORD,
                                    dbname=DATABASE, autocommit=True, connect_timeout=3)
         raise ValueError(self.engine)
 
     def detect_version(self) -> str:
+        if self.engine == "sqlserver":
+            # no database exists yet: connect to master and create it
+            with self.connect("master") as conn, conn.cursor() as cur:
+                cur.execute("SELECT CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(128))")
+                self.version = re.match(r"\d+\.\d+\.\d+", cur.fetchone()[0]).group(0)
+                cur.execute(f"IF DB_ID('{DATABASE}') IS NULL CREATE DATABASE [{DATABASE}]")
+            return self.version
         with self.connect() as conn, conn.cursor() as cur:
             if self.engine in ("mysql", "mariadb"):
                 cur.execute("SELECT VERSION()")

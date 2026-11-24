@@ -11,10 +11,14 @@ support:
     - since: "10.6"
       status: supported
       notes: ["Including WITH TIES."]
+  sqlserver:
+    - since: "11"
+      status: supported
+      notes: ["Requires ORDER BY (use ORDER BY (SELECT NULL) for no specific order); OFFSET is mandatory; no WITH TIES (use TOP (n) WITH TIES)."]
   postgresql:
     - since: "8.4"
       status: supported
       notes: ["FETCH ... WITH TIES since 13."]
 probes:
-  - engines: [mysql, mariadb, postgresql]
+  - engines: [mysql, mariadb, postgresql, sqlserver]
     statements: ["SELECT n FROM (SELECT 1 AS n) t ORDER BY n OFFSET 0 ROWS FETCH FIRST 1 ROWS ONLY"]

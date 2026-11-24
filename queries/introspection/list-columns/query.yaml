@@ -59,6 +59,15 @@ variants:
       - "default_raw: SQL expression as rendered by pg_get_expr(), e.g. 'abc'::character varying. SERIAL columns report nextval('...'::regclass)."
       - "collation: only set when it differs from the type's default collation."
       - "ordinal_position is renumbered (attnum has gaps after DROP COLUMN)."
+  - engine: sqlserver
+    since: "14"
+    file: sqlserver.sql
+    notes:
+      - "data_type is rebuilt from sys.types + length/precision/scale (nvarchar length in characters, (max) for -1). Alias types are reported by their own name; float/real without precision."
+      - "default_raw is the stored definition of the DEFAULT constraint, wrapped in parentheses by the server: ('x'), ((1)), (getdate())."
+      - "comment comes from the extended property MS_Description (the SSMS convention)."
+      - "generation_expression is the computed column definition; persisted = stored, otherwise virtual."
+      - "collation: set for every character column."
 
 gaps:
   - "MySQL < 5.7 (no GENERATION_EXPRESSION column)."

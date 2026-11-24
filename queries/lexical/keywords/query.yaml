@@ -26,5 +26,6 @@ variants:
     notes: ["reserved = catcode R or T. T ('reserved, can be function or type name', e.g. JOIN, LEFT) still requires quoting as a column name."]
 
 gaps:
+  - "SQL Server: no system view lists keywords; needs a static list per version."
   - "MySQL < 8.0.13: no server-side list; needs a static list per version."
   - "MariaDB < 10.6: KEYWORDS table missing (verify exact version)."

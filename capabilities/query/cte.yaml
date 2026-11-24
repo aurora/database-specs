@@ -11,10 +11,14 @@ support:
   mariadb:
     - since: "10.2.1"
       status: supported
+  sqlserver:
+    - since: "9"
+      status: supported
+      notes: ["A preceding statement in the same batch must be terminated with ';' before WITH."]
   postgresql:
     - since: "8.4"
       status: supported
       notes: ["Since 12, non-recursive side-effect-free CTEs referenced once are inlined; MATERIALIZED / NOT MATERIALIZED control this."]
 probes:
-  - engines: [mysql, mariadb, postgresql]
+  - engines: [mysql, mariadb, postgresql, sqlserver]
     statements: ["WITH x AS (SELECT 1 AS n) SELECT n FROM x"]

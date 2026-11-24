@@ -1,6 +1,7 @@
 # yaml-language-server: $schema=../../schemas/capability.schema.json
 id: query.cte-recursive
-title: Recursive common table expressions (WITH RECURSIVE)
+title: Recursive common table expressions
+description: Self-referencing CTEs. Most engines require WITH RECURSIVE; T-SQL has no RECURSIVE keyword.
 related: [query.cte]
 support:
   mysql:
@@ -13,6 +14,12 @@ support:
     - since: "10.2.2"
       status: supported
       notes: ["Recursion depth limited by max_recursive_iterations; CYCLE ... RESTRICT clause since 10.5.2."]
+  sqlserver:
+    - since: "9"
+      status: supported
+      notes:
+        - "Written as plain WITH - 'WITH RECURSIVE' is a syntax error."
+        - "Recursion limited to 100 levels by default; OPTION (MAXRECURSION n) at the end of the statement (0 = unlimited)."
   postgresql:
     - since: "8.4"
       status: supported
@@ -20,3 +27,6 @@ support:
 probes:
   - engines: [mysql, mariadb, postgresql]
     statements: ["WITH RECURSIVE r (n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM r WHERE n < 3) SELECT n FROM r"]
+  - name: tsql
+    engines: [sqlserver]
+    statements: ["WITH r (n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM r WHERE n < 3) SELECT n FROM r"]

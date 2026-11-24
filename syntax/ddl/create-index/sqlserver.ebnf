@@ -1,0 +1,17 @@
+/* SQL Server - CREATE INDEX for rowstore indexes (2017 - 2025)
+   Columnstore, XML, spatial and full-text indexes have their own statements.
+   Built-ins: identifier, string_literal, integer, expression.
+   Version annotations apply to the item that follows them. */
+
+create_index ::= 'CREATE' 'UNIQUE'? ( 'CLUSTERED' | 'NONCLUSTERED' )? 'INDEX' identifier
+                 'ON' table_name '(' index_column ( ',' index_column )* ')'
+                 ( 'INCLUDE' '(' identifier ( ',' identifier )* ')' )?
+                 ( 'WHERE' expression )?
+                 ( 'WITH' '(' index_option ( ',' index_option )* ')' )?
+                 ( 'ON' identifier ( '(' identifier ')' )? )?
+
+table_name ::= identifier ( '.' identifier ( '.' identifier )? )?
+
+index_column ::= identifier ( 'ASC' | 'DESC' )?
+
+index_option ::= identifier '=' ( 'ON' | 'OFF' | integer | identifier )

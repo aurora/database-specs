@@ -101,15 +101,16 @@ def variant_for(query: dict, engine: str, version: str) -> dict | None:
 
 # --- templates --------------------------------------------------------------
 
-_SECTION = re.compile(r"\{\{#(\w+)\}\}(.*?)\{\{/\1\}\}", re.S)
+_SECTION = re.compile(r"\{\{([#^])(\w+)\}\}(.*?)\{\{/\2\}\}", re.S)
 _VAR = re.compile(r"\{\{(\w+)\}\}")
 
 
 def render(template: str, params: dict) -> str:
-    """Mustache subset: {{name}}, {{#name}}...{{/name}}."""
+    """Mustache subset: {{name}}, {{#name}}...{{/name}} (if set), {{^name}}...{{/name}} (if not set)."""
 
     def section(m):
-        return m.group(2) if params.get(m.group(1)) not in (None, "", False) else ""
+        is_set = params.get(m.group(2)) not in (None, "", False)
+        return m.group(3) if is_set == (m.group(1) == "#") else ""
 
     out = _SECTION.sub(section, template)
 

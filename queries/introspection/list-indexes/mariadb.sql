@@ -5,6 +5,7 @@ SELECT
     s.NON_UNIQUE = 0                                      AS is_unique,
     s.INDEX_NAME = 'PRIMARY'                              AS is_primary,
     LOWER(s.INDEX_TYPE)                                   AS index_type,
+    s.INDEX_NAME = 'PRIMARY' AND t.ENGINE = 'InnoDB'      AS is_clustered,
     s.SEQ_IN_INDEX                                        AS column_position,
     s.COLUMN_NAME                                         AS column_name,
     CAST(NULL AS CHAR)                                    AS expression,
@@ -17,6 +18,8 @@ SELECT
     CAST(NULL AS CHAR)                                    AS predicate,
     NULLIF(s.INDEX_COMMENT, '')                           AS comment
 FROM information_schema.STATISTICS s
+JOIN information_schema.TABLES t
+  ON t.TABLE_SCHEMA = s.TABLE_SCHEMA AND t.TABLE_NAME = s.TABLE_NAME
 WHERE s.TABLE_SCHEMA = :schema
   AND s.TABLE_NAME = :table
 ORDER BY s.INDEX_NAME = 'PRIMARY' DESC, s.INDEX_NAME, s.SEQ_IN_INDEX

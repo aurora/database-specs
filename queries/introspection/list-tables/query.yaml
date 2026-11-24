@@ -45,6 +45,15 @@ variants:
       - "TABLE_TYPE can also be SEQUENCE (excluded), SYSTEM VERSIONED (mapped to table) and TEMPORARY (excluded)."
       - "TABLE_ROWS of partitioned tables is a rough per-partition estimate (an empty table with one partition reported 2)."
       - "Views report TABLE_COMMENT = 'VIEW'; mapped to NULL."
+  - engine: sqlserver
+    since: "14"
+    file: sqlserver.sql
+    notes:
+      - "table_type: external tables (PolyBase) -> foreign-table; tables on a partition scheme -> partitioned-table (SQL Server partitions are not separate tables). Indexed views remain view."
+      - "storage_engine is only set for memory-optimized tables (In-Memory OLTP)."
+      - "row_estimate is the row count from sys.partitions metadata (usually accurate, not guaranteed)."
+      - "data_bytes / index_bytes from sys.allocation_units (used pages * 8 KB); no VIEW DATABASE STATE permission needed."
+      - "System-versioned temporal history tables are listed as normal tables."
   - engine: postgresql
     since: "12"
     file: postgresql.sql

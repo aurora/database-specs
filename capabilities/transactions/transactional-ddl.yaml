@@ -18,6 +18,11 @@ support:
     - status: supported
       notes:
         - "Exceptions: CREATE/DROP DATABASE, CREATE/DROP TABLESPACE, CREATE INDEX CONCURRENTLY, VACUUM, ALTER SYSTEM, and ALTER TYPE ... ADD VALUE before 12."
+  sqlserver:
+    - status: supported
+      notes:
+        - "Most DDL can be rolled back. Exceptions include CREATE/ALTER/DROP DATABASE, full-text catalog/index DDL and some ALTER DATABASE options."
+        - "BEGIN alone starts a statement block, not a transaction: use BEGIN TRANSACTION."
 probes:
   - name: rollback-create-table
     engines: [mysql, mariadb]
@@ -34,4 +39,12 @@ probes:
       - "CREATE TABLE probe_tx_ddl (id INT)"
       - "ROLLBACK"
     check: "SELECT to_regclass('probe_tx_ddl') IS NULL"
+    cleanup: ["DROP TABLE IF EXISTS probe_tx_ddl"]
+  - name: rollback-create-table
+    engines: [sqlserver]
+    statements:
+      - "BEGIN TRANSACTION"
+      - "CREATE TABLE probe_tx_ddl (id INT)"
+      - "ROLLBACK TRANSACTION"
+    check: "SELECT CASE WHEN OBJECT_ID('probe_tx_ddl') IS NULL THEN 1 ELSE 0 END"
     cleanup: ["DROP TABLE IF EXISTS probe_tx_ddl"]

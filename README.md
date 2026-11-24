@@ -47,6 +47,34 @@ or driver. Consumers read the bundled JSON (`dist/db-specs.json`).
 - Do not copy prose from vendor documentation (MySQL docs are not freely licensed); state
   facts in your own words and link the source.
 
+## Using the specs from a client project
+
+- **At runtime** a client should consume the built bundle `dist/db-specs.json` (shipped as a
+  resource or turned into generated code), never the YAML sources.
+- **While developing** a client, include this repository as a git submodule (pins the spec
+  version the client is built against) and let people and coding agents query it with
+  `dbspecs show`. Snippet for the client's `CLAUDE.md` (adjust the path):
+
+  ````markdown
+  ## Database specifications
+
+  Engine facts (capabilities per version, introspection SQL, client operation templates,
+  lexical rules, statement syntax) come from `vendor/database-specs`. Do not guess dialect
+  behaviour and do not read its YAML directly - resolve it for the exact engine/version:
+
+  ```bash
+  uv run --project vendor/database-specs dbspecs show profile -e mysql -v 8.0.13
+  uv run --project vendor/database-specs dbspecs show capability returning -e mariadb -v 10.6
+  uv run --project vendor/database-specs dbspecs show query list-columns -e postgresql -v 16
+  uv run --project vendor/database-specs dbspecs show syntax create-index -e mysql -v 8.4 --sql "..."
+  uv run --project vendor/database-specs dbspecs show list
+  ```
+
+  `unknown` means not researched - not unsupported. Exit code 3 means there is no query variant
+  for that version (gap). If a fact is missing or wrong, fix it in database-specs (with a test),
+  not with a workaround in this repository.
+  ````
+
 ## Tooling
 
 Requires [uv](https://docs.astral.sh/uv/) and Docker or Podman.
@@ -57,6 +85,9 @@ uv run dbspecs build               # -> dist/db-specs.json, dist/syntax/index.ht
 uv run dbspecs test                # all targets in tests/targets.yaml
 uv run dbspecs test --target mysql-8.4 --target postgresql
 ```
+
+`show` resolves specs for one engine/version (capabilities, query variants, templates,
+version-filtered grammars, a full `profile`), as text or `--json`; see `dbspecs show -h`.
 
 `test` starts a throw-away container per target, runs every capability probe (a probe must
 succeed exactly when the capability is declared supported/partial) and every test case, and

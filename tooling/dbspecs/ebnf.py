@@ -117,7 +117,8 @@ class Grammar:
         return {r for r in self.references() if r not in self.rules and r not in BUILTINS}
 
     def for_version(self, version: str) -> "Grammar":
-        return Grammar({k: filter_version(v, version) or ("seq", []) for k, v in self.rules.items()}, self.order)
+        return Grammar({k: normalize(filter_version(v, version) or ("seq", [])) for k, v in self.rules.items()},
+                       self.order)
 
 
 def parse_grammar(text: str) -> Grammar:
@@ -191,6 +192,24 @@ def parse_grammar(text: str) -> Grammar:
     return Grammar(rules, order)
 
 
+def normalize(node):
+    """Flatten nested sequences / alternatives and unwrap single-element ones."""
+    kind = node[0]
+    if kind in ("seq", "alt"):
+        kids = []
+        for c in (normalize(c) for c in node[1]):
+            if c[0] == kind:
+                kids.extend(c[1])
+            else:
+                kids.append(c)
+        return kids[0] if len(kids) == 1 else (kind, kids)
+    if kind in ("opt", "star", "plus"):
+        return (kind, normalize(node[1]))
+    if kind == "ver":
+        return ("ver", node[1], normalize(node[2]))
+    return node
+
+
 def filter_version(node, version: str):
     """Remove items whose annotation excludes `version`. Returns None if nothing is left."""
     kind = node[0]
@@ -211,6 +230,39 @@ def filter_version(node, version: str):
         inner = filter_version(node[1], version)
         return ("plus", inner) if inner is not None else None
     return node
+
+
+# --- pretty printing --------------------------------------------------------
+
+def to_ebnf(node, ctx: str = "top") -> str:
+    """Render an AST back to W3C EBNF. ctx: top | seq | postfix (decides parentheses)."""
+    kind = node[0]
+    if kind == "kw":
+        return f"'{node[1]}'"
+    if kind == "punct":
+        q = '"' if "'" in node[1] else "'"
+        return f"{q}{node[1]}{q}"
+    if kind == "ref":
+        return node[1]
+    if kind == "seq":
+        if not node[1]:
+            return "()"
+        text = " ".join(to_ebnf(c, "seq") for c in node[1])
+        return f"( {text} )" if ctx == "postfix" and len(node[1]) > 1 else text
+    if kind == "alt":
+        text = " | ".join(to_ebnf(c, "top") for c in node[1])
+        return text if ctx == "top" else f"( {text} )"
+    if kind in ("opt", "star", "plus"):
+        return to_ebnf(node[1], "postfix") + {"opt": "?", "star": "*", "plus": "+"}[kind]
+    if kind == "ver":
+        ann = " ".join(f"@{k} {v}" for k, v in node[1].items())
+        return f"/* {ann} */ {to_ebnf(node[2], 'postfix')}"
+    raise ValueError(node)
+
+
+def grammar_to_ebnf(grammar: "Grammar") -> str:
+    width = max((len(n) for n in grammar.order), default=0)
+    return "\n".join(f"{name.ljust(width)} ::= {to_ebnf(grammar.rules[name])}" for name in grammar.order) + "\n"
 
 
 # --- SQL tokenizer (driven by the lexical spec) -----------------------------

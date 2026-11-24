@@ -68,6 +68,42 @@ def cmd_test(args) -> int:
     return 1 if failed else 0
 
 
+def cmd_show(args) -> int:
+    from .show import ShowError, render_text, resolve
+
+    try:
+        res = resolve(Specs.load(), args.kind, args.id, args.engine, args.version, args.sql)
+    except ShowError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    print(json.dumps(res, indent=2, ensure_ascii=False) if args.json else render_text(res))
+    if res["kind"] == "query" and res.get("variant", True) is None:
+        return 3  # no variant for this engine/version
+    return 0
+
+
+SHOW_HELP = """\
+kinds:
+  list [KIND]                 ids and titles (all kinds, or one)
+  profile                     everything for --engine/--version at a glance
+  capability ID               feature status (resolved with --engine/--version)
+  query ID                    query contract (+ SQL variant with --engine/--version)
+  operation ID                SQL template for client operations
+  syntax ID                   EBNF (filtered with --version), examples; --sql checks a statement
+  engine ID | lexical ID | protocol ID   the raw document (or --engine for engine/lexical)
+
+IDs can be shortened to their last segment if unique (e.g. 'returning').
+
+exit codes: 0 ok, 2 bad input, 3 query has no variant for this engine/version.
+
+examples:
+  dbspecs show profile --engine mariadb --version 11.4
+  dbspecs show capability returning --engine mysql --version 8.0.13
+  dbspecs show query list-indexes --engine postgresql --version 16
+  dbspecs show syntax create-index --engine mysql --version 5.7 --sql "CREATE INDEX i ON t ((a+1))"
+"""
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="dbspecs")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -78,6 +114,15 @@ def main(argv=None) -> int:
     p = sub.add_parser("test", help="run probes and test cases against containers")
     p.add_argument("--target", action="append", help="target id or engine (repeatable)")
     p.set_defaults(func=cmd_test)
+    p = sub.add_parser("show", help="resolve specs for an engine/version (for people and agents)",
+                       epilog=SHOW_HELP, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("kind", help="list, profile, capability, query, operation, syntax, engine, lexical, protocol")
+    p.add_argument("id", nargs="?", help="spec id (or kind for 'list')")
+    p.add_argument("--engine", "-e")
+    p.add_argument("--version", "-v", help="server version, e.g. 8.0.13 (range bounds: since incl., until excl.)")
+    p.add_argument("--sql", help="syntax only: check this statement against the grammar")
+    p.add_argument("--json", action="store_true", help="machine-readable output")
+    p.set_defaults(func=cmd_show)
     args = parser.parse_args(argv)
     return args.func(args)
 

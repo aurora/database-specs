@@ -26,6 +26,13 @@ items:
     title: Server / session settings (sql_mode, search_path, compatibility level, ...)
     priority: medium
 
+  - id: introspection.table-statistics
+    kind: query
+    title: Per-table statistics (row count, sizes) where list-tables cannot include them
+    priority: medium
+    engines: [manticore]
+    notes: ["Manticore: SHOW TABLE <name> STATUS (one statement per table); SHOW TABLE <name> INDEXES lists secondary indexes."]
+
   # --- session / admin operations -----------------------------------------------
   - id: session.use-schema
     kind: operation
@@ -71,6 +78,11 @@ items:
     kind: syntax
     title: INSERT incl. upsert clauses
     priority: medium
+  - id: dml.call
+    kind: syntax
+    title: CALL statements (Manticore SUGGEST / QSUGGEST / SNIPPETS / KEYWORDS / PQ / AUTOCOMPLETE, stored procedure calls)
+    priority: medium
+    notes: ["Manticore's CALL AUTOCOMPLETE / SUGGEST are directly useful for a client's search UI."]
   - id: fulltext.mysql-boolean-query
     kind: syntax
     title: Operator language inside AGAINST ('...' IN BOOLEAN MODE) for MySQL / MariaDB

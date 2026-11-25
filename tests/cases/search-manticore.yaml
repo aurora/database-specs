@@ -37,6 +37,14 @@ steps:
         - { match: { id: 1 } }
         - { match: { id: 2 } }
 
+  - sql: { manticore: "SELECT id FROM t_s WHERE MATCH('apple') AND cat = 1 OR price > 40 ORDER BY id ASC" }
+    expect:
+      row_count: 3
+      rows:
+        - { match: { id: 5 }, count: 0 }
+  - sql: { manticore: "SELECT id FROM t_s WHERE MATCH('apple') AND (cat = 1 OR price > 40) ORDER BY id ASC" }
+    expect: { row_count: 3 }
+
   - sql: { manticore: "REPLACE INTO t_s (id, cat) VALUES (1, 9)" }
   - sql: { manticore: "SELECT title, cat, price FROM t_s WHERE id = 1" }
     expect:

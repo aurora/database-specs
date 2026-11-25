@@ -3,7 +3,10 @@
    integer, number. Whitespace between tokens is not significant for this grammar, so it
    accepts a few spellings the server reads differently (e.g. 'app *'). */
 
-fulltext_query ::= sequence ( '|' sequence )*
+/* @@relaxed at the start: unknown fields in @field limits are ignored instead of an error */
+fulltext_query ::= ( '@' '@' 'relaxed' )? alternatives
+
+alternatives ::= sequence ( '|' sequence )*
 
 /* implicit AND between elements; a field limit applies to everything after it */
 sequence ::= element+
@@ -22,15 +25,25 @@ operand ::= ( '-' | '!' )? atom ( '^' number )?
 
 atom ::= term
        | phrase
-       | '(' fulltext_query ')'
+       | '(' alternatives ')'
+       | regex
 
 /* ^word = at field start, word$ = at field end, =word = exact form; * ? % are wildcards
-   (they need min_infix_len / min_prefix_len on the table to match anything) */
-term ::= ( '^' | '=' )? wildcard? word ( wildcard word? )* '$'?
+   (they need min_infix_len / min_prefix_len on the table to match anything); a backslash
+   escapes an operator character as part of a word: r\&b, \(live\) */
+term ::= ( '^' | '=' )? term_piece+ '$'?
+
+term_piece ::= word | wildcard | escaped
+
+escaped ::= '\' ( '&' | '(' | ')' | '|' | '-' | '!' | '@' | '~' | '/' | '^' | '$' | '<' | '=' | '*' | '?' | '%' | '\' )
 
 wildcard ::= '*' | '?' | '%'
 
 word ::= identifier | integer
+
+/* REGEX(/pattern/) matches dictionary words (needs dict = keywords); the pattern is simplified */
+regex ::= 'REGEX' '(' '/' regex_part+ '/' ')'
+regex_part ::= word | '.' | '*' | '+' | '?' | '[' | ']' | '-' | '^' | '$' | '\'
 
 /* "exact phrase", "proximity phrase"~n, "quorum of words"/n */
 phrase ::= string_literal ( '~' integer | '/' number )?
@@ -39,4 +52,4 @@ field_limit ::= '@' ( fields | '!' fields | '*' ) ( '[' integer ']' )?
 
 fields ::= identifier | '(' identifier ( ',' identifier )* ')'
 
-zone_limit ::= ( 'ZONE' | 'ZONESPAN' ) ':' '(' identifier ( ',' identifier )* ')'
+zone_limit ::= ( 'ZONE' | 'ZONESPAN' ) ':' ( '(' identifier ( ',' identifier )* ')' | identifier )

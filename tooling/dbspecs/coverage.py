@@ -188,6 +188,19 @@ def matrix(specs: Specs) -> dict:
         rows.append({"id": sid, "title": syn["title"], "cells": cells})
     sections["Syntax"] = rows
 
+    # protocol profiles ------------------------------------------------------------------------
+    cells = {}
+    for e in engines:
+        profs = specs.get("engine", e)["protocols"]
+        if not any(p.get("type_mapping") for p in profs):
+            cells[e] = Cell("⬜", "no type_mapping in the protocol profile")
+            continue
+        if not any(p.get("type_probe") for p in profs):
+            cells[e] = Cell("📄", "type_mapping without type_probe")
+            continue
+        cells[e] = _tested(res.outcomes(e, "protocol", lambda i: i.endswith(".type-mapping")), Cell("📄", "probe not run"))
+    sections["Protocol"] = [{"id": "protocol-profile", "title": "Wire type codes / flags per column type", "cells": cells}]
+
     # keywords ---------------------------------------------------------------------------------
     files: dict[str, list[dict]] = {}
     for kw in specs.docs["keywords"].values():
@@ -206,7 +219,31 @@ def matrix(specs: Specs) -> dict:
 
     roadmap = load_yaml(ROADMAP)["items"] if ROADMAP.is_file() else []
     runs = (res.data or {}).get("targets", {})
-    return {"engines": engines, "sections": sections, "roadmap": roadmap, "runs": runs}
+    return {"engines": engines, "sections": sections, "roadmap": roadmap, "runs": runs,
+            "inventory": inventory_summary(specs)}
+
+
+def inventory_summary(specs: Specs) -> list[dict]:
+    """Per engine inventory: item counts per status and the rule groups behind them."""
+    from . import inventory as inv
+    from .keywords import stored_files
+
+    keyword_files = stored_files()
+    scopes = {d["engine"]: d for d in specs.docs["scope"].values()}
+    out = []
+    for doc in sorted(specs.docs["inventory"].values(), key=lambda d: (d["engine"], parse_version(d["version"]))):
+        result = inv.classify(doc, scopes.get(doc["engine"]), keyword_files.get(doc["engine"], {}).get(doc["version"]))
+        counts: dict[str, int] = {}
+        groups: dict[int, dict] = {}
+        for item_id, rule in result.items():
+            status = rule["status"] if rule else "unclassified"
+            counts[status] = counts.get(status, 0) + 1
+            g = groups.setdefault(id(rule), {"rule": rule, "status": status, "items": []})
+            g["items"].append(item_id)
+        out.append({"engine": doc["engine"], "version": doc["version"], "counts": counts,
+                    "kinds": {k: sum(1 for i in doc["items"] if i["kind"] == k) for k in ("keyword", "grammar", "docs")},
+                    "groups": list(groups.values())})
+    return out
 
 
 def _range(stmt: dict) -> str:
@@ -260,12 +297,42 @@ def render_markdown(specs: Specs, m: dict) -> str:
             lines.append(f"| `{row['id']}` | {row['title']} | "
                          + " | ".join(row["cells"][e].symbol for e in m["engines"])
                          + f" | {_md(notes)} |")
+    lines += _inventory_markdown(m.get("inventory", []))
     lines += ["", "## Planned", "", "| priority | kind | id | title | engines |", "|---|---|---|---|---|"]
     order = {"high": 0, "medium": 1, "low": 2}
     for item in sorted(m["roadmap"], key=lambda i: (order[i["priority"]], i["kind"], i["id"])):
         engines = "-" if item["kind"] == "engine" else (", ".join(item.get("engines", [])) or "all")
         lines.append(f"| {item['priority']} | {item['kind']} | `{item['id']}` | {_md(item['title'])} | {engines} |")
     return "\n".join(lines) + "\n"
+
+
+INVENTORY_STATUS = [("covered", "✅"), ("planned", "🗓"), ("open", "⬜"), ("out-of-scope", "➖"), ("unclassified", "❓")]
+
+
+def _inventory_markdown(inventories: list[dict]) -> list[str]:
+    if not inventories:
+        return []
+    lines = ["", "## Inventory", "",
+             "Everything the engine has, from its own parser grammar and the manual's reference index "
+             "(`inventory/`), classified in `scope/<engine>.yaml`.", "",
+             "| engine | version | items (keywords / grammar / docs) | "
+             + " | ".join(f"{sym} {st}" for st, sym in INVENTORY_STATUS) + " |",
+             "|---|---|---|" + "---|" * len(INVENTORY_STATUS)]
+    for inv in inventories:
+        k = inv["kinds"]
+        lines.append(f"| {inv['engine']} | {inv['version']} | {sum(k.values())} ({k['keyword']} / {k['grammar']} / {k['docs']}) | "
+                     + " | ".join(str(inv["counts"].get(st, "")) for st, _ in INVENTORY_STATUS) + " |")
+    for inv in inventories:
+        lines += ["", f"### {inv['engine']} {inv['version']}: open and planned", "",
+                  "| status | what | items | examples |", "|---|---|---|---|"]
+        order = {"unclassified": 0, "open": 1, "planned": 2}
+        for g in sorted((g for g in inv["groups"] if g["status"] in order),
+                        key=lambda g: (order[g["status"]], -len(g["items"]))):
+            rule = g["rule"] or {}
+            what = rule.get("reason") or (f"roadmap `{rule['roadmap']}`" if rule.get("roadmap") else "no scope rule")
+            examples = "; ".join(f"`{i}`" for i in g["items"][:3])
+            lines.append(f"| {g['status']} | {_md(what)} | {len(g['items'])} | {_md(examples)} |")
+    return lines
 
 
 def _md(text: str) -> str:

@@ -6,7 +6,8 @@ description: >
   Embedded database library; there is no server. The "version" is the version of the linked
   SQLite library, which is chosen by the application (statically linked) or the OS (shared
   libsqlite3), and compile-time options can enable or remove features.
-protocols: [sqlite]
+protocols:
+  - id: sqlite
 lexical: sqlite
 catalogs: [sqlite_schema, pragma functions]
 

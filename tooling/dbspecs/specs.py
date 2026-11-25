@@ -20,6 +20,8 @@ KINDS = {
     "queries": "query",
     "syntax": "syntax",
     "keywords": "keywords",
+    "inventory": "inventory",
+    "scope": "scope",
     "tests/cases": "test",
 }
 

@@ -11,8 +11,8 @@
     "version": { "$ref": "common.schema.json#/$defs/version", "description": "Exact server / library version the list was generated from." },
     "generated_at": { "$ref": "common.schema.json#/$defs/date" },
     "method": {
-      "description": "server-query: list from the server (lexical.keywords); c-api: sqlite3_keyword_name(); probe: candidate words from other lists tested one by one (only reserved words can be found).",
-      "enum": ["server-query", "c-api", "probe"]
+      "description": "server-query: list from the server (lexical.keywords); c-api: sqlite3_keyword_name(); grammar: keywords of the parser sources (inventory/); probe: candidate words from other lists tested one by one (only reserved words can be found).",
+      "enum": ["server-query", "c-api", "grammar", "probe"]
     },
     "complete": {
       "description": "true = all keywords of this version are listed; false = only reserved words could be determined (nonreserved is empty).",

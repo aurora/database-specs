@@ -32,11 +32,15 @@ uv run dbspecs test --target mariadb-10.6 --target postgresql   # subset: target
 uv run dbspecs build        # dist/db-specs.json + dist/syntax/ (railroad diagrams)
 uv run dbspecs keywords     # regenerate keywords/<engine>/<version>.yaml from the test targets
 uv run dbspecs coverage     # COVERAGE.md + dist/coverage.html (also written after every test run)
+uv run dbspecs inventory --target manticore   # regenerate inventory/<engine>/<version>.yaml from the server's sources
 ```
 
 ## Layout
 
-- `engines/`, `protocols/`, `lexical/`: one YAML per engine / wire protocol / dialect.
+- `engines/`, `protocols/`, `lexical/`: one YAML per engine / wire protocol / dialect. An engine lists
+  its protocols as profiles (`protocols: [{ id: mysql, default_port: 9306, handshake, type_mapping,
+  type_probe }]`): the wire format stays shared, engine differences live in the profile, and
+  `type_probe` verifies the type codes / flags on every test target.
 - `capabilities/<area>/<name>.yaml`: id = `<area>.<name>`, versioned support + executable probes.
 - `operations/<area>/<name>.yaml`: SQL templates for things a client generates.
 - `queries/<area>/<name>/`: `query.yaml` (contract) + one `.sql` per engine/version variant.
@@ -48,6 +52,11 @@ uv run dbspecs coverage     # COVERAGE.md + dist/coverage.html (also written aft
   cannot be placeholders, `extra_columns` for engine-specific data). Languages embedded in string
   literals (Manticore's MATCH() query) are syntax specs with `wrap`, referenced from the lexical
   spec's `embedded_languages`.
+- `inventory/<engine>/<version>.yaml` (generated): everything the engine has - keywords and grammar
+  forms from its parser sources at the build commit, plus the manual's reference index.
+  `scope/<engine>.yaml` classifies every item (covered by specs / planned in the roadmap / open /
+  out-of-scope with a reason); `validate` fails on unclassified items. `/audit-inventory <engine>`
+  runs an independent review in a fresh subagent and writes `dist/audit/`.
 - `keywords/<engine>/<version>.yaml`: generated keyword lists (never edit by hand; `test` fails
   when a stored list no longer matches its server version).
 - `tests/targets.yaml` (container images), `tests/cases/` (integration tests). Embedded engines
@@ -76,6 +85,9 @@ uv run dbspecs coverage     # COVERAGE.md + dist/coverage.html (also written aft
   introspection queries or an ad-hoc `sql` step. Operations that return DDL (`result_column`)
   need a `roundtrip` step (snapshot, drop, re-run the DDL, compare) - that is what proves the
   reconstruction is complete.
+- **Completeness comes from the inventory, not from memory.** Before writing specs for an engine
+  area, look at its inventory items; after writing them, move the matching scope rules to
+  `covered`. A new engine version means: regenerate the inventory, then classify the new items.
 - **Planning**: new work starts from `roadmap.yaml`; once a spec file exists, remove its roadmap
   item (`validate` complains otherwise) and regenerate COVERAGE.md. Where an engine lacks a feature
   entirely, say so explicitly (`status: unsupported`, or `not_applicable` in query contracts) so

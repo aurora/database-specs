@@ -2,7 +2,9 @@
 id: postgresql
 name: PostgreSQL
 vendor: PostgreSQL Global Development Group
-protocols: [postgresql]
+protocols:
+  - id: postgresql
+    default_port: 5432
 lexical: postgresql
 catalogs: [pg_catalog, information_schema]
 

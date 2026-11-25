@@ -24,7 +24,7 @@ grammars:
 
 setup:
   manticore:
-    - "CREATE TABLE t_ft (title TEXT, body TEXT, cat INT) min_infix_len = '2'"
+    - "CREATE TABLE t_ft (title TEXT, body TEXT, cat INT) min_infix_len = '2' html_strip = '1' index_zones = 'h*,th'"
     - "INSERT INTO t_ft (id, title, body, cat) VALUES (1, 'red apple pie', 'sweet dessert with apples', 1)"
 cleanup:
   manticore: ["DROP TABLE IF EXISTS t_ft"]
@@ -60,6 +60,13 @@ examples:
   - { sql: "apple^2", expect: valid, engines: { manticore: {} }, notes: ["Boost the term's weight."] }
   - { sql: "äpfel", expect: valid, engines: { manticore: {} } }
   - { sql: "ZONE:(h1) apple", expect: valid, engines: { manticore: {} } }
+  - { sql: "@@relaxed @nosuch apple", expect: valid, engines: { manticore: {} }, notes: ["Unknown fields are ignored."] }
+  - { sql: "@!(title,body) apple", expect: valid, engines: { manticore: {} } }
+  - { sql: "REGEX(/app.*/)", expect: valid, engines: { manticore: {} } }
+  - { sql: "ZONE:th apple", expect: valid, engines: { manticore: {} } }
+  - { sql: "ZONESPAN:th red apple", expect: valid, engines: { manticore: {} } }
+  - { sql: "r\\&b | \\(official video\\)", expect: valid, engines: { manticore: {} }, notes: ["Escaped operator characters are part of the word."] }
+  - { sql: "\\$manticore", expect: valid, engines: { manticore: {} } }
   - { sql: "-apple", expect: semantic-error, engines: { manticore: {} } }
   - { sql: "@nosuch apple", expect: semantic-error, engines: { manticore: {} } }
   - { sql: "apple |", expect: invalid, engines: { manticore: {} } }

@@ -5,7 +5,9 @@ vendor: Microsoft
 description: >
   SQL Server (box product, also on Linux/containers). Azure SQL Database / Managed Instance
   share the T-SQL dialect but differ in features and get their own engine files.
-protocols: [tds]
+protocols:
+  - id: tds
+    default_port: 1433
 lexical: tsql
 catalogs: [sys, INFORMATION_SCHEMA]
 

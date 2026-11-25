@@ -12,6 +12,7 @@ identifiers:
   case_folding: lower
   notes:
     - "Table and column names are case-insensitive and stored lower case."
+    - "cluster:table addresses a table of a replication cluster; INSERT / REPLACE / UPDATE / DELETE on a replicated table must use it. JSON attributes are addressed as json.key.sub, json['key'], json.arr[0]; t.@table and @@system.x are system names."
 
 strings:
   - kind: string
@@ -27,7 +28,7 @@ strings:
 comments:
   - { kind: block, open: "/*", close: "*/", nestable: false }
 
-operators: ["!=", "<>", "<=", ">=", "=", "AND", "OR", "NOT", "IN", "BETWEEN"]
+operators: ["!=", "<>", "<=", ">=", "=", "<", ">", "+", "-", "*", "/", "%", "|", "&", "AND", "OR", "NOT", "IN", "BETWEEN", "IS", "LIKE", "DIV", "MOD"]
 
 statements:
   terminator: ";"
@@ -43,7 +44,7 @@ embedded_languages:
 
 keywords:
   notes:
-    - "No keyword list on the server. keywords/manticore/ holds the reserved words found by probing candidate words as column names."
+    - "No keyword list on the server. keywords/manticore/ holds all keywords of the server grammar (inventory/manticore/); reserved ones were found by probing them as SELECT list items."
 
 sources:
   - evidence: observed

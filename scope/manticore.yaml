@@ -1,0 +1,237 @@
+# yaml-language-server: $schema=../schemas/scope.schema.json
+# Classifies every item of inventory/manticore/*.yaml (generated from the server's grammar and the
+# manual's reference index). First matching rule wins; `dbspecs validate` fails on unclassified
+# items and on rules that match nothing. Keywords listed in keywords/manticore/ are covered
+# automatically. Status: covered (specs), planned (roadmap), out-of-scope / open (reason).
+engine: manticore
+
+rules:
+  # --- full-text search -------------------------------------------------------------------------
+  - match: ["docs:Full-text search operators: *"]
+    status: covered
+    specs: ["syntax:fulltext.manticore-query", "lexical:manticore"]
+  - match: ["sphinxql:where_item*", "sphinxql:where_expr: *", "sphinxql:where_tok: *"]
+    status: covered
+    specs: ["syntax:query.fulltext-select", "capability:query.fulltext-search"]
+  - match: ["sphinxql:like_filter: *"]
+    status: covered
+    specs: ["query:introspection.list-tables"]
+  - match: ["sphinxquery:*"]
+    status: covered
+    specs: ["syntax:fulltext.manticore-query"]
+  - match: ["sphinxql:filter_item: *", "sphinxql:filter_expr: *", "sphinxql:mva_aggr: *", "sphinxql:streq: *",
+            "sphinxql:subkey: *", "sphinxql:select_item: *", "sphinxql:named_const: *", "sphinxql:option_item: *",
+            "sphinxql:const_int: *", "sphinxql:const_float: *", "sphinxexpr:expr: *", "sphinxexpr:streq: *",
+            "sphinxexpr:subkey: *", "sphinxexpr:attr: *", "sphinxexpr:json_attr_name: *", "sphinxexpr:iterator: *",
+            "sphinxexpr:constlist: *", "sphinxexpr:stringlist: *"]
+    status: covered
+    specs: ["syntax:query.fulltext-select"]
+
+  # --- SELECT -----------------------------------------------------------------------------------------
+  - match: ["sphinxql:select_from: *", "sphinxql:opt_group_clause: *", "sphinxql:group_order_clause: *",
+            "sphinxql:opt_having_clause: *", "sphinxql:order_item: *", "sphinxql:order_clause: ORDER BY <order_items_list>",
+            "sphinxql:limit_clause: *", "sphinxql:facet_stmt: *", "sphinxql:facet_by: *", "sphinxql:facet_opt_alias: *",
+            "sphinxql:select_without_from: *", "sphinxql:opt_facet_*",
+            "docs-page:Searching/Faceted_search: *",
+            "sphinxql:join_clause: *", "sphinxql:join_tok: *", "sphinxql:join_type: *", "sphinxql:on_clause: *",
+            "sphinxql:opt_as: *", "docs:SQL commands / SELECT: SELECT", "docs:SQL commands / SELECT: WHERE",
+            "docs:SQL commands / SELECT: GROUP BY*", "docs:SQL commands / SELECT: JOIN"]
+    status: covered
+    specs: ["syntax:query.fulltext-select", "capability:query.top-n-per-group", "capability:query.limit-offset"]
+  - match: ["docs:SQL commands / SELECT: FACET"]
+    status: covered
+    specs: ["syntax:query.fulltext-select", "capability:query.multi-result-select"]
+  - match: ["sphinxql:tablename_with_maybecluster: *", "sphinxql_second:one_index: *", "sphinxql_second:const_*", "ddl:tablename: *"]
+    status: covered
+    specs: ["lexical:manticore"]
+  - match: ["sphinxql:select1: *", "sphinxql:select: *", "sphinxql:opt_outer_*", "sphinxql:hint_item: *",
+            "sphinxql:knn_item: *", "sphinxql:hybrid_match_item: *", "sphinxql:opt_distinct_item: *",
+            "sphinxql:consthash: *", "sphinxql:facet_alias: *", "sphinxexpr:for_loop: *", "sphinxexpr:maparg: *", "sphinxexpr:arg: *",
+            "docs-page:Searching/Options: *", "buddy:Knn", "buddy:Fuzzy",
+            "sphinxql:select_expr: *", "sphinxql:group_concat_order_item: *", "sphinxql:opt_group_concat_separator: *",
+            "sphinxql:order_clause: *", "sphinxql:function: *", "sphinxql:json_aggr: *", "sphinxql:option_clause_item: *",
+            "sphinxql:option_name: *", "sphinxql:on_clause_type_cast: *", "sphinxql:hash_key: *", "sphinxql:expr: *",
+            "sphinxql:opt_collate: *", "docs:SQL commands / SELECT: OPTION", "docs:SQL commands / SELECT: SUB-SELECTS",
+            "docs:SQL commands / SELECT: SHOW WARNINGS"]
+    status: planned
+    roadmap: dml.select
+  - match: ["docs:Functions / *", "sphinxql:accepted_funcs: *", "sphinxql:time_unit: *", "sphinxexpr:function: *",
+            "docs-page:Functions/*", "docs-page:Searching/Highlighting: *"]
+    status: planned
+    roadmap: lexical.functions
+
+  # --- data and schema editing --------------------------------------------------------------------------
+  - match: ["sphinxql:insert_into: *", "sphinxql:insert_or_replace: *", "sphinxql:insert_row: *", "sphinxql:opt_column_list: *",
+            "buddy:Replace", "docs:SQL commands / Data management: INSERT",
+            "docs:SQL commands / Data management: REPLACE*"]
+    status: covered
+    specs: ["operation:dml.insert-row", "capability:dml.upsert"]
+  - match: ["docs:SQL commands / Data management: Bulk import", "docs:SQL commands / Node management: PURGE BULK_IMPORT",
+            "sphinxql:insert_val: *", "sphinxql:vec_array: *", "sphinxql:vec_group_list: *", "buddy:Insert", "buddy:ReplaceSelect"]
+    status: planned
+    roadmap: dml.insert
+  - match: ["sphinxql:update: *", "sphinxql:update_item: *", "buddy:Update", "docs:SQL commands / Data management: UPDATE"]
+    status: covered
+    specs: ["operation:dml.update-row"]
+  - match: ["sphinxql:delete_from: *", "docs:SQL commands / Data management: DELETE"]
+    status: covered
+    specs: ["operation:dml.delete-row"]
+  - match: ["sphinxql_second:truncate: *", "sphinxql_second:opt_with_reconfigure: *", "sphinxql_second:rtindex: *",
+            "buddy:Truncate", "docs:SQL commands / Data management: TRUNCATE TABLE"]
+    status: covered
+    specs: ["operation:ddl.truncate-table"]
+  - match: ["ddl:drop_table: *", "ddl:_if_exists: *", "buddy:Drop", "docs:SQL commands / Schema management: DROP TABLE IF EXISTS"]
+    status: covered
+    specs: ["operation:ddl.drop-table"]
+  - match: ["ddl:alter: <alter_table_name> ADD COLUMN *", "ddl:alter: <alter_table_name> DROP COLUMN *",
+            "ddl:alter: <alter_table_name> <modify_column> <columnident> <alter_col_type> *", "ddl:alter_table_name: *",
+            "buddy:AlterColumn", "buddy:AlterRenameTable", "buddy:ModifyTable", "docs:SQL commands / Schema management: ALTER TABLE",
+            "docs:SQL commands / Schema management: ALTER TABLE RENAME"]
+    status: covered
+    specs: ["operation:ddl.add-column", "operation:ddl.drop-column", "operation:ddl.rename-table", "operation:ddl.change-column-type"]
+  - match: ["ddl:alter: <alter_table_name> *", "ddl:alter: ALTER RTINDEX *",
+            "docs:SQL commands / Schema management: ALTER TABLE REBUILD SECONDARY",
+            "docs:SQL commands / Schema management: ALTER TABLE type='distributed'", "buddy:AlterDistributedTable"]
+    status: planned
+    roadmap: ddl.alter-table
+  - match: ["ddl:create_table: *", "ddl:create_table_item: *", "ddl:create_table_items: *", "ddl:create_table_option: *",
+            "ddl:option_item: *", "buddy:CreateTable", "buddy:Sharding", "ddl:create_table_like: *", "ddl:_if_not_exists: *",
+            "ddl:item_option: *", "ddl:attribute_type: *", "ddl:field_flag: *", "ddl:text_or_string: *", "ddl:opt_as: *",
+            "ddl:opt_option_clause: *", "docs:SQL commands / Schema management: CREATE TABLE*",
+            "docs:Common things: *", "docs:Common things / Common table settings: *",
+            "docs:Common things / Distributed table settings: *", "docs:Common things / RT table settings: rt_mem_limit",
+            "docs:Common things / RT table settings: diskchunk_*"]
+    status: planned
+    roadmap: ddl.create-table
+  - match: ["docs:Common things / RT table settings: *", "docs:Common things / Plain table settings: *"]
+    status: out-of-scope
+    reason: "Configuration-file syntax of plain mode / plain tables (rt_attr_*, rt_field, source); SQL CREATE TABLE declares columns directly."
+
+  # --- object tree / introspection ---------------------------------------------------------------------------
+  - match: ["sphinxql:show_what: TABLES *", "sphinxql:show_stmt: *", "docs:SQL commands / Schema management: SHOW TABLES"]
+    status: covered
+    specs: ["query:introspection.list-tables"]
+  - match: ["buddy:Show", "buddy:Select", "buddy:Alias", "sphinxql_extra:show_fields: *", "sphinxql_extra:fields_or_columns: *",
+            "sphinxql_extra:create_database: *", "sphinxql_extra:lock_tables: *", "sphinxql_extra:unlock_tables: *",
+            "sphinxql_extra:list_locked: *", "sphinxql_extra:read_or_write: *"]
+    status: covered
+    specs: ["engine:manticore"]
+  - match: ["sphinxql_extra:savepoint_sp: *"]
+    status: planned
+    roadmap: transactions.savepoints
+  - match: ["sphinxql:show_what: DATABASES *"]
+    status: covered
+    specs: ["query:introspection.list-schemas"]
+  - match: ["sphinxql:describe_tok: *", "sphinxql:describe_opt: *", "docs:SQL commands / Schema management: DESCRIBE"]
+    status: covered
+    specs: ["query:introspection.list-columns"]
+  - match: ["sphinxql:show_what: CREATE TABLE *", "docs:SQL commands / Schema management: SHOW CREATE TABLE"]
+    status: covered
+    specs: ["operation:introspection.table-ddl"]
+  - match: ["sphinxql:show_what: <index_or_table> *", "sphinxql:show_what: TABLE STATUS *", "sphinxql:index_or_table: *", "sphinxql:chunk: *",
+            "docs:SQL commands / Schema management: SHOW TABLE *"]
+    status: planned
+    roadmap: introspection.table-statistics
+  - match: ["docs:SQL commands / Schema management: *SOURCE*", "docs:SQL commands / Schema management: *MATERIALIZED VIEW*",
+            "docs:SQL commands / Schema management: *MV*", "buddy:Queue"]
+    status: open
+    reason: "Kafka sources and materialized views (Buddy): SHOW SOURCES / SHOW MATERIALIZED VIEWS work (observed 32.1.3); introspection.list-views has a gap for them, view-ddl no implementation."
+  - match: ["docs-page:Searching/Conversational_search: *", "buddy:ConversationalSearch"]
+    status: open
+    reason: "Conversational search (Buddy): CHAT MODEL objects (CREATE / SHOW / DESCRIBE / DROP CHAT MODEL) and CALL CHAT - no specs yet."
+
+  # --- query analysis ------------------------------------------------------------------------------------------
+  - match: ["sphinxql:show_what: PLAN", "sphinxql:show_what: PROFILE", "sphinxql:show_what: META *", "sphinxql:explain_query: *",
+            "docs:SQL commands / SELECT: EXPLAIN QUERY", "docs:SQL commands / SELECT: SHOW META",
+            "docs:SQL commands / SELECT: SHOW PROFILE", "docs:SQL commands / SELECT: SHOW PLAN"]
+    status: covered
+    specs: ["operation:query.explain"]
+  - match: ["sphinxql:show_what: WARNINGS", "sphinxql:show_what: SCROLL"]
+    status: planned
+    roadmap: dml.select
+
+  # --- session, variables, transactions ------------------------------------------------------------------------
+  - match: ["sphinxql:transact_op: *", "sphinxql:start_transaction: *", "docs:SQL commands / Transactions: *"]
+    status: open
+    reason: "No transaction-control spec: transactions.transactional-ddl only mentions BEGIN / COMMIT / ROLLBACK in a note; START TRANSACTION and SET AUTOCOMMIT = 0 (observed: changes autocommit) are not described."
+  - match: ["sphinxql_second:set_transaction: *", "sphinxql_second:isolation_level: *"]
+    status: planned
+    roadmap: transactions.isolation-levels
+  - match: ["sphinxql:set_stmt: SET PASSWORD *"]
+    status: open
+    reason: "User management needs a server with authentication enabled (see introspection.list-users gaps)."
+  - match: ["sphinxql:show_what: CHARACTER SET", "sphinxql:show_what: COLLATION"]
+    status: planned
+    roadmap: introspection.server-variables
+  - match: ["sphinxql:set_stmt: SET NAMES *", "sphinxql:set_stmt: SET CHARACTER SET *"]
+    status: planned
+    roadmap: connection-parameters
+  - match: ["sphinxql:set_stmt: *", "sphinxql:global_or_session: *", "sphinxql:bool_or_integer_value: *",
+            "sphinxql:show_what: <global_or_session> VARIABLES *", "sphinxql:show_what: STATUS *", "sphinxql:show_what: SETTINGS",
+            "sphinxql_second:set_global_stmt: SET GLOBAL *", "sphinxql_second:global_or_session: *",
+            "docs:SQL commands / Server status: SHOW STATUS", "docs:SQL commands / Server status: SHOW VARIABLES",
+            "docs:SQL commands / Server status: SHOW VERSION"]
+    status: planned
+    roadmap: introspection.server-variables
+  - match: ["sphinxql:show_what: THREADS", "docs:SQL commands / Server status: SHOW THREADS", "docs-page:Node_info_and_management/SHOW_QUERIES: *"]
+    status: open
+    reason: "session.list-processes has no Manticore variant: SHOW THREADS lists working threads only; SHOW QUERIES (Buddy) lists running statements of all protocols with the id KILL takes - variant candidate (no idle sessions either)."
+  - match: ["sphinxql_second:kill_connid: *", "sphinxql_second:opt_word_query: *", "docs-page:Node_info_and_management/KILL: *"]
+    status: open
+    reason: "session.cancel-query: KILL takes a query id from SHOW QUERIES, not CONNECTION_ID(); needs a test with a long-running SELECT (KILL on DEBUG SLEEP returned OK without effect)."
+  - match: ["sphinxql_extra:use_database: *"]
+    status: planned
+    roadmap: session.use-schema
+
+  # --- users and permissions -------------------------------------------------------------------------------------
+  - match: ["sphinxql:create_user_stmt: *", "sphinxql:drop_user_stmt: *", "sphinxql:grant_stmt: *", "sphinxql:revoke_stmt: *",
+            "sphinxql:opt_grant_options: *", "sphinxql:token_stmt: *", "sphinxql:grant_target: *", "buddy:PluginsAuthPermissions", "sphinxql:show_what: USERS", "sphinxql:show_what: PERMISSIONS*",
+            "sphinxql:show_what: USAGE*", "sphinxql:show_what: TOKEN*", "sphinxql_second:reload_auth: *",
+            "sphinxql_second:backup_tail_token: AUTH", "docs:SQL commands / Authentication and authorization: *"]
+    status: open
+    reason: "Authentication (users, GRANT, tokens) exists since the auth feature; introspection.list-users / list-privileges need a test server with auth enabled (32.1.3 crashed on GRANT with auth disabled)."
+
+  # --- CALL ---------------------------------------------------------------------------------------------------------
+  - match: ["sphinxql:call_proc: *", "sphinxql:call_opt_name: *", "sphinxql:call_arg: *", "buddy:Autocomplete", "docs:SQL commands / CALL: *"]
+    status: planned
+    roadmap: dml.call
+
+  # --- deliberately out of scope ---------------------------------------------------------------------------------------
+  - match: ["ddl:alter: <alter_cluster_ident> *", "ddl:create_cluster: *", "ddl:join_cluster: *",
+            "sphinxql_second:delete_cluster: *", "sphinxql_second:exit_cluster: *", "sphinxql_second:set_global_stmt: SET CLUSTER *",
+            "docs:SQL commands / Replication: *", "sphinxql:show_what: AGENT *", "buddy:CreateCluster"]
+    status: out-of-scope
+    reason: "Replication clusters and distributed agents are server administration, not something a database client edits."
+  - match: ["sphinxql:show_what: PLUGINS"]
+    status: open
+    reason: "Loaded UDFs are callable in SELECT (autocomplete), and SHOW PLUGINS lists them; introspection.list-routines is not applicable for Manticore and does not cover them."
+  - match: ["ddl:create_function: *", "ddl:drop_function: *", "buddy:Plugin", "ddl:create_plugin: *", "ddl:drop_plugin: *", "ddl:udf_type: *",
+            "sphinxql_second:reload_plugins: *", "docs:SQL commands / Plugins: *"]
+    status: out-of-scope
+    reason: "C plugins / UDFs and Buddy plugins are server extensions (shared libraries), not client-side SQL."
+  - match: ["sphinxql:optimize_index: *", "sphinxql:sysfilters: *", "sphinxql_second:attach_index: *", "sphinxql_second:backup*",
+            "sphinxql_second:drop_cache: *", "sphinxql_second:flush_*", "sphinxql_second:freeze_indexes: *",
+            "sphinxql_second:unfreeze_indexes: *", "sphinxql_second:purge: *", "sphinxql_second:reload_*",
+            "sphinxql_second:opt_reload_index_from: *", "sphinxql_second:opt_with_truncate: *", "sphinxql_second:index_or_table: *",
+            "sphinxql_second:indexes_or_tables: *", "sphinxql_second:like_filter: *", "sphinxql_second:opt_option_clause: *",
+            "sphinxql_second:set_global_stmt: SET <index_or_table> *", "sphinxql_second:option_item: *", "sphinxql:show_what: LOCKS",
+            "buddy:Backup", "buddy:Flush", "buddy:Optimize",
+            "ddl:import_table: *", "docs:SQL commands / Backup: *", "docs:SQL commands / Flushing misc things: *",
+            "docs:SQL commands / Table optimization: *", "docs:SQL commands / Importing to a real-time table: *",
+            "docs:SQL commands / Plain table rotate: *", "docs:SQL commands / Node management: PURGE",
+            "docs:SQL commands / Schema management: SHOW LOCKS"]
+    status: out-of-scope
+    reason: "Maintenance (optimize, flush, freeze, attach / import, reload, backup, purge): administration commands a client may pass through but does not need specs for."
+  - match: ["sphinxql_debug:*", "buddy:Test", "buddy:EmptyString"]
+    status: out-of-scope
+    reason: "DEBUG statements and internal plugins (developer diagnostics: sleep, crash, malloc stats, chunk merges; Buddy's test and empty-query handlers)."
+  - match: ["sphinxql_extra:*"]
+    status: out-of-scope
+    reason: "Remaining MySQL-compatibility statements (SHOW TRIGGERS, FLUSH TABLES WITH READ LOCK, SET of MySQL session variables) - not needed by the client; observed ones (SHOW COLUMNS, CREATE DATABASE, LOCK TABLES, SAVEPOINT, USE) are classified above."
+  - match: ["docs:HTTP endpoints: *", "buddy:EmulateElastic", "buddy:Metrics", "buddy:CliTable"]
+    status: out-of-scope
+    reason: "HTTP JSON API: the client talks SQL over the mysql protocol. Would be a protocol spec of its own."
+  - match: ["docs:Searchd / *", "docs:Indexer / *", "docs:Indextool / *", "docs:Wordbreaker / *", "docs:Spelldump: *",
+            "docs:Table Converter for Manticore v2 / Sphinx v2 / *", "docs:Common settings in configuration file: *"]
+    status: out-of-scope
+    reason: "Server configuration and command-line tools."

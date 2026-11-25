@@ -6,7 +6,37 @@ description: >
   Full-text search engine with an SQL interface over the MySQL protocol (port 9306) and a JSON
   HTTP API (port 9308). Not a MySQL fork: its SQL dialect, data model (full-text fields vs
   attributes, real-time / plain / percolate / distributed tables) and catalog are its own.
-protocols: [mysql]
+protocols:
+  - id: mysql
+    default_port: 9306
+    handshake:
+      server_version: "The full VERSION() text (version, commit, build date, library versions) - not a MySQL-like 8.x version."
+      capabilities: [CONNECT_WITH_DB, COMPRESS, PROTOCOL_41, SECURE_CONNECTION, MULTI_RESULTS, PLUGIN_AUTH, CONNECT_ATTRS, DEPRECATE_EOF]
+      auth_plugins: [mysql_native_password]
+      tls: "Only when searchd is configured with SSL certificates; the default container announces no CLIENT_SSL, so a client requiring TLS fails."
+      notes:
+        - "Without authentication configured, any user name and password are accepted."
+        - "No CLIENT_MULTI_STATEMENTS: several statements per query only as SELECT ... FROM ...; SHOW META (the server's own multi-statement list of SELECT / SHOW / SET); 'SELECT 1; SELECT 2' is a syntax error."
+        - "COM_STMT_PREPARE answers OK with the parameter count but no column metadata; executing prepared statements is not verified. Text-protocol queries must not contain '?'."
+        - "MULTI_RESULTS is needed for SELECT ... FACET (one result set per facet)."
+    type_mapping:
+      - { type: bigint, code: 8, notes: ["Also the id column; signed 64 bit."] }
+      - { type: int, code: 3, flags: [UNSIGNED], notes: ["INT is unsigned 32 bit (DESCRIBE: uint): inserting -1 stores 4294967295."] }
+      - { type: bool, code: 3, flags: [UNSIGNED], value: "0 or 1" }
+      - { type: timestamp, code: 3, flags: [UNSIGNED], value: "Unix time in seconds", notes: ["Not a TIMESTAMP (7) column: a client has to format it itself."] }
+      - { type: float, code: 4, notes: ["AVG() and other float expressions arrive as DOUBLE (5)."] }
+      - { type: text, code: 254, binary: false, notes: ["Stored full-text fields; fields that are indexed but not stored do not appear in SELECT *."] }
+      - { type: string, code: 254, binary: false }
+      - { type: json, code: 254, binary: false, value: "JSON text; NULL when unset" }
+      - { type: multi, code: 254, binary: false, value: "Comma-separated sorted integers, e.g. 1,2" }
+      - { type: multi64, code: 254, binary: false, value: "Comma-separated sorted integers" }
+      - { type: float_vector, code: 254, binary: false, value: "Comma-separated floats with 6 decimals, e.g. 0.500000,0.250000" }
+    type_probe:
+      setup: ["CREATE TABLE t_wire (a_text TEXT, a_string STRING, a_int INT, a_bigint BIGINT, a_float FLOAT, a_bool BOOL, a_timestamp TIMESTAMP, a_json JSON, a_multi MULTI, a_multi64 MULTI64, a_vector FLOAT_VECTOR knn_type='hnsw' knn_dims='2' hnsw_similarity='l2')"]
+      query: "SELECT * FROM t_wire"
+      columns: { id: bigint, a_text: text, a_string: string, a_int: int, a_bigint: bigint, a_float: float, a_bool: bool, a_timestamp: timestamp, a_json: json, a_multi: multi, a_multi64: multi64, a_vector: float_vector }
+      cleanup: ["DROP TABLE IF EXISTS t_wire"]
+    sources: [{ evidence: tested }]
 lexical: manticore
 catalogs: [SHOW / DESCRIBE statements]
 
@@ -21,6 +51,10 @@ identification:
     - "information_schema (TABLES, COLUMNS, ...) is a small emulation for MySQL tools: only some columns are real, others return the string 'null'. Use SHOW TABLES / DESCRIBE (the introspection queries do)."
     - "CONNECTION_ID() matches the ConnID column of SHOW THREADS, which lists working threads only (not idle sessions)."
     - "32.1.3 with authentication disabled crashed (connection lost, container gone) on GRANT ... TO a user that does not exist - do not probe user management on a shared server."
+    - "32.1.3 also crashes (signal 11) on the documented SELECT * FROM <table>.@table (table schema as a result set); use DESCRIBE."
+    - "Statements accepted without effect (observed 32.1.3): CREATE DATABASE (SHOW DATABASES unchanged), SAVEPOINT (ROLLBACK TO SAVEPOINT is a syntax error), SET TRANSACTION ISOLATION LEVEL (no variable changes). LOCK TABLES t READ does lock: writes fail with 'table is locked' until UNLOCK TABLES."
+    - "MySQL compatibility for GUI tools (Buddy / extra parser): SHOW COLUMNS FROM t returns Field, Type, Null, Key, Default, Extra (Null always NO); SHOW FULL TABLES returns Tables_in_Manticore, Table_type (BASE TABLE); SHOW SCHEMAS = SHOW DATABASES."
+    - "SHOW QUERIES lists running statements of all protocols (id, query, time, protocol, host) including Buddy's internal HTTP requests; KILL takes that query id, not CONNECTION_ID()."
 
 versions:
   - series: "32"

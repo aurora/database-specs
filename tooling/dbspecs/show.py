@@ -239,7 +239,8 @@ def resolve_profile(specs: Specs, engine: str, version: str) -> dict:
     ident_quotes = [f"{q['open']}...{q['close']}{_cond(q)}" for q in lex["identifiers"]["quotes"] if "prefix" not in q]
     return {
         "kind": "profile", "engine": engine, "name": eng["name"], "version": version,
-        "protocols": eng["protocols"],
+        "protocols": [{**p, "default_port": p.get("default_port", specs.get("protocol", p["id"]).get("default_port"))}
+                      for p in eng["protocols"]],
         "lexical": {
             "identifier_quotes": ident_quotes,
             "preferred_quote": lex["identifiers"].get("preferred_quote"),
@@ -328,7 +329,20 @@ def render_text(res: dict) -> str:
         return "\n".join(out)
 
     if k == "profile":
-        out.append(f"{res['name']} {res['version']}  (engine: {res['engine']}, protocol: {', '.join(res['protocols'])})")
+        out.append(f"{res['name']} {res['version']}  (engine: {res['engine']})")
+        for prof in res["protocols"]:
+            port = f", default port {prof['default_port']}" if prof.get("default_port") else ""
+            out.append(f"protocol {prof['id']}{port}")
+            hs = prof.get("handshake", {})
+            for key in ("server_version", "tls"):
+                if hs.get(key):
+                    out.append(f"  {key}: {hs[key]}")
+            if hs.get("capabilities"):
+                out.append("  capabilities: " + ", ".join(hs["capabilities"]))
+            for m in prof.get("type_mapping", []):
+                extra = (f" flags {'+'.join(m['flags'])}" if m.get("flags") else "") + (f" - {m['value']}" if m.get("value") else "")
+                out.append(f"  {m['type']} -> code {m['code']}{extra}")
+            out += ["  " + line for line in _bullets(prof.get("notes", []) + hs.get("notes", []))]
         out.append("lexical:")
         out += [f"  {key}: {v}" for key, v in res["lexical"].items()]
         out.append("capabilities:")
@@ -341,6 +355,12 @@ def render_text(res: dict) -> str:
         out += [f"  {o}: {s}" for o, s in res["operations"].items()]
         out.append("syntax: " + (", ".join(res["syntax"]) or "-"))
         out.append("note: 'unknown' means not researched yet - NOT unsupported.")
+        return "\n".join(out)
+
+    if "document" in res:  # engine / lexical / protocol: the document itself
+        import yaml
+        out.append(f"{res['kind']} {res['id']}")
+        out.append(yaml.safe_dump(res["document"], sort_keys=False, width=110, allow_unicode=True).rstrip())
         return "\n".join(out)
 
     out.append(f"{res['id']} - {res['title']}")

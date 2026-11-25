@@ -4,7 +4,43 @@ name: MariaDB
 vendor: MariaDB Foundation / MariaDB plc
 description: Community fork of MySQL 5.5; diverged substantially since 10.0.
 extends: mysql@5.5
-protocols: [mysql]
+protocols:
+  - id: mysql
+    default_port: 3306
+    type_mapping:
+      - { type: "TINYINT", code: 1 }
+      - { type: "BOOL", code: 1, notes: ["Alias of TINYINT(1); indistinguishable on the wire (check the column type)."] }
+      - { type: "SMALLINT", code: 2 }
+      - { type: "MEDIUMINT", code: 9 }
+      - { type: "INT", code: 3 }
+      - { type: "INT UNSIGNED", code: 3, flags: [UNSIGNED] }
+      - { type: "BIGINT", code: 8 }
+      - { type: "DECIMAL", code: 246 }
+      - { type: "FLOAT", code: 4 }
+      - { type: "DOUBLE", code: 5 }
+      - { type: "BIT", code: 16, flags: [UNSIGNED], binary: true, notes: ["Value is the raw bit string (bytes), e.g. b'101' -> 0x05."] }
+      - { type: "CHAR", code: 254, binary: false }
+      - { type: "VARCHAR", code: 253, binary: false }
+      - { type: "BINARY", code: 254, flags: [BINARY], binary: true }
+      - { type: "VARBINARY", code: 253, flags: [BINARY], binary: true }
+      - { type: "TEXT", code: 252, flags: [BLOB], binary: false }
+      - { type: "BLOB", code: 252, flags: [BINARY, BLOB], binary: true }
+      - { type: "MEDIUMTEXT", code: 252, flags: [BLOB], binary: false }
+      - { type: "LONGBLOB", code: 252, flags: [BINARY, BLOB], binary: true }
+      - { type: "ENUM", code: 254, flags: [ENUM], binary: false }
+      - { type: "SET", code: 254, flags: [SET], binary: false }
+      - { type: "DATE", code: 10, flags: [BINARY], notes: ["Temporal values arrive as text in the text protocol."] }
+      - { type: "TIME", code: 11, flags: [BINARY] }
+      - { type: "DATETIME", code: 12, flags: [BINARY] }
+      - { type: "TIMESTAMP", code: 7, flags: [BINARY, UNSIGNED] }
+      - { type: "YEAR", code: 13, flags: [UNSIGNED, ZEROFILL], notes: ["Text protocol: four digits."] }
+      - { type: "GEOMETRY", code: 255, flags: [BINARY, BLOB], binary: true, notes: ["WKB with a 4-byte SRID prefix."] }
+      - { type: "JSON", code: 252, flags: [BINARY, BLOB], binary: false, notes: ["Alias of LONGTEXT with utf8mb4_bin collation: BLOB code, text charset, but the BINARY flag is set (binary collation) - decide by charsetnr, not by the flag."] }
+    type_probe:
+      setup: ["CREATE TABLE t_wire (a_tinyint TINYINT, a_bool BOOL, a_smallint SMALLINT, a_mediumint MEDIUMINT, a_int INT, a_uint INT UNSIGNED, a_bigint BIGINT, a_decimal DECIMAL(10,2), a_float FLOAT, a_double DOUBLE, a_bit BIT(3), a_char CHAR(3), a_varchar VARCHAR(10), a_binary BINARY(3), a_varbinary VARBINARY(10), a_text TEXT, a_blob BLOB, a_mediumtext MEDIUMTEXT, a_longblob LONGBLOB, a_enum ENUM('x','y'), a_set SET('x','y'), a_date DATE, a_time TIME, a_datetime DATETIME, a_timestamp TIMESTAMP NULL, a_year YEAR, a_json JSON, a_geometry GEOMETRY)"]
+      query: "SELECT * FROM t_wire"
+      columns: {a_tinyint: "TINYINT", a_bool: "BOOL", a_smallint: "SMALLINT", a_mediumint: "MEDIUMINT", a_int: "INT", a_uint: "INT UNSIGNED", a_bigint: "BIGINT", a_decimal: "DECIMAL", a_float: "FLOAT", a_double: "DOUBLE", a_bit: "BIT", a_char: "CHAR", a_varchar: "VARCHAR", a_binary: "BINARY", a_varbinary: "VARBINARY", a_text: "TEXT", a_blob: "BLOB", a_mediumtext: "MEDIUMTEXT", a_longblob: "LONGBLOB", a_enum: "ENUM", a_set: "SET", a_date: "DATE", a_time: "TIME", a_datetime: "DATETIME", a_timestamp: "TIMESTAMP", a_year: "YEAR", a_json: "JSON", a_geometry: "GEOMETRY"}
+      cleanup: ["DROP TABLE IF EXISTS t_wire"]
 lexical: mariadb
 catalogs: [information_schema, performance_schema, mysql, sys]
 

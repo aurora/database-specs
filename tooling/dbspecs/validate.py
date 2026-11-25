@@ -67,9 +67,23 @@ def validate(specs: Specs) -> list[str]:
     # 3. cross references
     for eid, eng in engines.items():
         rel = specs.path("engine", eid).relative_to(specs.root)
-        for p in eng["protocols"]:
-            if p not in specs.docs["protocol"]:
-                errors.append(f"{rel}: unknown protocol '{p}'")
+        for prof in eng["protocols"]:
+            proto = specs.docs["protocol"].get(prof["id"])
+            if proto is None:
+                errors.append(f"{rel}: unknown protocol '{prof['id']}'")
+                continue
+            codes = {t["code"] for t in proto.get("type_codes", [])}
+            flags = {f["name"] for f in proto.get("column_flags", [])}
+            mapped = {m["type"] for m in prof.get("type_mapping", [])}
+            for m in prof.get("type_mapping", []):
+                if m["code"] not in codes:
+                    errors.append(f"{rel}: {prof['id']} type_mapping {m['type']}: code {m['code']} not in protocols/{prof['id']}.yaml")
+                for f in m.get("flags", []):
+                    if f not in flags:
+                        errors.append(f"{rel}: {prof['id']} type_mapping {m['type']}: unknown flag {f}")
+            for col, t in prof.get("type_probe", {}).get("columns", {}).items():
+                if t not in mapped:
+                    errors.append(f"{rel}: {prof['id']} type_probe column {col}: type {t} has no type_mapping")
         if eng["lexical"] not in specs.docs["lexical"]:
             errors.append(f"{rel}: unknown lexical spec '{eng['lexical']}'")
         if "extends" in eng and eng["extends"].split("@")[0] == eid:
@@ -188,6 +202,38 @@ def validate(specs: Specs) -> list[str]:
             check_engine(specs.path("syntax", doc_id).relative_to(specs.root), eid)
             if eid in syn["grammars"]:
                 errors.append(f"{specs.path('syntax', doc_id).relative_to(specs.root)}: {eid} has a grammar and is not_applicable")
+
+    # inventories: every item classified, every reference valid, no stale rules
+    from . import inventory as inv
+    from .keywords import stored_files
+    keyword_files = stored_files()
+    scopes = {d["engine"]: d for d in specs.docs["scope"].values()}
+    roadmap_ids = {i["id"] for i in load_yaml(specs.root / "roadmap.yaml").get("items", [])}
+    for doc in specs.docs["inventory"].values():
+        engine = doc["engine"]
+        rel = f"inventory/{engine}/{doc['version']}.yaml"
+        check_engine(rel, engine)
+        scope = scopes.get(engine)
+        if scope is None:
+            errors.append(f"{rel}: no scope/{engine}.yaml classifies this inventory")
+            continue
+        result = inv.classify(doc, scope, keyword_files.get(engine, {}).get(doc["version"]))
+        missing = [i for i, r in result.items() if r is None]
+        if missing:
+            errors.append(f"scope/{engine}.yaml: {len(missing)} item(s) of {rel} unclassified, e.g. "
+                          + "; ".join(missing[:5]))
+        used = {id(r) for r in result.values() if r is not None}
+        for n, rule in enumerate(scope["rules"]):
+            if id(rule) not in used:
+                errors.append(f"scope/{engine}.yaml: rule {n} ({rule['match'][0]}) matches no item of {rel}")
+    for engine, scope in scopes.items():
+        for n, rule in enumerate(scope["rules"]):
+            for ref in rule.get("specs", []):
+                problem = inv.spec_applies(specs, ref, engine)
+                if problem:
+                    errors.append(f"scope/{engine}.yaml: rule {n}: {problem}")
+            if rule.get("roadmap") and rule["roadmap"] not in roadmap_ids:
+                errors.append(f"scope/{engine}.yaml: rule {n}: roadmap item '{rule['roadmap']}' not found")
 
     for doc_id, t in specs.docs["test"].items():
         rel = specs.path("test", doc_id).relative_to(specs.root)

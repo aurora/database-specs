@@ -1,24 +1,41 @@
 /* Manticore - SELECT with full-text search, grouping and facets (curated subset)
    Built-ins: identifier, string_literal, integer, number.
-   The MATCH() argument is its own language: syntax fulltext.manticore-query. */
+   The MATCH() argument is its own language: syntax fulltext.manticore-query.
+   Not covered: index hints (an optimizer-hint comment like SecondaryIndex(col) after the statement - the
+   tokenizer drops comments), sub-selects, table functions, KNN / HYBRID_MATCH. */
 
 select ::= 'SELECT' select_item ( ',' select_item )*
-           'FROM' identifier ( ',' identifier )*
+           'FROM' table_name ( ',' table_name )* join_clause*
            where_clause?
            group_clause?
            order_clause?
            limit_clause?
            option_clause?
            facet_clause*
+         | 'SELECT' select_item ( ',' select_item )* limit_clause?
 
-select_item ::= '*' | value_expr ( 'AS'? identifier )?
+/* cluster:table addresses a table of a replication cluster */
+table_name ::= ( identifier ':' )? identifier
 
-/* MATCH() may appear once, as one item of the top-level AND chain only:
-   not in OR, not under NOT, not in parentheses. */
-where_clause ::= 'WHERE' ( condition_term ( 'AND' condition_term )* 'AND' )? match_call ( 'AND' condition_term )*
+select_item ::= '*' | identifier '.' '*' | value_expr ( 'AS'? identifier )?
+
+/* MATCH() items belong to the top-level AND chain only (not in OR, not under NOT; parentheses
+   only around a single MATCH). Several MATCH items need a JOIN: one per table, named by the
+   second argument; two for the same table are a semantic error ('too many MATCH() clauses').
+   The condition after the last MATCH item may contain OR - it binds as a whole:
+   MATCH('a') AND x = 1 OR y = 2 means MATCH('a') AND (x = 1 OR y = 2), not SQL precedence. */
+where_clause ::= 'WHERE' ( condition_term 'AND' )? match_group ( 'AND' condition_term 'AND' match_group )? ( 'AND' condition )?
                | 'WHERE' condition
 
-match_call ::= 'MATCH' '(' string_literal ')'
+match_group ::= match_item ( 'AND' match_item )*
+
+match_item ::= ( match_call | '(' match_call ')' ) ( 'AS' identifier )?
+
+match_call ::= 'MATCH' '(' string_literal ( ',' identifier )? ')'
+
+join_clause ::= ( 'INNER' | 'LEFT' ) 'JOIN' identifier 'ON' join_condition ( 'AND' join_condition )*
+
+join_condition ::= column_ref '=' column_ref
 
 condition ::= condition_term ( 'OR' condition_term )*
 condition_term ::= condition_factor ( 'AND' condition_factor )*
@@ -26,22 +43,34 @@ condition_factor ::= 'NOT'? ( '(' condition ')' | predicate )
 
 predicate ::= value_expr ( comparison_operator value_expr
                          | 'NOT'? 'IN' '(' literal ( ',' literal )* ')'
+                         | 'NOT'? 'IN' '@' identifier
+                         | 'NOT'? ( 'ANY' | 'ALL' ) '(' string_literal ( ',' string_literal )* ')'
                          | 'NOT'? 'BETWEEN' literal 'AND' literal
                          | 'IS' 'NOT'? 'NULL' )
+            | function_call
 
 comparison_operator ::= '=' | '!=' | '<>' | '<' | '<=' | '>' | '>='
 
-value_expr ::= function_call | identifier | literal
+value_expr ::= function_call | column_ref | literal | sysvar | 'FACET' '(' ')' | mva_aggr
+
+/* ANY(mva) = 2, ALL(mva) > 1 */
+mva_aggr ::= ( 'ANY' | 'ALL' ) '(' column_ref ')'
+
+/* table.column, json.path.keys and json['key'] / json[0] */
+column_ref ::= identifier ( '.' identifier | '[' ( string_literal | integer ) ']' )*
+
+sysvar ::= '@' '@' identifier ( '.' identifier )*
 
 /* WEIGHT(), COUNT(*), ANY(mva), HIGHLIGHT(), GROUPBY(), ... */
 function_call ::= identifier '(' ( '*' | value_expr ( ',' value_expr )* )? ')'
 
 literal ::= string_literal | '-'? number
 
-/* GROUP n BY: up to n rows per group; WITHIN GROUP ORDER BY picks which rows */
+/* GROUP n BY: up to n rows per group; WITHIN GROUP ORDER BY picks which rows.
+   HAVING takes a single predicate (no AND / OR). */
 group_clause ::= 'GROUP' integer? 'BY' identifier ( ',' identifier )*
                  ( 'WITHIN' 'GROUP' 'ORDER' 'BY' order_item ( ',' order_item )* )?
-                 ( 'HAVING' condition )?
+                 ( 'HAVING' predicate )?
 
 order_clause ::= 'ORDER' 'BY' order_item ( ',' order_item )*
 
@@ -51,7 +80,19 @@ order_item ::= value_expr ( 'ASC' | 'DESC' )
 limit_clause ::= 'LIMIT' integer ( ( ',' | 'OFFSET' ) integer )?
 
 option_clause ::= 'OPTION' option ( ',' option )*
-option ::= identifier '=' ( identifier | literal )
+/* field_weights = (title = 10, body = 1), ranker = expr('sum(lcs) * 1000 + bm25'), max_matches = 2000 */
+option ::= identifier '=' ( '(' named_value ( ',' named_value )* ')' | identifier ( '(' string_literal ')' )? | literal )
+named_value ::= identifier '=' literal
 
-/* each FACET returns an extra result set (value, count(*)) */
-facet_clause ::= 'FACET' identifier ( 'AS' identifier )? order_clause? limit_clause?
+/* each FACET returns an extra result set: the facet values with count(*) */
+facet_clause ::= 'FACET' facet_item ( ',' facet_item )*
+                 ( 'BY' facet_item ( ',' facet_item )* )?
+                 ( 'ALL' 'FILTERS' | 'EXCLUDE'? 'FILTERS' identifier ( ',' identifier )* )?
+                 'ZEROES'?
+                 ( 'MODE' identifier )?
+                 ( 'DISTINCT' identifier? )?
+                 order_clause?
+                 limit_clause?
+
+/* FACET brand, FACET INTERVAL(price, 200, 400) AS range */
+facet_item ::= value_expr ( 'AS' identifier )?

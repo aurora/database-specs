@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://db-specs.invalid/schemas/scope.schema.json",
+  "title": "Inventory classification of one engine",
+  "description": "Classifies every item of inventory/<engine>/*.yaml. Rules are tried in order; the first rule with a matching pattern (fnmatch on the item id) wins. Keywords contained in keywords/<engine>/<version>.yaml count as covered without a rule.",
+  "type": "object",
+  "required": ["engine", "rules"],
+  "additionalProperties": false,
+  "properties": {
+    "engine": { "$ref": "common.schema.json#/$defs/engineId" },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["match", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "match": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+          "status": {
+            "description": "covered: described by the given specs. planned: a roadmap item will cover it. out-of-scope: deliberately not described (reason required). open: belongs in scope, not described yet (reason says what is missing).",
+            "enum": ["covered", "planned", "out-of-scope", "open"]
+          },
+          "specs": {
+            "description": "For covered: <kind>:<id> (syntax:query.fulltext-select, capability:..., operation:..., query:..., lexical:..., engine:...).",
+            "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^(syntax|capability|operation|query|lexical|engine|keywords):[a-z0-9._-]+$" }
+          },
+          "roadmap": { "type": "string", "description": "For planned: roadmap.yaml item id." },
+          "reason": { "type": "string" }
+        },
+        "allOf": [
+          { "if": { "properties": { "status": { "const": "covered" } } }, "then": { "required": ["specs"] } },
+          { "if": { "properties": { "status": { "const": "planned" } } }, "then": { "required": ["roadmap"] } },
+          { "if": { "properties": { "status": { "enum": ["out-of-scope", "open"] } } }, "then": { "required": ["reason"] } }
+        ]
+      }
+    }
+  }
+}

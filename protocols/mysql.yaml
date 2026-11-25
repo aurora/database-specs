@@ -12,9 +12,10 @@ client_libraries:
   - name: MySQL Connector/C (libmysqlclient)
 
 notes:
+  - "Which code and flags each engine sends for its column types is in the engine's protocol profile (engines/<engine>.yaml protocols[].type_mapping), verified per test target by its type_probe. Port, handshake and deviations (e.g. Manticore on 9306) are there too."
   - "TEXT vs BLOB: both arrive as BLOB-family codes; a column is binary only if charsetnr = 63 (binary). Same for CHAR/VARCHAR vs BINARY/VARBINARY."
   - "ENUM and SET arrive as STRING (254) with ENUM_FLAG / SET_FLAG set, not as their own codes."
-  - "MariaDB JSON is an alias for LONGTEXT with a CHECK(json_valid()) constraint; on the wire it is a BLOB-family text column, not 245."
+  - "MariaDB JSON is an alias for LONGTEXT with a CHECK(json_valid()) constraint; on the wire it is a BLOB-family text column, not 245. Its utf8mb4_bin collation sets the BINARY flag although the value is text: decide binary vs text by charsetnr = 63, not by the flag."
 
 type_codes:
   - { code: 0,   name: DECIMAL,     category: decimal }
@@ -78,6 +79,8 @@ column_flags:
   - { bit: 32768, name: NUM }
 
 sources:
+  - evidence: tested
+    notes: "Codes used in the type_mapping of mysql, mariadb and manticore are verified on every test target (dbspecs test, protocol mysql.type-mapping)."
   - evidence: unverified
     url: https://dev.mysql.com/doc/dev/mysql-server/latest/field__types_8h.html
-    notes: Codes written from knowledge of enum_field_types; to be verified by a wire-level test.
+    notes: Remaining codes written from knowledge of enum_field_types.

@@ -464,3 +464,69 @@ def report_json(report: Report) -> dict:
         "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "results": [r.as_dict() for r in report.results],
     }
+
+
+def run_inventory(specs: Specs, server: Server, report: Report):
+    """Engines with an inventory need one for every tested version (new version = new items)."""
+    from .inventory import stored
+    versions = stored().get(server.engine)
+    if versions is None:
+        return
+    if server.version in versions:
+        report.add(Result(server.target["id"], server.version, "inventory", server.engine, "pass"))
+    else:
+        report.add(Result(server.target["id"], server.version, "inventory", server.engine, "observed",
+                          f"no inventory/{server.engine}/{server.version}.yaml (have {', '.join(versions)}) - run "
+                          f"`dbspecs inventory --target {server.target['id']}` and classify new items in scope/"))
+
+
+TYPE_FLAGS = {"mysql": {"UNSIGNED": 32, "ZEROFILL": 64, "BINARY": 128, "BLOB": 16, "ENUM": 256, "SET": 2048}}
+
+
+def run_protocol(specs: Specs, server: Server, report: Report):
+    """Every protocol profile with a type_probe: wire type code, type flags and binary charset per column."""
+    eng = specs.get("engine", server.engine)
+    for prof in eng["protocols"]:
+        probe = prof.get("type_probe")
+        if not probe:
+            continue
+        mapping = {}
+        for m in prof["type_mapping"]:
+            if in_range(server.version, m):
+                mapping[m["type"]] = m
+        name = f"{prof['id']}.type-mapping"
+        problems = []
+        try:
+            with server.connect() as conn:
+                _exec_all(conn, probe["setup"])
+                with conn.cursor() as cur:
+                    cur.execute(probe["query"])
+                    cur.fetchall()
+                    fields = getattr(getattr(cur, "_result", None), "fields", None)  # pymysql: flags + charsetnr
+                    cols = [(f.name, f.type_code, f.flags, f.charsetnr) for f in fields] if fields else \
+                           [(d[0], d[1], None, None) for d in cur.description]
+        except Exception as exc:
+            report.add(Result(server.target["id"], server.version, "protocol", name, "fail", f"probe failed: {exc}"))
+            continue
+        finally:
+            _cleanup(server, probe.get("cleanup", []))
+        flagbits = TYPE_FLAGS.get(prof["id"], {})
+        seen = {c[0] for c in cols}
+        for col, etype in probe["columns"].items():
+            if col not in seen:
+                problems.append(f"{col}: column missing from the result")
+        for col, code, flags, charsetnr in cols:
+            etype = probe["columns"].get(col)
+            m = mapping.get(etype)
+            if m is None:
+                continue
+            if code != m["code"]:
+                problems.append(f"{col} ({etype}): code {code}, expected {m['code']}")
+            if flags is not None and flagbits:
+                got = sorted(n for n, b in flagbits.items() if flags & b)
+                if got != sorted(m.get("flags", [])):
+                    problems.append(f"{col} ({etype}): flags {got}, expected {sorted(m.get('flags', []))}")
+            if charsetnr is not None and "binary" in m and (charsetnr == 63) != m["binary"]:
+                problems.append(f"{col} ({etype}): charsetnr {charsetnr}, expected binary={m['binary']}")
+        report.add(Result(server.target["id"], server.version, "protocol", name,
+                          "fail" if problems else "pass", "; ".join(problems)))

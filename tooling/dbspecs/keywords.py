@@ -149,13 +149,26 @@ def _probe_reserved(server: Server, conn, words) -> set[str]:
     return reserved
 
 
+def _grammar_list(engine: str, version: str) -> list[str] | None:
+    """Keywords of the parser grammar, from the engine's inventory (inventory/<engine>/<version>.yaml)."""
+    from .inventory import stored
+    doc = stored().get(engine, {}).get(version)
+    if not doc:
+        return None
+    return [i["id"][3:] for i in doc["items"] if i["kind"] == "keyword"]
+
+
 def generate(specs: Specs, server: Server) -> dict:
     with server.connect() as conn:
         words = _server_list(specs, server, conn)
         method = ("c-api" if server.engine == "sqlite" else "server-query") if words else "probe"
+        grammar = None if words else _grammar_list(server.engine, server.version)
+        if grammar:
+            method, words = "grammar", grammar
         complete = words is not None
         candidates = set(w.upper() for w in (words or _candidates(server.engine)))
-        reserved = _probe_reserved(server, conn, candidates)
+        probe_words = candidates | (_candidates(server.engine) if grammar else set())
+        reserved = _probe_reserved(server, conn, probe_words)
     doc = {
         "engine": server.engine,
         "version": server.version,
@@ -172,6 +185,10 @@ def generate(specs: Specs, server: Server) -> dict:
                         + (" as SELECT list items (CREATE TABLE accepts most of them as column names)"
                            if server.engine == "manticore" else "") + ". Only reserved words are known; reserved words that no other list"
                         " contains can be missing."]
+    if method == "grammar":
+        doc["notes"] = ["All keywords of the server's SQL parsers (from its grammar at the build commit, see "
+                        "inventory/); reserved = fails as a SELECT list item, also probed for keywords of other "
+                        "engines (function-like words such as DATE are reserved without being grammar keywords)."]
     doc["reserved"] = sorted(reserved)
     doc["nonreserved"] = sorted(candidates - reserved) if complete else []
     return doc

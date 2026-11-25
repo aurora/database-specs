@@ -13,12 +13,17 @@ grammars:
     file: manticore.ebnf
     start: select
     notes:
-      - "Exactly one MATCH() per statement, only as an item of the top-level AND chain (anywhere in it); in OR, under NOT or in parentheses it is a syntax error, a second one 'too many MATCH() clauses'."
+      - "MATCH() items belong to the top-level AND chain (in OR or under NOT: syntax error; parentheses only around a single MATCH). One per table: a second MATCH needs a JOIN and the table as second argument, otherwise 'too many MATCH() clauses'."
+      - "Precedence trap: everything after the last MATCH item is one filter, so MATCH('a') AND x = 1 OR y = 2 means MATCH('a') AND (x = 1 OR y = 2). Before a MATCH item, a top-level OR is a syntax error."
+      - "HAVING takes a single predicate (no AND / OR). Optimizer hints go into a comment after the statement (SecondaryIndex(col), ColumnarScan(col), DocidIndex(col) and NO_ variants)."
       - "Full-text fields cannot be compared (title = 'x' is an error: filters only work on attributes)."
       - "ORDER BY items need ASC or DESC. Without LIMIT 20 rows are returned."
       - "GROUP n BY returns up to n rows per group; WITHIN GROUP ORDER BY chooses them; plain columns next to aggregates are allowed (one representative row per group)."
       - "Each FACET adds a result set (query.multi-result-select)."
-      - "Subqueries only as SELECT * FROM (SELECT ...) ORDER BY ... (re-sorting); JOIN support is limited and not covered here."
+      - "Subqueries only as SELECT * FROM (SELECT ...) ORDER BY ... (re-sorting). JOIN: INNER / LEFT with ON equality conditions (casts like ON a = INT(b) are not covered)."
+      - "JSON attributes: meta.a.b, meta['a'], meta.k[0] in the select list and filters. String attributes: brand ANY ('a', 'b'). No LIKE in WHERE."
+      - "FACET items are expressions (INTERVAL(price, 200, 400) AS r); BY, ALL / EXCLUDE FILTERS, ZEROES, MODE, DISTINCT, ORDER BY FACET() / COUNT(*) and LIMIT per facet."
+      - "Not covered: KNN / HYBRID_MATCH, sub-selects, table functions, SELECT ... FROM t.@table (crashes 32.1.3, see engine notes)."
     sources: [{ evidence: tested }]
   mysql:
     file: mysql.ebnf
@@ -37,14 +42,16 @@ grammars:
 
 setup:
   manticore:
-    - "CREATE TABLE t_fts (title TEXT, body TEXT, cat INT, price FLOAT, tags MULTI)"
-    - "INSERT INTO t_fts (id, title, body, cat, price, tags) VALUES (1, 'red apple pie', 'sweet dessert', 1, 3.5, (1,2))"
+    - "CREATE TABLE t_fts (title TEXT, body TEXT, cat INT, price FLOAT, tags MULTI, brand STRING, meta JSON)"
+    - "INSERT INTO t_fts (id, title, body, cat, price, tags, brand, meta) VALUES (1, 'red apple pie', 'sweet dessert', 1, 3.5, (1,2), 'acme', '{\"a\":{\"b\":1},\"k\":[5,6]}')"
+    - "CREATE TABLE t_cat (name TEXT, cid INT)"
+    - "INSERT INTO t_cat (id, name, cid) VALUES (1, 'fruit apple', 1)"
   mysql:
     - "CREATE TABLE t_fts (id INT PRIMARY KEY, title VARCHAR(200), body TEXT, cat INT, price FLOAT, FULLTEXT (title, body), FULLTEXT (title)) ENGINE=InnoDB"
   mariadb:
     - "CREATE TABLE t_fts (id INT PRIMARY KEY, title VARCHAR(200), body TEXT, cat INT, price FLOAT, FULLTEXT (title, body), FULLTEXT (title)) ENGINE=InnoDB"
 cleanup:
-  manticore: ["DROP TABLE IF EXISTS t_fts"]
+  manticore: ["DROP TABLE IF EXISTS t_fts", "DROP TABLE IF EXISTS t_cat"]
   mysql: ["DROP TABLE IF EXISTS t_fts"]
   mariadb: ["DROP TABLE IF EXISTS t_fts"]
 
@@ -80,8 +87,32 @@ examples:
     expect: invalid
     engines: { manticore: {} }
   - sql: "SELECT id FROM t_fts WHERE MATCH('apple') AND MATCH('pie')"
+    expect: semantic-error
+    engines: { manticore: {} }
+    notes: ["'too many MATCH() clauses': several MATCH items only with a JOIN, one per table."]
+  - sql: "SELECT t_fts.id FROM t_fts INNER JOIN t_cat ON t_fts.cat = t_cat.cid WHERE MATCH('apple', t_fts) AND MATCH('fruit', t_cat)"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT t_fts.id, t_cat.name FROM t_fts LEFT JOIN t_cat ON t_fts.cat = t_cat.cid WHERE MATCH('apple')"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts WHERE (MATCH('apple')) AND cat = 1"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts WHERE MATCH('apple', t_fts) AS m"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts WHERE MATCH('apple') AND cat = 1 OR price > 2"
+    expect: valid
+    engines: { manticore: {} }
+    notes: ["Means MATCH('apple') AND (cat = 1 OR price > 2) - not SQL precedence (tests/cases/search-manticore.yaml checks the rows)."]
+  - sql: "SELECT id FROM t_fts WHERE cat = 1 OR price > 2 AND MATCH('apple')"
     expect: invalid
     engines: { manticore: {} }
+  - sql: "SELECT cat, COUNT(*) AS c FROM t_fts GROUP BY cat HAVING c > 0 AND c < 5"
+    expect: invalid
+    engines: { manticore: {} }
+    notes: ["HAVING takes a single predicate."]
   - sql: "SELECT id FROM t_fts WHERE MATCH(title, 'apple')"
     expect: invalid
     engines: { manticore: {} }
@@ -106,6 +137,54 @@ examples:
   - sql: "SELECT id FROM t_fts WHERE MATCH('apple') LIMIT 0, 10 OPTION ranker = bm25, max_matches = 2000"
     expect: valid
     engines: { manticore: {} }
+  # --- Manticore forms found by the inventory audit
+  - sql: "SELECT id FROM t_fts FACET brand, cat"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts FACET brand BY cat"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts FACET brand DISTINCT cat"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts FACET INTERVAL(price, 2, 3) AS pr"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts FACET brand ORDER BY FACET() ASC LIMIT 5"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts WHERE cat = 1 FACET brand ALL FILTERS"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts WHERE meta.a.b = 1"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT id, meta.k[0] AS k0 FROM t_fts WHERE meta['a'].b = 1"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts WHERE brand ANY ('acme', 'other')"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts WHERE MATCH('apple') OPTION field_weights = (title = 10, body = 1), ranker = expr('sum(lcs) * 1000 + bm25')"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts WHERE MATCH('apple') OPTION ranker = sph04"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT t_fts.* FROM t_fts"
+    expect: semantic-error
+    engines: { manticore: {} }
+    notes: ["The SQL parser has table.* (select_item), but 32.1.3 rejects it: 'unknown column' without a JOIN, an expression parse error with one."]
+  - sql: "SELECT t_fts.*, t_cat.name FROM t_fts INNER JOIN t_cat ON t_fts.cat = t_cat.cid"
+    expect: semantic-error
+    engines: { manticore: {} }
+  - sql: "SELECT @@version_comment"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts WHERE title LIKE 'red%'"
+    expect: invalid
+    engines: { manticore: {} }
+    notes: ["No LIKE in WHERE (LIKE only filters SHOW / DESCRIBE output); use MATCH() or REGEX() on string attributes."]
   # --- MySQL / MariaDB
   - sql: "SELECT id, MATCH(title, body) AGAINST ('apple') AS score FROM t_fts WHERE MATCH(title, body) AGAINST ('apple') ORDER BY score DESC LIMIT 10"
     expect: valid

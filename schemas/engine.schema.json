@@ -16,10 +16,10 @@
       "pattern": "^[a-z0-9-]+(@[0-9]+(\\.[0-9]+){0,2})?$"
     },
     "protocols": {
-      "description": "Wire protocols the engine speaks (ids from protocols/).",
+      "description": "Wire protocols the engine speaks, each as a profile: the protocol (id from protocols/) plus what this engine does differently on it (port, handshake, how its column types are sent).",
       "type": "array",
       "minItems": 1,
-      "items": { "$ref": "common.schema.json#/$defs/id" }
+      "items": { "$ref": "#/$defs/protocolProfile" }
     },
     "lexical": {
       "description": "Lexical spec id (file in lexical/).",
@@ -69,5 +69,60 @@
       }
     },
     "sources": { "$ref": "common.schema.json#/$defs/sources" }
+  },
+  "$defs": {
+    "protocolProfile": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/id", "description": "Protocol id (file in protocols/)." },
+        "default_port": { "type": "integer", "description": "Overrides the protocol's default_port. Absent for embedded engines." },
+        "handshake": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "server_version": { "type": "string", "description": "What the handshake reports as server version." },
+            "capabilities": { "type": "array", "items": { "type": "string" }, "description": "Capability flags the server announces (observed with default settings)." },
+            "auth_plugins": { "type": "array", "items": { "type": "string" } },
+            "tls": { "type": "string", "description": "When TLS is available." },
+            "notes": { "$ref": "common.schema.json#/$defs/notes" }
+          }
+        },
+        "type_mapping": {
+          "description": "How the engine's column types arrive: type name as written in CREATE TABLE -> wire type code (protocols/<id>.yaml), type flags and whether the value is binary.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["type", "code"],
+            "additionalProperties": false,
+            "properties": {
+              "type": { "type": "string" },
+              "code": { "type": "integer" },
+              "flags": { "type": "array", "items": { "type": "string" }, "description": "Exactly the type-related flags set (mysql: UNSIGNED, ZEROFILL, BINARY, BLOB, ENUM, SET; names from the protocol's column_flags). NOT_NULL / key flags depend on the column and are not listed." },
+              "binary": { "type": "boolean", "description": "For string / blob-like codes: the binary charset is reported (mysql: charsetnr = 63), i.e. bytes unless a note says otherwise (MySQL JSON). Not given for numeric / temporal codes, which report charsetnr 63 as well." },
+              "value": { "type": "string", "description": "Text format of the value, where not obvious." },
+              "since": { "$ref": "common.schema.json#/$defs/version" },
+              "until": { "$ref": "common.schema.json#/$defs/version" },
+              "notes": { "$ref": "common.schema.json#/$defs/notes" }
+            }
+          }
+        },
+        "type_probe": {
+          "description": "Checks type_mapping against a server: setup creates a table, query selects one column per mapped type; columns maps result column -> engine type.",
+          "type": "object",
+          "required": ["setup", "query", "columns"],
+          "additionalProperties": false,
+          "properties": {
+            "setup": { "type": "array", "items": { "type": "string" } },
+            "query": { "type": "string" },
+            "columns": { "type": "object", "additionalProperties": { "type": "string" } },
+            "cleanup": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "notes": { "$ref": "common.schema.json#/$defs/notes" },
+        "sources": { "$ref": "common.schema.json#/$defs/sources" }
+      }
+    }
   }
 }

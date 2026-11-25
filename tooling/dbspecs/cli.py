@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 from .build import build
-from .runner import Report, report_json, run_keywords, run_probes, run_syntax, run_tests
+from .runner import Report, report_json, run_inventory, run_keywords, run_protocol, run_probes, run_syntax, run_tests
 from .servers import running
 from .specs import ROOT, Specs, load_yaml
 from .validate import validate
@@ -78,6 +78,8 @@ def cmd_test(args) -> int:
                 run_tests(specs, server, report)
                 run_syntax(specs, server, report)
                 run_keywords(specs, server, report)
+                run_inventory(specs, server, report)
+                run_protocol(specs, server, report)
                 for r in report.results[n:]:
                     mark = {"pass": "ok  ", "fail": "FAIL", "observed": "obs ", "skip": "skip"}.get(r.outcome, r.outcome)
                     print(f"   {mark} {r.kind:6} {r.id}" + (f"  - {r.detail}" if r.detail else ""))
@@ -119,6 +121,42 @@ def cmd_keywords(args) -> int:
                 print(f"{target['id']:16} {server.version:10} {doc['method']:12} "
                       f"reserved {len(doc['reserved']):4}  nonreserved {len(doc['nonreserved']):4}  -> {path.relative_to(ROOT)}",
                       flush=True)
+    return 0
+
+
+def cmd_inventory(args) -> int:
+    import re as _re
+
+    from . import inventory as inv
+
+    targets = load_yaml(ROOT / "tests" / "targets.yaml")["targets"]
+    targets = [t for t in targets if t["id"] in args.target or t["engine"] in args.target]
+    for target in targets:
+        if target["engine"] != "manticore":
+            print(f"{target['id']}: no inventory generator for {target['engine']} yet", file=sys.stderr)
+            continue
+        with running(target) as server, server.connect() as conn, conn.cursor() as cur:
+            cur.execute("SELECT VERSION()")
+            raw = cur.fetchone()[0]
+            buddy = None
+            try:
+                cur.execute("SHOW VERSION")
+                for row in cur.fetchall():
+                    if str(row[0]).lower() == "buddy":
+                        bm = _re.search(r"-([0-9a-f]{7,})\s*$", str(row[1]))  # buddy v4.4.11+26111914-73139908
+                        buddy = bm.group(1) if bm else None
+            except Exception:  # noqa: BLE001 - older servers without SHOW VERSION
+                pass
+        m = _re.match(r"^\S+ ([0-9a-f]+)@", raw)
+        if not m:
+            print(f"{target['id']}: no commit in VERSION() {raw!r}", file=sys.stderr)
+            return 1
+        doc = inv.generate_manticore(server.version, m.group(1), buddy)
+        path = inv.write(doc)
+        kinds = {}
+        for it in doc["items"]:
+            kinds[it["kind"]] = kinds.get(it["kind"], 0) + 1
+        print(f"{target['id']:16} {server.version:10} {kinds} -> {path.relative_to(ROOT)}", flush=True)
     return 0
 
 
@@ -186,6 +224,9 @@ def main(argv=None) -> int:
     p = sub.add_parser("keywords", help="generate keywords/<engine>/<version>.yaml from the test targets")
     p.add_argument("--target", action="append", help="target id or engine (repeatable)")
     p.set_defaults(func=cmd_keywords)
+    p = sub.add_parser("inventory", help="generate inventory/<engine>/<version>.yaml from the engine's sources")
+    p.add_argument("--target", action="append", required=True, help="target id or engine (repeatable)")
+    p.set_defaults(func=cmd_inventory)
     p = sub.add_parser("show", help="resolve specs for an engine/version (for people and agents)",
                        epilog=SHOW_HELP, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("kind", help="list, profile, capability, query, operation, syntax, engine, lexical, protocol")

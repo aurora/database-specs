@@ -1,0 +1,68 @@
+# yaml-language-server: $schema=../../schemas/capability.schema.json
+id: query.fulltext-search
+title: Full-text search in SQL
+description: >
+  Word-based search with ranking, as opposed to LIKE. The syntax differs completely per engine;
+  syntax specs query.fulltext-select and fulltext.manticore-query describe the statement forms.
+related: [query.multi-result-select]
+support:
+  mysql:
+    - status: supported
+      notes:
+        - "FULLTEXT index (InnoDB since 5.6) + WHERE MATCH(col, ...) AGAINST ('words' [IN NATURAL LANGUAGE MODE | IN BOOLEAN MODE | WITH QUERY EXPANSION]); MATCH in the select list returns the relevance."
+        - "The MATCH column list must equal the columns of one FULLTEXT index. Words shorter than innodb_ft_min_token_size (3) and stopwords are ignored."
+        - "Several MATCH ... AGAINST and OR with other conditions are allowed."
+  mariadb:
+    - status: supported
+      notes: ["Same MATCH ... AGAINST syntax as MySQL; FULLTEXT on InnoDB since 10.0.5, also on MyISAM/Aria. Mroonga engine for CJK."]
+  postgresql:
+    - status: supported
+      notes:
+        - "tsvector @@ tsquery: to_tsvector('english', col) @@ websearch_to_tsquery('english', 'words'); ranking with ts_rank. Index with GIN on the expression or a generated tsvector column."
+        - "websearch_to_tsquery since 11; plainto_tsquery / to_tsquery before."
+  sqlserver:
+    - status: supported
+      notes:
+        - "Requires the Full-Text Search component (not part of the default Linux container image: FULLTEXTSERVICEPROPERTY('IsFullTextInstalled') = 0), a full-text catalog and a FULLTEXT INDEX on a table with a unique single-column key."
+        - "WHERE CONTAINS(col, '\"word*\" AND other') / FREETEXT(col, 'words'); ranking via CONTAINSTABLE / FREETEXTTABLE joins."
+      sources:
+        - { evidence: docs, url: "https://learn.microsoft.com/sql/relational-databases/search/full-text-search" }
+        - { evidence: observed, notes: "IsFullTextInstalled = 0 in mcr.microsoft.com/mssql/server:2022-latest" }
+  sqlite:
+    - since: "3.9"
+      status: supported
+      notes:
+        - "FTS5 virtual tables (compile option, enabled in common builds): CREATE VIRTUAL TABLE t USING fts5(cols); WHERE t MATCH 'query' ORDER BY rank. FTS3/FTS4 before."
+        - "A full-text table is a separate (virtual) table, not an index on an existing table; external content tables can mirror one."
+  manticore:
+    - status: supported
+      notes:
+        - "The core feature: TEXT columns are full-text fields; WHERE MATCH('query') with the full-text query language (fulltext.manticore-query); WEIGHT() is the relevance."
+        - "Exactly one MATCH() per SELECT, only at the top level of WHERE combined by AND - not inside OR or NOT ('too many MATCH() clauses' / syntax error)."
+        - "Full-text fields are not stored as filterable values: comparing a TEXT field with = is an error; use MATCH('@field \"exact phrase\"') or a string attribute."
+      sources: [{ evidence: observed, notes: "manticore 32.1.3" }]
+probes:
+  - engines: [mysql, mariadb]
+    setup:
+      - "CREATE TABLE probe_ft (id INT PRIMARY KEY, body TEXT, FULLTEXT (body)) ENGINE=InnoDB"
+      - "INSERT INTO probe_ft (id, body) VALUES (1, 'hello search world'), (2, 'other words here'), (3, 'nothing related')"
+    statements: ["SELECT id FROM probe_ft WHERE MATCH(body) AGAINST ('search')"]
+    check: "SELECT COUNT(*) = 1 FROM probe_ft WHERE MATCH(body) AGAINST ('search')"
+    cleanup: ["DROP TABLE IF EXISTS probe_ft"]
+  - engines: [postgresql]
+    statements: ["SELECT to_tsvector('simple', 'hello search world') @@ plainto_tsquery('simple', 'search')"]
+    check: "SELECT to_tsvector('simple', 'hello search world') @@ plainto_tsquery('simple', 'search')"
+  - engines: [sqlite]
+    setup:
+      - "CREATE VIRTUAL TABLE probe_ft USING fts5(body)"
+      - "INSERT INTO probe_ft (body) VALUES ('hello search world'), ('other words here')"
+    statements: ["SELECT rowid FROM probe_ft WHERE probe_ft MATCH 'search' ORDER BY rank"]
+    check: "SELECT COUNT(*) = 1 FROM probe_ft WHERE probe_ft MATCH 'search'"
+    cleanup: ["DROP TABLE IF EXISTS probe_ft"]
+  - engines: [manticore]
+    setup:
+      - "CREATE TABLE probe_ft (body TEXT)"
+      - "INSERT INTO probe_ft (id, body) VALUES (1, 'hello search world'), (2, 'other words here')"
+    statements: ["SELECT id, WEIGHT() FROM probe_ft WHERE MATCH('search')"]
+    check: "SELECT COUNT(*) FROM probe_ft WHERE MATCH('search')"
+    cleanup: ["DROP TABLE IF EXISTS probe_ft"]

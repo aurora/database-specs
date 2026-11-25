@@ -19,7 +19,13 @@ support:
   sqlite:
     - status: unsupported
       notes: ["Only rowid / AUTOINCREMENT (sqlite_sequence table)."]
+  manticore:
+    - status: unsupported
+      notes: ["Without an explicit id, INSERT generates a unique document id; there is no sequence object."]
 probes:
   - engines: [mysql, mariadb, postgresql, sqlserver, sqlite]
     statements: ["CREATE SEQUENCE probe_seq START WITH 1 INCREMENT BY 1"]
     cleanup: ["DROP SEQUENCE IF EXISTS probe_seq"]
+  - engines: [manticore]
+    statements:
+      - "CREATE SEQUENCE probe_seq START WITH 1 INCREMENT BY 1"

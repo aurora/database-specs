@@ -77,6 +77,21 @@
         "properties": {
           "query": { "$ref": "common.schema.json#/$defs/id" },
           "operation": { "$ref": "common.schema.json#/$defs/id" },
+          "background": {
+            "description": "Start a second session that runs this statement (per engine) in the background; {{background_session}} in later params is its session id.",
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          },
+          "await_background": {
+            "description": "Wait for the background statement: it must end within the given time (and with an error if expect_error).",
+            "type": "object",
+            "required": ["within_seconds"],
+            "additionalProperties": false,
+            "properties": {
+              "within_seconds": { "type": "number" },
+              "expect_error": { "type": "boolean" }
+            }
+          },
           "sql": {
             "description": "Ad-hoc check per engine (not a contract), e.g. to verify the effect of an operation.",
             "type": "object",
@@ -121,7 +136,7 @@
           },
           "expect": { "$ref": "#/$defs/expectation" }
         },
-        "oneOf": [{ "required": ["query"] }, { "required": ["operation"] }, { "required": ["sql"] }, { "required": ["roundtrip"] }]
+        "oneOf": [{ "required": ["query"] }, { "required": ["operation"] }, { "required": ["sql"] }, { "required": ["roundtrip"] }, { "required": ["background"] }, { "required": ["await_background"] }]
       }
     }
   }

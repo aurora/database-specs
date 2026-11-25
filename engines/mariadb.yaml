@@ -11,6 +11,7 @@ catalogs: [information_schema, performance_schema, mysql, sys]
 identification:
   version_query: SELECT VERSION()
   version_pattern: '^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)-MariaDB'
+  session_id_query: SELECT CONNECTION_ID()
   notes:
     - "VERSION() contains '-MariaDB' (e.g. 11.4.5-MariaDB-ubu2404). The handshake of 10.x/11.x may carry a '5.5.5-' prefix for old clients; strip it."
     - "Do not reuse MySQL version ranges: MariaDB 10.x is not comparable to MySQL 8.x."

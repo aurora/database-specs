@@ -29,6 +29,15 @@ support:
     - since: "3.25"
       status: supported
       notes: ["GROUPS frames, EXCLUDE and FILTER on window aggregates since 3.28."]
+  manticore:
+    - status: unsupported
+      notes: ["Grouping is GROUP BY / GROUP n BY / WITHIN GROUP ORDER BY and FACET; no OVER()."]
 probes:
   - engines: [mysql, mariadb, postgresql, sqlserver, sqlite]
     statements: ["SELECT ROW_NUMBER() OVER (ORDER BY n) AS rn FROM (SELECT 1 AS n) t"]
+  - engines: [manticore]
+    setup:
+      - "CREATE TABLE probe_mt (title TEXT, v INT)"
+    statements:
+      - "SELECT id, ROW_NUMBER() OVER (ORDER BY id ASC) FROM probe_mt"
+    cleanup: ["DROP TABLE IF EXISTS probe_mt"]

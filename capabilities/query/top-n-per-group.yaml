@@ -1,0 +1,66 @@
+# yaml-language-server: $schema=../../schemas/capability.schema.json
+id: query.top-n-per-group
+title: The first N rows of every group (top-N per group)
+description: >
+  "The 2 most expensive products per category", or with N = 1 the representative row of each
+  group. Only Manticore has a dedicated clause; elsewhere it is a query pattern. The notes say
+  which form to generate.
+related: [query.window-functions]
+support:
+  mysql:
+    - until: "8.0"
+      status: partial
+      notes:
+        - "No window functions: correlated subquery WHERE (SELECT COUNT(*) FROM t t2 WHERE t2.grp = t.grp AND t2.sort > t.sort) < N (quadratic; ties can return more than N rows)."
+        - "A TEMPORARY table cannot be referenced twice in one query ('Can't reopen table')."
+    - since: "8.0"
+      status: supported
+      notes: ["SELECT ... FROM (SELECT t.*, ROW_NUMBER() OVER (PARTITION BY grp ORDER BY sort DESC) AS rn FROM t) x WHERE rn <= N. Use RANK() to keep ties."]
+  mariadb:
+    - since: "10.2"
+      status: supported
+      notes: ["ROW_NUMBER() OVER (PARTITION BY grp ORDER BY ...) in a derived table, filtered by rn <= N."]
+  postgresql:
+    - status: supported
+      notes:
+        - "ROW_NUMBER() OVER (PARTITION BY ...) in a derived table, or a LATERAL subquery with ORDER BY ... LIMIT N per group (uses an index on (grp, sort))."
+        - "N = 1: SELECT DISTINCT ON (grp) ... ORDER BY grp, sort DESC."
+  sqlserver:
+    - status: supported
+      notes: ["ROW_NUMBER() OVER (PARTITION BY ...) in a derived table / CTE, or CROSS APPLY (SELECT TOP (N) ... ORDER BY ...)."]
+  sqlite:
+    - until: "3.25"
+      status: partial
+      notes: ["No window functions: correlated subquery pattern (see mysql < 8.0)."]
+    - since: "3.25"
+      status: supported
+      notes: ["ROW_NUMBER() OVER (PARTITION BY ...) in a subquery, filtered by rn <= N."]
+  manticore:
+    - status: supported
+      notes:
+        - "SELECT ... GROUP N BY grp WITHIN GROUP ORDER BY sort DESC ORDER BY ... returns up to N rows per group; WITHIN GROUP ORDER BY chooses which rows (without it: arbitrary, in practice the first by id)."
+        - "GROUP BY without N (or GROUP 0 BY) returns one representative row per group - plain columns are allowed next to aggregates, as in MySQL without ONLY_FULL_GROUP_BY."
+        - "LIMIT counts the returned rows, not groups; GROUPBY() returns the group key, COUNT(*) the size of the whole group."
+      sources: [{ evidence: observed, notes: "manticore 32.1.3" }]
+probes:
+  - engines: [mysql, mariadb, postgresql, sqlite]
+    setup:
+      - "CREATE TABLE probe_g (id INT PRIMARY KEY, cat INT, price INT)"
+      - "INSERT INTO probe_g (id, cat, price) VALUES (1, 1, 10), (2, 1, 30), (3, 1, 20), (4, 2, 5), (5, 2, 50), (6, 3, 7)"
+    statements: ["SELECT t.id FROM probe_g t WHERE (SELECT COUNT(*) FROM probe_g t2 WHERE t2.cat = t.cat AND t2.price > t.price) < 2"]
+    check: "SELECT COUNT(*) = 5 AND SUM(id) = 20 FROM probe_g t WHERE (SELECT COUNT(*) FROM probe_g t2 WHERE t2.cat = t.cat AND t2.price > t.price) < 2"
+    cleanup: ["DROP TABLE IF EXISTS probe_g"]
+  - engines: [sqlserver]
+    setup:
+      - "CREATE TABLE probe_g (id INT PRIMARY KEY, cat INT, price INT)"
+      - "INSERT INTO probe_g (id, cat, price) VALUES (1, 1, 10), (2, 1, 30), (3, 1, 20), (4, 2, 5), (5, 2, 50), (6, 3, 7)"
+    statements: ["SELECT id FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY cat ORDER BY price DESC) AS rn FROM probe_g) x WHERE rn <= 2"]
+    check: "SELECT CASE WHEN COUNT(*) = 5 AND SUM(id) = 20 THEN 1 ELSE 0 END FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY cat ORDER BY price DESC) AS rn FROM probe_g) x WHERE rn <= 2"
+    cleanup: ["DROP TABLE IF EXISTS probe_g"]
+  - engines: [manticore]
+    rows: 5
+    setup:
+      - "CREATE TABLE probe_g (title TEXT, cat INT, price INT)"
+      - "INSERT INTO probe_g (id, title, cat, price) VALUES (1, 'a', 1, 10), (2, 'b', 1, 30), (3, 'c', 1, 20), (4, 'd', 2, 5), (5, 'e', 2, 50), (6, 'f', 3, 7)"
+    statements: ["SELECT id, cat, price FROM probe_g GROUP 2 BY cat WITHIN GROUP ORDER BY price DESC ORDER BY cat ASC"]
+    cleanup: ["DROP TABLE IF EXISTS probe_g"]

@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=../../../schemas/query.schema.json
+id: introspection.list-databases
+title: List databases (server level above schemas)
+result:
+  order: database_name
+  columns:
+    - { name: database_name, type: string, nullable: false }
+    - { name: is_system, type: boolean, nullable: false, description: "Templates (PostgreSQL) and master/model/msdb/tempdb (SQL Server)." }
+    - { name: owner, type: string, nullable: true }
+    - { name: encoding, type: string, nullable: true }
+    - { name: collation, type: string, nullable: true }
+    - { name: size_bytes, type: integer, nullable: true, description: "NULL without the privilege to read it." }
+    - { name: is_current, type: boolean, nullable: false }
+    - { name: comment, type: string, nullable: true }
+variants:
+  - engine: postgresql
+    since: "12"
+    file: postgresql.sql
+    notes:
+      - "One connection per database: listing works from any database, but opening another one needs a new connection."
+      - "size_bytes only where the user has CONNECT privilege (pg_database_size)."
+      - "is_system marks template databases; postgres is an ordinary default database."
+  - engine: sqlserver
+    since: "14"
+    file: sqlserver.sql
+    notes:
+      - "Switch with USE <db> (session.use-schema is about schemas). size_bytes from sys.master_files (data + log)."
+      - "No database-level comments (extended properties live inside each database)."
+not_applicable:
+  mysql: "Databases are schemas - see introspection.list-schemas."
+  mariadb: "Databases are schemas - see introspection.list-schemas."
+  sqlite: "One database file per connection; attached databases are schemas (introspection.list-schemas)."
+  manticore: "One database (Manticore); see introspection.list-schemas."

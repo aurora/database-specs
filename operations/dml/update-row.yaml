@@ -42,3 +42,10 @@ implementations:
       template: "UPDATE {{table}} SET {{assignments}} WHERE {{#no_unique_key}}rowid = (SELECT rowid FROM {{table}} WHERE {{key_predicate}} LIMIT 1){{/no_unique_key}}{{^no_unique_key}}{{key_predicate}}{{/no_unique_key}}"
       caveats: ["Rowid tables can always be addressed by rowid (select it with the grid rows: stable as long as the row lives, unless VACUUM renumbers an implicit rowid). WITHOUT ROWID tables always have a primary key. UPDATE ... LIMIT only with SQLITE_ENABLE_UPDATE_DELETE_LIMIT."]
       sources: [{ evidence: tested }]
+  manticore:
+    - status: partial
+      template: "UPDATE {{table}} SET {{assignments}} WHERE {{key_predicate}}"
+      caveats:
+        - "Only attributes can be updated; a full-text field (TEXT) gives 'can not be updated (full-text field)'. To change one, REPLACE INTO the whole document (all columns) or REPLACE INTO t SET col = ... WHERE id = n."
+        - "The document id is always unique: use id = ? as key_predicate; no_unique_key never applies (there is no UPDATE ... LIMIT)."
+      sources: [{ evidence: tested }]

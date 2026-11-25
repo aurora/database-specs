@@ -77,6 +77,34 @@ variants:
       - "default_raw is the default expression as written, e.g. 'x', 1, CURRENT_TIMESTAMP."
       - "generation_kind from pragma_table_xinfo (generated columns since 3.31); generation_expression, collation and comment are not exposed by pragmas (only in the CREATE TABLE text) and are NULL."
 
+  - engine: manticore
+    file: manticore.sql
+    inline_parameters: { table: identifier }
+    transform:
+      schema_name: { param: schema }
+      table_name: { param: table }
+      column_name: { column: Field }
+      ordinal_position: { row_number: true }
+      data_type: { column: Type }
+      is_nullable: { column: Type, equals: json }
+      default_raw: { const: null }
+      is_auto_increment: { column: Field, equals: id }
+      generation_expression: { const: null }
+      generation_kind: { const: null }
+      collation: { const: null }
+      comment: { const: null }
+    extra_columns:
+      - name: properties
+        column: Properties
+        description: "Space-separated flags: indexed / stored (full-text fields), attribute, columnar, knn, ... Empty for plain attributes."
+    notes:
+      - "The implicit id column (bigint, document id) always comes first; an INSERT without id generates one (is_auto_increment)."
+      - "data_type is Manticore's type name as DESCRIBE reports it (uint for INT, mva for MULTI, ...); SHOW CREATE TABLE spells some differently (integer, multi)."
+      - "A text column is a full-text field: 'indexed' = searchable with MATCH(), 'stored' = returned by SELECT. string columns are attributes (filterable, sortable); 'indexed attribute' makes one also a full-text field."
+      - "Attributes have no NULL: missing values read as 0 / empty string; only json attributes return NULL (is_nullable)."
+      - "Percolate tables report id, query, tags, filters (the stored queries); distributed tables return (Agent, Type) rows instead - the transform fails for them, list their columns from a local table."
+    sources: [{ evidence: observed, notes: "manticore 32.1.3" }]
+
 gaps:
   - "MySQL < 5.7 (no GENERATION_EXPRESSION column)."
   - "PostgreSQL < 12 (no attgenerated)."

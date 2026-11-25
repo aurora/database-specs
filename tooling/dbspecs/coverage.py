@@ -180,7 +180,8 @@ def matrix(specs: Specs) -> dict:
         cells = {}
         for e in engines:
             if e not in syn["grammars"]:
-                cells[e] = Cell("⬜", "no grammar")
+                na = syn.get("not_applicable", {})
+                cells[e] = Cell("➖", na[e]) if e in na else Cell("⬜", "no grammar")
                 continue
             cells[e] = _tested(res.outcomes(e, "syntax", lambda i, s=sid: i.startswith(s + "#")),
                                Cell("📄", "examples not run"))

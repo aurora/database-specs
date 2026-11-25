@@ -40,3 +40,9 @@ implementations:
       transactional: true
       caveats: ["References in other tables' foreign keys, triggers and views are rewritten (legacy_alter_table = OFF, default since 3.26)."]
       sources: [{ evidence: tested }]
+  manticore:
+    - status: supported
+      template: "ALTER TABLE {{table}} RENAME {{new_name}}"
+      transactional: false
+      caveats: ["RENAME TO new_name works as well (observed 32.1.3)."]
+      sources: [{ evidence: tested }]

@@ -27,6 +27,8 @@ support:
       status: supported
       notes:
         - "INSERT, UPDATE, DELETE (also UPSERT). Not usable inside triggers or as a subquery/CTE; the order of returned rows is not guaranteed."
+  manticore:
+    - status: unsupported
 probes:
   - engines: [mysql, mariadb, postgresql, sqlite]
     setup: ["CREATE TEMPORARY TABLE probe_returning (id INT)"]
@@ -36,3 +38,9 @@ probes:
     setup: ["CREATE TABLE #probe_returning (id INT)"]
     statements: ["INSERT INTO #probe_returning (id) VALUES (1) RETURNING id"]
     cleanup: ["DROP TABLE IF EXISTS #probe_returning"]
+  - engines: [manticore]
+    setup:
+      - "CREATE TABLE probe_mt (title TEXT, v INT)"
+    statements:
+      - "INSERT INTO probe_mt (id, v) VALUES (1, 1) RETURNING id"
+    cleanup: ["DROP TABLE IF EXISTS probe_mt"]

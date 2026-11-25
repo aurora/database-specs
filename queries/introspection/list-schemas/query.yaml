@@ -45,3 +45,15 @@ variants:
     notes:
       - "Schemas are the attached databases (main, ATTACH ... AS name, and temp once a temporary object exists); temp is flagged is_system."
       - "default_charset is the text encoding of the main database (UTF-8 / UTF-16le / UTF-16be)."
+  - engine: manticore
+    file: manticore.sql
+    transform:
+      schema_name: { column: Database }
+      is_system: { column: Database, equals: information_schema }
+      owner: { const: null }
+      default_charset: { const: null }
+      default_collation: { const: null }
+      comment: { const: null }
+    notes:
+      - "There is one database, Manticore (DATABASE() returns it); information_schema is a small emulation for MySQL tools (only a few columns are real, others return the string 'null'). All tables live in Manticore."
+    sources: [{ evidence: observed, notes: "manticore 32.1.3" }]

@@ -68,3 +68,7 @@ implementations:
       template: "SELECT m.sql || ';' AS ddl FROM {{schema}}.sqlite_master m WHERE m.type = 'trigger' AND m.name = {{trigger_name}}"
       caveats: ["The original text; the body contains ';' - execute as one statement or a script, never split on ';'."]
       sources: [{ evidence: tested }]
+  manticore:
+    - status: unsupported
+      caveats: ["No triggers."]
+      sources: [{ evidence: docs }]

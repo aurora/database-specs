@@ -1,0 +1,99 @@
+# yaml-language-server: $schema=../../schemas/test.schema.json
+id: table-editing-manticore
+description: >
+  Table editor operations on Manticore (no defaults, nullability, indexes, foreign keys or column
+  renames exist), each verified by DESCRIBE / SHOW TABLES or SQL.
+engines: [manticore]
+
+setup:
+  manticore:
+    - "CREATE TABLE t_ed (title TEXT, n INT)"
+
+cleanup:
+  manticore:
+    - DROP TABLE IF EXISTS t_ed
+    - DROP TABLE IF EXISTS t_ed2
+
+steps:
+  - operation: ddl.add-column
+    params: { table: t_ed, column: qty, column_definition: bigint }
+  - operation: ddl.add-column
+    params: { table: t_ed, column: body, column_definition: text }
+  - query: introspection.list-columns
+    params: { schema: "{{schema}}", table: t_ed }
+    expect:
+      row_count: 5
+      rows:
+        - match: { column_name: body }
+          values: { ordinal_position: 3, data_type: text, properties: indexed stored }
+        - match: { column_name: qty }
+          values: { ordinal_position: 5, data_type: bigint }
+  - operation: ddl.drop-column
+    params: { table: t_ed, column: body }
+  - operation: ddl.change-column-type
+    params: { table: t_ed, column: n, new_type: bigint }
+  - query: introspection.list-columns
+    params: { schema: "{{schema}}", table: t_ed }
+    expect:
+      row_count: 4
+      rows:
+        - match: { column_name: n }
+          values: { data_type: bigint }
+        - match: { column_name: body }
+          count: 0
+
+  - operation: dml.insert-row
+    params: { table: t_ed, columns: "id, title, n, qty", values: "1, 'red apple', 3, 10" }
+  - operation: dml.insert-row
+    params: { table: t_ed, columns: "title, n", values: "'generated id', 4" }
+  - sql: { manticore: "SELECT id, title, n, qty FROM t_ed ORDER BY id ASC" }
+    expect:
+      row_count: 2
+      rows:
+        - match: { id: 1 }
+          values: { title: red apple, n: 3, qty: 10 }
+        - match: { title: generated id }
+          values: { qty: 0 }
+  - operation: dml.update-row
+    params: { table: t_ed, assignments: "n = 5, qty = 11", key_predicate: id = 1 }
+  - sql: { manticore: "SELECT n, qty FROM t_ed WHERE id = 1" }
+    expect:
+      rows:
+        - match: {}
+          values: { n: 5, qty: 11 }
+  - operation: dml.delete-row
+    params: { table: t_ed, key_predicate: id = 1 }
+
+  - operation: query.browse-table
+    params: { table: t_ed, order_by: id ASC, limit: 10, offset: 0 }
+    expect:
+      row_count: 1
+      rows:
+        - match: { title: generated id }
+          values: { n: 4 }
+
+  - operation: ddl.rename-table
+    params: { table: t_ed, new_name: t_ed2 }
+  - query: introspection.list-tables
+    params: { schema: "{{schema}}" }
+    expect:
+      rows:
+        - match: { table_name: t_ed2 }
+          values: { table_type: table }
+        - match: { table_name: t_ed }
+          count: 0
+  - operation: ddl.truncate-table
+    params: { table: t_ed2 }
+  - sql: { manticore: "SELECT COUNT(*) AS c FROM t_ed2" }
+    expect:
+      rows:
+        - match: {}
+          values: { c: 0 }
+  - operation: ddl.drop-table
+    params: { table: t_ed2 }
+  - query: introspection.list-tables
+    params: { schema: "{{schema}}" }
+    expect:
+      rows:
+        - match: { table_name: t_ed2 }
+          count: 0

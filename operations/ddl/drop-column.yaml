@@ -40,3 +40,9 @@ implementations:
       transactional: true
       caveats: ["Not possible for PRIMARY KEY / UNIQUE / indexed columns, columns in foreign keys, generated column expressions, views, triggers or CHECK constraints - rebuild the table instead."]
       sources: [{ evidence: tested }]
+  manticore:
+    - status: supported
+      template: "ALTER TABLE {{table}} DROP COLUMN {{column}}"
+      transactional: false
+      caveats: ["Works for attributes and full-text fields; the id column cannot be dropped."]
+      sources: [{ evidence: tested }]

@@ -1,0 +1,57 @@
+/* Manticore - SELECT with full-text search, grouping and facets (curated subset)
+   Built-ins: identifier, string_literal, integer, number.
+   The MATCH() argument is its own language: syntax fulltext.manticore-query. */
+
+select ::= 'SELECT' select_item ( ',' select_item )*
+           'FROM' identifier ( ',' identifier )*
+           where_clause?
+           group_clause?
+           order_clause?
+           limit_clause?
+           option_clause?
+           facet_clause*
+
+select_item ::= '*' | value_expr ( 'AS'? identifier )?
+
+/* MATCH() may appear once, as one item of the top-level AND chain only:
+   not in OR, not under NOT, not in parentheses. */
+where_clause ::= 'WHERE' ( condition_term ( 'AND' condition_term )* 'AND' )? match_call ( 'AND' condition_term )*
+               | 'WHERE' condition
+
+match_call ::= 'MATCH' '(' string_literal ')'
+
+condition ::= condition_term ( 'OR' condition_term )*
+condition_term ::= condition_factor ( 'AND' condition_factor )*
+condition_factor ::= 'NOT'? ( '(' condition ')' | predicate )
+
+predicate ::= value_expr ( comparison_operator value_expr
+                         | 'NOT'? 'IN' '(' literal ( ',' literal )* ')'
+                         | 'NOT'? 'BETWEEN' literal 'AND' literal
+                         | 'IS' 'NOT'? 'NULL' )
+
+comparison_operator ::= '=' | '!=' | '<>' | '<' | '<=' | '>' | '>='
+
+value_expr ::= function_call | identifier | literal
+
+/* WEIGHT(), COUNT(*), ANY(mva), HIGHLIGHT(), GROUPBY(), ... */
+function_call ::= identifier '(' ( '*' | value_expr ( ',' value_expr )* )? ')'
+
+literal ::= string_literal | '-'? number
+
+/* GROUP n BY: up to n rows per group; WITHIN GROUP ORDER BY picks which rows */
+group_clause ::= 'GROUP' integer? 'BY' identifier ( ',' identifier )*
+                 ( 'WITHIN' 'GROUP' 'ORDER' 'BY' order_item ( ',' order_item )* )?
+                 ( 'HAVING' condition )?
+
+order_clause ::= 'ORDER' 'BY' order_item ( ',' order_item )*
+
+/* the direction is mandatory ('no sort order defined' otherwise) */
+order_item ::= value_expr ( 'ASC' | 'DESC' )
+
+limit_clause ::= 'LIMIT' integer ( ( ',' | 'OFFSET' ) integer )?
+
+option_clause ::= 'OPTION' option ( ',' option )*
+option ::= identifier '=' ( identifier | literal )
+
+/* each FACET returns an extra result set (value, count(*)) */
+facet_clause ::= 'FACET' identifier ( 'AS' identifier )? order_clause? limit_clause?

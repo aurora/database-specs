@@ -35,3 +35,8 @@ implementations:
       template: "DELETE FROM {{table}} WHERE {{#no_unique_key}}rowid = (SELECT rowid FROM {{table}} WHERE {{key_predicate}} LIMIT 1){{/no_unique_key}}{{^no_unique_key}}{{key_predicate}}{{/no_unique_key}}"
       caveats: ["See dml.update-row for rowid."]
       sources: [{ evidence: tested }]
+  manticore:
+    - status: supported
+      template: "DELETE FROM {{table}} WHERE {{key_predicate}}"
+      caveats: ["Use id = ? as key_predicate (always unique); there is no DELETE ... LIMIT."]
+      sources: [{ evidence: tested }]

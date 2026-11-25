@@ -45,3 +45,6 @@ variants:
     file: sqlite.sql
     notes:
       - "There is no reverse lookup: every table of main.sqlite_master is scanned with pragma_foreign_key_list. Constraint names are synthetic (fk_<table>_<id>) as in list-foreign-keys."
+
+not_applicable:
+  manticore: "No foreign keys (no constraints at all)."

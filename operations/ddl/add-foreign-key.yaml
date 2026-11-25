@@ -43,3 +43,7 @@ implementations:
   sqlite:
     - status: unsupported
       notes: ["No ALTER for this: rebuild the table (see the emulated steps of ddl.change-column-type)."]
+  manticore:
+    - status: unsupported
+      caveats: ["No foreign keys."]
+      sources: [{ evidence: observed }]

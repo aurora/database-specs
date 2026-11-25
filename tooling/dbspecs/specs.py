@@ -146,3 +146,51 @@ def quote_literal(lexical: dict, value: str) -> str:
                 value = value.replace("'", "''")
             return f"'{value}'"
     raise ValueError(f"no plain string literal rule in lexical spec {lexical['id']}")
+
+
+def query_sql(var: dict, sql: str, lexical: dict, params: dict) -> tuple[str, dict]:
+    """Substitute a variant's inline_parameters (quoted) into the SQL; returns (sql, remaining params)."""
+    inline = var.get("inline_parameters", {})
+    if not inline:
+        return sql, params
+    values = {}
+    for name, kind in inline.items():
+        value = str(params[name])
+        values[name] = quote_identifier(lexical, value) if kind == "identifier" else quote_literal(lexical, value)
+    return render(sql, values), {k: v for k, v in params.items() if k not in inline}
+
+
+def apply_transform(var: dict, raw_rows: list[dict], params: dict) -> list[dict]:
+    """Contract rows from engine-native rows per the variant's transform (reference implementation)."""
+    rules = var.get("transform")
+    if not rules:
+        return raw_rows
+    out = []
+    for n, raw in enumerate(raw_rows, 1):
+        row = {}
+        for name, rule in rules.items():
+            if "column" in rule:
+                v = raw[rule["column"]]
+                if isinstance(v, (bytes, bytearray)):
+                    v = v.decode()
+                if "map" in rule:
+                    if v not in rule["map"]:
+                        raise ValueError(f"{name}: raw value {v!r} of {rule['column']} not in map")
+                    v = rule["map"][v]
+                elif "equals" in rule:
+                    v = v == rule["equals"]
+                elif "contains" in rule:
+                    v = rule["contains"] in str(v or "").split()
+                elif rule.get("empty_as_null") and v == "":
+                    v = None
+            elif "param" in rule:
+                v = params[rule["param"]]
+            elif "const" in rule:
+                v = rule["const"]
+            else:
+                v = n
+            row[name] = v
+        for extra in var.get("extra_columns", []):
+            row[extra["name"]] = raw[extra["column"]]
+        out.append(row)
+    return out

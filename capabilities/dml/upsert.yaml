@@ -1,0 +1,79 @@
+# yaml-language-server: $schema=../../schemas/capability.schema.json
+id: dml.upsert
+title: Insert-or-update in one statement (upsert)
+description: >
+  Insert a row or update the existing one on a key conflict, atomically. The syntax differs per
+  engine; probes check that an existing row is really updated.
+related: [dml.returning]
+support:
+  mysql:
+    - status: supported
+      notes:
+        - "INSERT ... ON DUPLICATE KEY UPDATE col = ...; reacts to any PRIMARY KEY / UNIQUE conflict (not a chosen one)."
+        - "New values: VALUES(col) is deprecated since 8.0.20; use a row alias: INSERT ... VALUES (...) AS new ON DUPLICATE KEY UPDATE col = new.col."
+        - "Affected rows: 1 = inserted, 2 = updated, 0 = unchanged. REPLACE INTO deletes and re-inserts (fires DELETE triggers, cascades)."
+  mariadb:
+    - status: supported
+      notes: ["INSERT ... ON DUPLICATE KEY UPDATE col = VALUE(col) / VALUES(col); no row alias syntax."]
+  postgresql:
+    - since: "9.5"
+      status: supported
+      notes:
+        - "INSERT ... ON CONFLICT (cols) | ON CONSTRAINT name DO UPDATE SET col = EXCLUDED.col [WHERE ...] | DO NOTHING."
+        - "MERGE since 15 (with RETURNING since 17) for multi-row / conditional logic; ON CONFLICT is the race-free choice."
+  sqlserver:
+    - status: supported
+      notes:
+        - "MERGE target USING source ON ... WHEN MATCHED THEN UPDATE ... WHEN NOT MATCHED THEN INSERT ...; (the terminating ';' is required)."
+        - "Not race-free by default: use MERGE target WITH (HOLDLOCK) or SERIALIZABLE, or UPDATE ... IF @@ROWCOUNT = 0 INSERT ... in a transaction."
+  sqlite:
+    - until: "3.24"
+      status: partial
+      notes: ["Only INSERT OR REPLACE (delete + insert)."]
+    - since: "3.24"
+      status: supported
+      notes:
+        - "INSERT ... ON CONFLICT (cols) DO UPDATE SET col = excluded.col | DO NOTHING (PostgreSQL syntax). The conflict target is optional for the last clause since 3.35."
+        - "INSERT OR REPLACE deletes the old row (new rowid, cascades) - not an update."
+  manticore:
+    - status: partial
+      notes:
+        - "REPLACE INTO t (id, ...) VALUES (...) replaces the whole document: columns not listed get their defaults (full-text fields become empty)."
+        - "REPLACE INTO t SET col = value WHERE id = n replaces only the given attributes (partial replace), but does not insert a missing document."
+        - "No INSERT ... ON DUPLICATE KEY UPDATE; the key is always the document id."
+      sources: [{ evidence: observed, notes: "manticore 32.1.3" }]
+probes:
+  - engines: [mysql, mariadb]
+    setup:
+      - "CREATE TEMPORARY TABLE probe_upsert (id INT PRIMARY KEY, v INT)"
+      - "INSERT INTO probe_upsert (id, v) VALUES (1, 1)"
+    statements: ["INSERT INTO probe_upsert (id, v) VALUES (1, 2) ON DUPLICATE KEY UPDATE v = 2"]
+    check: "SELECT v = 2 FROM probe_upsert WHERE id = 1"
+    cleanup: ["DROP TABLE IF EXISTS probe_upsert"]
+  - engines: [postgresql, sqlite]
+    setup:
+      - "CREATE TEMPORARY TABLE probe_upsert (id INT PRIMARY KEY, v INT)"
+      - "INSERT INTO probe_upsert (id, v) VALUES (1, 1)"
+    statements: ["INSERT INTO probe_upsert (id, v) VALUES (1, 2) ON CONFLICT (id) DO UPDATE SET v = excluded.v"]
+    check: "SELECT v = 2 FROM probe_upsert WHERE id = 1"
+    cleanup: ["DROP TABLE IF EXISTS probe_upsert"]
+  - engines: [sqlserver]
+    setup:
+      - "CREATE TABLE #probe_upsert (id INT PRIMARY KEY, v INT)"
+      - "INSERT INTO #probe_upsert (id, v) VALUES (1, 1)"
+    statements:
+      - |
+        MERGE #probe_upsert WITH (HOLDLOCK) AS t
+        USING (VALUES (1, 2)) AS s (id, v) ON t.id = s.id
+        WHEN MATCHED THEN UPDATE SET v = s.v
+        WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v);
+    check: "SELECT CASE WHEN v = 2 THEN 1 ELSE 0 END FROM #probe_upsert WHERE id = 1"
+    cleanup: ["DROP TABLE IF EXISTS #probe_upsert"]
+  - engines: [manticore]
+    setup:
+      - "CREATE TABLE probe_mt (title TEXT, v INT)"
+      - "INSERT INTO probe_mt (id, title, v) VALUES (1, 'a', 1)"
+    statements:
+      - "REPLACE INTO probe_mt (id, v) VALUES (1, 2)"
+    check: "SELECT v = 2 FROM probe_mt WHERE id = 1"
+    cleanup: ["DROP TABLE IF EXISTS probe_mt"]

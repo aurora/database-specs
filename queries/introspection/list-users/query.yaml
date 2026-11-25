@@ -1,0 +1,40 @@
+# yaml-language-server: $schema=../../../schemas/query.schema.json
+id: introspection.list-users
+title: List users, roles and logins
+description: Server-level accounts (MySQL/MariaDB accounts, PostgreSQL roles, SQL Server logins and server roles).
+result:
+  order: user_name, host
+  columns:
+    - { name: user_name, type: string, nullable: false }
+    - { name: host, type: string, nullable: true, description: "MySQL / MariaDB: the account's host part ('%' = any)." }
+    - { name: kind, type: string, nullable: false, enum: [user, role, login] }
+    - { name: is_system, type: boolean, nullable: false, description: "Built-in accounts / roles (mysql.sys, pg_* roles, fixed server roles, ##...##)." }
+    - { name: can_login, type: boolean, nullable: true }
+    - { name: is_superuser, type: boolean, nullable: true }
+    - { name: is_locked, type: boolean, nullable: true, description: "Account locked / login disabled." }
+    - { name: auth_method, type: string, nullable: true, description: "MySQL/MariaDB auth plugin, SQL Server login type." }
+variants:
+  - engine: mysql
+    since: "5.7"
+    file: mysql.sql
+    notes:
+      - "Reads mysql.user (needs SELECT on the mysql schema). Roles (8.0+) are stored as locked accounts and reported as user; mysql.role_edges tells which accounts are granted as roles."
+  - engine: mariadb
+    since: "10.6"
+    file: mariadb.sql
+    notes: ["mysql.user is a view over mysql.global_priv; roles have is_role = 'Y' and an empty host. The lock flag only exists in global_priv's JSON (account_locked)."]
+  - engine: postgresql
+    since: "12"
+    file: postgresql.sql
+    notes: ["Users and groups are both roles: kind user = role with LOGIN. Predefined pg_* roles are is_system."]
+  - engine: sqlserver
+    since: "14"
+    file: sqlserver.sql
+    notes:
+      - "Server principals: logins (SQL, Windows user / group) and server roles. Database users are separate per database (sys.database_principals)."
+      - "Needs VIEW ANY DEFINITION (or sysadmin) to see all logins."
+not_applicable:
+  sqlite: "No users or authentication."
+
+gaps:
+  - "Manticore: SHOW USERS (username) and SHOW PERMISSIONS exist since authentication was added; not mapped yet because they need a server with auth enabled (32.1.3 crashed on GRANT to an unknown user with auth disabled)."

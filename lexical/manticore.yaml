@@ -1,0 +1,50 @@
+# yaml-language-server: $schema=../schemas/lexical.schema.json
+id: manticore
+description: >
+  Lexical rules of Manticore's SQL dialect (SphinxQL heritage). MySQL-like, but smaller; the
+  argument of MATCH() is a string in the full-text query language (syntax fulltext.manticore-query).
+
+identifiers:
+  quotes:
+    - { open: "`", close: "`", escape: [double] }
+  preferred_quote: "`"
+  unquoted_pattern: '^[A-Za-z_][A-Za-z0-9_]*$'
+  case_folding: lower
+  notes:
+    - "Table and column names are case-insensitive and stored lower case."
+
+strings:
+  - kind: string
+    open: "'"
+    close: "'"
+    escape: [backslash]
+    notes: ["Backslash escapes; inside MATCH() the full-text query language has its own escaping on top (\\\\ for its special characters)."]
+  - kind: string
+    open: '"'
+    close: '"'
+    escape: [backslash]
+
+comments:
+  - { kind: block, open: "/*", close: "*/", nestable: false }
+
+operators: ["!=", "<>", "<=", ">=", "=", "AND", "OR", "NOT", "IN", "BETWEEN"]
+
+statements:
+  terminator: ";"
+  notes:
+    - "Only /* */ comments: '-- comment' is a syntax error (observed 32.1.3); a client must strip line comments before sending."
+    - "No client-side DELIMITER and no stored programs: splitting scripts on ';' outside strings and comments is enough."
+    - "No server-side placeholders: '?' is a syntax error; clients must inline escaped literals (pymysql / libmariadb do this client-side)."
+
+embedded_languages:
+  - context: "String argument of MATCH() in WHERE"
+    syntax: fulltext.manticore-query
+    notes: ["Also used by the HTTP JSON API (query_string) and by percolate queries (INSERT INTO pq (query) VALUES ('...'))."]
+
+keywords:
+  notes:
+    - "No keyword list on the server. keywords/manticore/ holds the reserved words found by probing candidate words as column names."
+
+sources:
+  - evidence: observed
+    url: https://manual.manticoresearch.com/Searching/Full_text_matching/Operators

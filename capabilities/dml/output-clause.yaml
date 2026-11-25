@@ -21,6 +21,8 @@ support:
   postgresql:
     - status: unsupported
       notes: ["Use RETURNING; PostgreSQL 18 adds OLD/NEW in RETURNING."]
+  manticore:
+    - status: unsupported
 probes:
   - engines: [sqlserver]
     setup: ["CREATE TABLE #probe_output (id INT)"]
@@ -30,3 +32,9 @@ probes:
     setup: ["CREATE TEMPORARY TABLE probe_output (id INT)"]
     statements: ["INSERT INTO probe_output (id) OUTPUT inserted.id VALUES (1)"]
     cleanup: ["DROP TABLE IF EXISTS probe_output"]
+  - engines: [manticore]
+    setup:
+      - "CREATE TABLE probe_mt (title TEXT, v INT)"
+    statements:
+      - "INSERT INTO probe_mt (id, v) OUTPUT inserted.id VALUES (1, 1)"
+    cleanup: ["DROP TABLE IF EXISTS probe_mt"]

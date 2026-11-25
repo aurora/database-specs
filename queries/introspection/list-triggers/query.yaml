@@ -56,3 +56,6 @@ variants:
     notes:
       - "Reads main.sqlite_master. Timing, event and WHEN condition are parsed from the stored CREATE TRIGGER text; action_statement is the BEGIN ... END block."
       - "Always row level (FOR EACH ROW is optional and implied); cannot be disabled."
+
+not_applicable:
+  manticore: "No triggers."

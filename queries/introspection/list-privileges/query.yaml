@@ -1,0 +1,49 @@
+# yaml-language-server: $schema=../../../schemas/query.schema.json
+id: introspection.list-privileges
+title: List the privileges granted to a user or role
+description: >
+  Directly granted privileges of one grantee, one row per privilege and object. Privileges
+  inherited through roles / groups are not expanded (see the notes per engine).
+parameters:
+  - { name: grantee, type: string, description: "User / role / login name (MySQL/MariaDB: user part of the account, all hosts)." }
+result:
+  order: grantee_host, object_type, schema_name, object_name, column_name, privilege
+  columns:
+    - { name: grantee, type: string, nullable: false }
+    - { name: grantee_host, type: string, nullable: true }
+    - { name: object_type, type: string, nullable: false, enum: [global, database, schema, table, column, routine, sequence] }
+    - { name: schema_name, type: string, nullable: true }
+    - { name: object_name, type: string, nullable: true, description: "Routines: name(identity arguments) where overloading exists." }
+    - { name: column_name, type: string, nullable: true }
+    - { name: privilege, type: string, nullable: false, description: "Upper case, as the engine names it (SELECT, EXECUTE, CREATE ROUTINE, CONNECT, ...)." }
+    - { name: is_grantable, type: boolean, nullable: false }
+    - { name: is_denied, type: boolean, nullable: false, description: "SQL Server DENY entries; false elsewhere." }
+variants:
+  - engine: mysql
+    since: "5.7"
+    file: mysql.sql
+    notes:
+      - "information_schema.*_PRIVILEGES plus mysql.procs_priv for routines. A schema-level row is a database grant (db.*)."
+      - "USAGE means 'no global privileges'. Privileges of granted roles (8.0) are not expanded."
+      - "The grant option belongs to a level (global / schema / table / routine), not to a single privilege: WITH GRANT OPTION on any table privilege makes the column privileges of that table grantable too (observed)."
+  - engine: mariadb
+    since: "10.6"
+    file: mysql.sql
+    notes: ["Same query as MySQL; role privileges are not expanded."]
+  - engine: postgresql
+    since: "12"
+    file: postgresql.sql
+    notes:
+      - "From the ACLs of the current database, its schemas, relations, columns and functions (system schemas excluded). Objects without an explicit ACL use the default ACL, so owners appear with their implicit privileges."
+      - "PUBLIC can be queried as grantee 'PUBLIC'. Superusers bypass all checks; role memberships are not expanded."
+  - engine: sqlserver
+    since: "14"
+    file: sqlserver.sql
+    notes:
+      - "Database permissions (database, schema, object, column) of a database principal plus server permissions of a login with that name."
+      - "Fixed role memberships (db_owner, sysadmin, ...) grant implicit permissions that are not listed."
+not_applicable:
+  sqlite: "No users or privileges."
+gaps:
+  - "Manticore: SHOW PERMISSIONS (username, action, target, allow, budget); not mapped yet (needs a server with auth enabled)."
+  - "Role memberships (who is member of which role) need their own query."

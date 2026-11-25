@@ -1,0 +1,36 @@
+/* MySQL / MariaDB - SELECT with MATCH ... AGAINST (curated subset)
+   Built-ins: identifier, string_literal, integer, number.
+   The column list of MATCH must equal the columns of one FULLTEXT index. */
+
+select ::= 'SELECT' select_item ( ',' select_item )*
+           'FROM' identifier
+           ( 'WHERE' condition )?
+           ( 'ORDER' 'BY' order_item ( ',' order_item )* )?
+           ( 'LIMIT' integer ( ( ',' | 'OFFSET' ) integer )? )?
+
+select_item ::= '*' | value_expr ( 'AS'? identifier )?
+
+/* unlike Manticore, MATCH ... AGAINST is an ordinary expression: OR, NOT and several of them */
+condition ::= condition_term ( 'OR' condition_term )*
+condition_term ::= condition_factor ( 'AND' condition_factor )*
+condition_factor ::= 'NOT'? ( '(' condition ')' | predicate )
+
+predicate ::= match_against ( comparison_operator value_expr )?
+            | value_expr comparison_operator value_expr
+
+match_against ::= 'MATCH' '(' identifier ( ',' identifier )* ')'
+                  'AGAINST' '(' string_literal search_modifier? ')'
+
+search_modifier ::= 'IN' 'NATURAL' 'LANGUAGE' 'MODE' ( 'WITH' 'QUERY' 'EXPANSION' )?
+                  | 'IN' 'BOOLEAN' 'MODE'
+                  | 'WITH' 'QUERY' 'EXPANSION'
+
+comparison_operator ::= '=' | '!=' | '<>' | '<' | '<=' | '>' | '>='
+
+value_expr ::= match_against | function_call | identifier | literal
+
+function_call ::= identifier '(' ( '*' | value_expr ( ',' value_expr )* )? ')'
+
+literal ::= string_literal | '-'? number
+
+order_item ::= value_expr ( 'ASC' | 'DESC' )?

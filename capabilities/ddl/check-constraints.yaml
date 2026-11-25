@@ -25,6 +25,9 @@ support:
   sqlite:
     - status: supported
       notes: ["PRAGMA ignore_check_constraints = ON disables checking per connection."]
+  manticore:
+    - status: unsupported
+      notes: ["CREATE TABLE has no CHECK clause (parse error); Manticore tables have no constraints besides the unique document id."]
 probes:
   - engines: [mysql, mariadb, postgresql, sqlite]
     invert: true
@@ -36,3 +39,7 @@ probes:
     setup: ["CREATE TABLE #probe_check (a INT CHECK (a > 0))"]
     statements: ["INSERT INTO #probe_check (a) VALUES (-1)"]
     cleanup: ["DROP TABLE IF EXISTS #probe_check"]
+  - engines: [manticore]
+    statements:
+      - "CREATE TABLE probe_mt (a INT CHECK (a > 0))"
+    cleanup: ["DROP TABLE IF EXISTS probe_mt"]

@@ -28,6 +28,7 @@ variants:
 not_applicable:
   sqlserver: "No system view lists keywords; probed reserved words are in keywords/sqlserver/."
   sqlite: "Keywords are only available through the C API (sqlite3_keyword_name); lists in keywords/sqlite/."
+  manticore: "No keyword list on the server; probed reserved words are in keywords/manticore/."
 
 gaps:
   - "MySQL < 8.0.13: no server-side list; needs a static list per version."

@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=../../schemas/test.schema.json
+id: session-admin
+description: Process list and cancelling / terminating a busy second session.
+engines: [mysql, mariadb, postgresql, sqlserver]
+
+steps:
+  - query: session.list-processes
+    expect:
+      rows:
+        - match: { is_current: true }
+          matches: { query: "(?i)processlist|pg_stat_activity|dm_exec_sessions" }
+
+  # cancel only the running statement
+  - background:
+      mysql: SELECT SLEEP(20)
+      mariadb: SELECT SLEEP(20)
+      postgresql: SELECT pg_sleep(20)
+      sqlserver: WAITFOR DELAY '00:00:20'
+  - operation: session.cancel-query
+    params: { session_id: "{{background_session}}" }
+  - await_background: { within_seconds: 10 }
+
+  # end the whole session
+  - background:
+      mysql: SELECT SLEEP(20)
+      mariadb: SELECT SLEEP(20)
+      postgresql: SELECT pg_sleep(20)
+      sqlserver: WAITFOR DELAY '00:00:20'
+  - operation: session.cancel-query
+    params: { session_id: "{{background_session}}", terminate: true }
+  - await_background: { within_seconds: 10, expect_error: true }

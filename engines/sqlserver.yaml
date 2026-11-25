@@ -12,6 +12,7 @@ catalogs: [sys, INFORMATION_SCHEMA]
 identification:
   version_query: SELECT CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(128))
   version_pattern: '^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)'
+  session_id_query: SELECT @@SPID
   notes:
     - "ProductVersion has four parts (e.g. 16.0.4135.4); the first three are used for version ranges."
     - "Major version -> product: 13 = 2016, 14 = 2017, 15 = 2019, 16 = 2022, 17 = 2025."

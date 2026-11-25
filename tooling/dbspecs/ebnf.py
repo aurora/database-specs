@@ -29,7 +29,7 @@ from functools import lru_cache
 
 from .specs import in_range
 
-BUILTINS = ("identifier", "string_literal", "integer", "expression")
+BUILTINS = ("identifier", "string_literal", "integer", "number", "expression")
 
 
 class GrammarError(ValueError):
@@ -273,7 +273,7 @@ class Tok:
     text: str
 
 
-_PUNCT2 = ("<=", ">=", "<>", "!=", "::", "||", "->")
+_PUNCT2 = ("<=", ">=", "<>", "!=", "::", "||", "->", "<<", ">>")
 
 
 def _active(entry: dict) -> bool:
@@ -284,7 +284,12 @@ def _active(entry: dict) -> bool:
     return when is None or when.get("effect") == "disables"
 
 
-def tokenize(sql: str, lexical: dict) -> list[Tok]:
+DEFAULT_WORD = r"[A-Za-z_][A-Za-z0-9_$]*"
+
+
+def tokenize(sql: str, lexical: dict, word_pattern: str | None = None) -> list[Tok]:
+    """word_pattern overrides what a bare word is (e.g. for languages embedded in strings)."""
+    word_re = re.compile(word_pattern or DEFAULT_WORD)
     ident_quotes = [q for q in lexical["identifiers"]["quotes"] if _active(q)]
     string_quotes = [q for q in lexical["strings"] if _active(q) and q.get("kind") == "string"]
     line_comments = [c["open"].strip() for c in lexical["comments"] if c["kind"] == "line"]
@@ -335,10 +340,10 @@ def tokenize(sql: str, lexical: dict) -> list[Tok]:
         if q:
             out.append(Tok("string", read_quoted(q)))
             continue
-        m = re.match(r"[A-Za-z_][A-Za-z0-9_$]*", sql[i:])
-        if m:
+        m = word_re.match(sql, i)
+        if m and m.end() > i:
             out.append(Tok("word", m.group(0)))
-            i += m.end()
+            i = m.end()
             continue
         m = re.match(r"\d+(\.\d+)?", sql[i:])
         if m:
@@ -380,6 +385,8 @@ def matches(grammar: Grammar, start: str, tokens: list[Tok]) -> bool:
             return frozenset({pos + 1}) if t.kind == "string" else frozenset()
         if name == "integer":
             return frozenset({pos + 1}) if t.kind == "number" and t.text.isdigit() else frozenset()
+        if name == "number":
+            return frozenset({pos + 1}) if t.kind == "number" else frozenset()
         if name == "expression":
             ends, depth = set(), 0
             for j in range(pos, len(toks)):

@@ -48,3 +48,7 @@ implementations:
   sqlite:
     - status: unsupported
       notes: ["No ALTER for this: rebuild the table (see the emulated steps of ddl.change-column-type)."]
+  manticore:
+    - status: unsupported
+      caveats: ["No column defaults: missing attribute values are 0 / empty."]
+      sources: [{ evidence: observed, notes: "CREATE TABLE ... DEFAULT is a syntax error (32.1.3)" }]

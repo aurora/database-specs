@@ -59,6 +59,32 @@
           "since": { "$ref": "common.schema.json#/$defs/version" },
           "until": { "$ref": "common.schema.json#/$defs/version" },
           "file": { "type": "string", "pattern": "^[a-z0-9._-]+\\.sql$" },
+          "inline_parameters": {
+            "description": "Parameters that cannot be placeholders (e.g. DESCRIBE {{table}}): the consumer quotes them per the engine's lexical spec and substitutes {{name}} in the SQL text. All other parameters stay :name placeholders.",
+            "type": "object",
+            "propertyNames": { "pattern": "^[a-z_][a-z0-9_]*$" },
+            "additionalProperties": { "enum": ["identifier", "string-literal"] }
+          },
+          "transform": {
+            "description": "The SQL returns engine-native columns (SHOW / DESCRIBE / PRAGMA output); every contract column is computed per raw row with exactly one rule.",
+            "type": "object",
+            "propertyNames": { "pattern": "^[a-z_][a-z0-9_]*$" },
+            "additionalProperties": { "$ref": "#/$defs/transformRule" }
+          },
+          "extra_columns": {
+            "description": "Engine-specific columns returned after the contract columns (only with transform: copied from a raw column).",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "column"],
+              "additionalProperties": false,
+              "properties": {
+                "name": { "type": "string", "pattern": "^[a-z_][a-z0-9_]*$" },
+                "column": { "type": "string" },
+                "description": { "type": "string" }
+              }
+            }
+          },
           "notes": { "$ref": "common.schema.json#/$defs/notes" },
           "sources": { "$ref": "common.schema.json#/$defs/sources" }
         }
@@ -73,6 +99,37 @@
     "gaps": {
       "description": "Known engine/version combinations without a variant yet.",
       "$ref": "common.schema.json#/$defs/notes"
+    }
+  },
+  "$defs": {
+    "transformRule": {
+      "description": "column: raw value (with map: translated, unmapped values are an error; with equals: boolean value == equals; with contains: boolean, true when the space-separated raw value contains the word). param: a query parameter. const: a fixed value (may be null). row_number: 1-based position of the raw row.",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["column"],
+          "additionalProperties": false,
+          "properties": {
+            "column": { "type": "string" },
+            "map": { "type": "object", "additionalProperties": { "type": ["string", "null"] } },
+            "equals": { "type": "string" },
+            "contains": { "type": "string" },
+            "empty_as_null": { "type": "boolean" }
+          }
+        },
+        {
+          "type": "object", "required": ["param"], "additionalProperties": false,
+          "properties": { "param": { "type": "string" } }
+        },
+        {
+          "type": "object", "required": ["const"], "additionalProperties": false,
+          "properties": { "const": { "type": ["string", "integer", "boolean", "null"] } }
+        },
+        {
+          "type": "object", "required": ["row_number"], "additionalProperties": false,
+          "properties": { "row_number": { "const": true } }
+        }
+      ]
     }
   }
 }

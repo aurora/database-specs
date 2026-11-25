@@ -1,0 +1,63 @@
+# yaml-language-server: $schema=../../schemas/operation.schema.json
+id: query.explain
+title: Show the execution plan of a statement
+parameters:
+  - { name: sql, kind: sql-fragment, description: "The statement to explain." }
+  - { name: format, kind: sql-fragment, description: "Output format where selectable (see implementations)." }
+  - { name: analyze, kind: boolean, description: "Execute the statement and report actual row counts / timings. CAUTION: data-modifying statements are really executed." }
+
+implementations:
+  mysql:
+    - status: supported
+      template: "EXPLAIN {{#analyze}}ANALYZE {{/analyze}}{{#format}}FORMAT={{format}} {{/format}}{{sql}}"
+      caveats:
+        - "format: TRADITIONAL (rows per table, default), JSON (5.7+, one row), TREE (8.0.16+). EXPLAIN ANALYZE (8.0.18+) executes the query and always prints TREE format."
+        - "Result columns differ per format: traditional id, select_type, table, ..., JSON / TREE a single column named EXPLAIN."
+        - "Primary key lookups may be resolved during optimization: EXPLAIN ANALYZE then reports 'Rows fetched before execution'."
+        - "Two JSON layouts: version 1 with query_block (observed up to 8.4) and version 2 with query_plan / json_schema_version 2.0 (observed as default in 9.7). Selectable with SET explain_json_format_version = 1|2 (exact version of the default switch unverified)."
+      sources: [{ evidence: tested }]
+  mariadb:
+    - status: supported
+      template: "{{#analyze}}ANALYZE{{/analyze}}{{^analyze}}EXPLAIN{{/analyze}} {{#format}}FORMAT={{format}} {{/format}}{{sql}}"
+      caveats:
+        - "format: JSON (10.1+) or omitted for the traditional table. ANALYZE <statement> (10.1+) executes it and adds r_rows / r_filtered (r_total_time_ms with JSON)."
+        - "The result column is named EXPLAIN, for ANALYZE it is named ANALYZE."
+      sources: [{ evidence: tested }]
+  postgresql:
+    - status: supported
+      template: "EXPLAIN (FORMAT {{#format}}{{format}}{{/format}}{{^format}}TEXT{{/format}}{{#analyze}}, ANALYZE{{/analyze}}) {{sql}}"
+      caveats:
+        - "format: TEXT (one row per line, column QUERY PLAN), JSON, YAML, XML (one row). ANALYZE executes the statement - wrap data-modifying statements in BEGIN ... ROLLBACK."
+        - "Further options: BUFFERS, VERBOSE, SETTINGS, WAL, SERIALIZE (17+), MEMORY (17+)."
+      sources: [{ evidence: tested }]
+  sqlserver:
+    - status: supported
+      method: emulated
+      steps:
+        - "SET {{#analyze}}STATISTICS XML{{/analyze}}{{^analyze}}SHOWPLAN_XML{{/analyze}} ON"
+        - "{{sql}}"
+        - "SET {{#analyze}}STATISTICS XML{{/analyze}}{{^analyze}}SHOWPLAN_XML{{/analyze}} OFF"
+      caveats:
+        - "Each step is its own batch. With SHOWPLAN_XML the statement is not executed; it returns one row with the XML plan instead."
+        - "STATISTICS XML executes the statement and returns the actual plan as an additional result set after the query results."
+        - "No format choice (XML only); SHOWPLAN_TEXT / SHOWPLAN_ALL are deprecated. The result column is named 'Microsoft SQL Server 2005 XML Showplan'."
+      sources: [{ evidence: tested }]
+  sqlite:
+    - status: supported
+      template: "EXPLAIN QUERY PLAN {{sql}}"
+      caveats:
+        - "Rows id, parent, notused, detail form a tree (parent = id of the parent node). Plain EXPLAIN shows the VDBE bytecode instead."
+        - "The detail wording changed: older versions write 'SEARCH TABLE t USING ...' (observed 3.27, 3.34), newer ones 'SEARCH t USING ...' (observed 3.40+)."
+        - "No ANALYZE variant (the CLI's .eqp full / .scanstats are client features)."
+      sources: [{ evidence: tested }]
+  manticore:
+    - status: supported
+      steps:
+        - "SET profiling = 1"
+        - "{{sql}}"
+        - "SHOW PLAN"
+      caveats:
+        - "No EXPLAIN SELECT: the statement is executed (like analyze), then SHOW PLAN returns the transformed full-text query tree (row Variable = transformed_tree) and SHOW PROFILE the time per stage. Read the result of the last step."
+        - "Without executing: EXPLAIN QUERY <table> '<full-text query>' returns the same tree for a MATCH() argument only. SHOW META after a query gives totals and per-keyword statistics."
+        - "format and analyze are ignored."
+      sources: [{ evidence: tested }]

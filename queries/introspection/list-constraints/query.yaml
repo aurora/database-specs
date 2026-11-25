@@ -67,3 +67,6 @@ variants:
     notes:
       - "Primary key and UNIQUE constraints only; CHECK constraints are not exposed by pragmas (only in the CREATE TABLE text)."
       - "Constraint names are not reported: the primary key is named pk_<table>, unique constraints by their sqlite_autoindex_* index. index_name of a rowid-alias primary key is NULL."
+
+not_applicable:
+  manticore: "No constraints besides the unique document id."

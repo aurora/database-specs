@@ -94,6 +94,9 @@ variants:
       - "Expression elements have column_name NULL; their expression text is not exposed by pragmas (expression is NULL)."
       - "predicate is cut from the CREATE INDEX text after ' WHERE ' (main schema only)."
 
+not_applicable:
+  manticore: "No CREATE INDEX: full-text fields are indexed by the table itself, secondary indexes on attributes are managed by the engine; DESCRIBE shows the per-column flags (introspection.list-columns properties)."
+
 gaps:
   - "MySQL 8.0.0 - 8.0.12 (IS_VISIBLE exists, EXPRESSION does not)."
   - "SQLite: expression text of expression index elements."

@@ -18,3 +18,7 @@ support:
     - status: unsupported
       notes: ["No stored routines; application-defined functions are registered per connection through the C API (sqlite3_create_function)."]
       sources: [{ evidence: docs, url: "https://sqlite.org/appfunc.html" }]
+  manticore:
+    - status: unsupported
+      notes: ["No stored routines; CREATE FUNCTION ... SONAME loads user-defined functions from a plugin library (C)."]
+      sources: [{ evidence: observed, notes: "CREATE FUNCTION f RETURNS INT SONAME 'x.so' tries dlopen()" }]

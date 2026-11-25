@@ -1,0 +1,37 @@
+# yaml-language-server: $schema=../../schemas/capability.schema.json
+id: query.multi-result-select
+title: One SELECT statement returns several result sets
+description: >
+  A single SELECT (not a batch, multi-statement string or procedure call) produces more than one
+  result set. A client must then read all result sets of the statement (mysql protocol:
+  SERVER_MORE_RESULTS_EXISTS) and show them, e.g. as tabs.
+related: [query.fulltext-search]
+support:
+  mysql:
+    - status: unsupported
+      notes: ["Several result sets only come from CALL of a procedure or from multi-statement strings (CLIENT_MULTI_STATEMENTS)."]
+  mariadb:
+    - status: unsupported
+      notes: ["Several result sets only come from CALL or multi-statement strings, as in MySQL."]
+  postgresql:
+    - status: unsupported
+      notes: ["Several result sets only from a simple-query string with several statements; procedures return refcursors instead."]
+  sqlserver:
+    - status: unsupported
+      notes: ["Batches and procedures return one result set per SELECT; a client must always loop over result sets (SQLMoreResults)."]
+  sqlite:
+    - status: unsupported
+  manticore:
+    - status: supported
+      notes:
+        - "SELECT ... FACET col [ORDER BY ...] [LIMIT n] FACET ... returns the main result set first, then one result set per FACET with the value and count(*)."
+        - "SHOW META after a SELECT returns statistics (total_found, time) as another statement."
+      sources: [{ evidence: observed, notes: "manticore 32.1.3" }]
+probes:
+  - engines: [manticore]
+    result_sets: 2
+    setup:
+      - "CREATE TABLE probe_facet (title TEXT, v INT)"
+      - "INSERT INTO probe_facet (id, title, v) VALUES (1, 'a', 1), (2, 'b', 1), (3, 'c', 2)"
+    statements: ["SELECT id, v FROM probe_facet FACET v"]
+    cleanup: ["DROP TABLE IF EXISTS probe_facet"]

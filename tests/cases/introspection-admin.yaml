@@ -1,0 +1,183 @@
+# yaml-language-server: $schema=../../schemas/test.schema.json
+id: introspection-admin
+description: Databases, users, privileges and user-defined types.
+engines: [mysql, mariadb, postgresql, sqlserver]
+
+setup:
+  mysql: &mysql_setup
+    - CREATE USER IF NOT EXISTS 'u_ot'@'%' IDENTIFIED BY 'Dbspecs-test1'
+    - CREATE TABLE t_priv (id INT, c INT)
+    - CREATE PROCEDURE p_priv() SELECT 1
+    - GRANT SELECT ON dbspecs.* TO 'u_ot'@'%'
+    - GRANT INSERT ON dbspecs.t_priv TO 'u_ot'@'%' WITH GRANT OPTION
+    - GRANT UPDATE (c) ON dbspecs.t_priv TO 'u_ot'@'%'
+    - GRANT EXECUTE ON PROCEDURE dbspecs.p_priv TO 'u_ot'@'%'
+  mariadb:
+    - CREATE USER IF NOT EXISTS 'u_ot'@'%' IDENTIFIED BY 'Dbspecs-test1'
+    - CREATE ROLE IF NOT EXISTS r_ot
+    - CREATE TABLE t_priv (id INT, c INT)
+    - CREATE PROCEDURE p_priv() SELECT 1
+    - GRANT SELECT ON dbspecs.* TO 'u_ot'@'%'
+    - GRANT INSERT ON dbspecs.t_priv TO 'u_ot'@'%' WITH GRANT OPTION
+    - GRANT UPDATE (c) ON dbspecs.t_priv TO 'u_ot'@'%'
+    - GRANT EXECUTE ON PROCEDURE dbspecs.p_priv TO 'u_ot'@'%'
+  postgresql:
+    - CREATE ROLE u_ot LOGIN PASSWORD 'Dbspecs-test1'
+    - CREATE ROLE r_ot
+    - CREATE TABLE t_priv (id int, c int)
+    - CREATE FUNCTION f_priv() RETURNS integer LANGUAGE sql AS $$ SELECT 1 $$
+    - GRANT USAGE ON SCHEMA public TO u_ot
+    - GRANT INSERT ON t_priv TO u_ot WITH GRANT OPTION
+    - GRANT UPDATE (c) ON t_priv TO u_ot
+    - GRANT EXECUTE ON FUNCTION f_priv() TO u_ot
+    - CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy')
+    - CREATE DOMAIN posint AS integer NOT NULL DEFAULT 1 CHECK (VALUE > 0)
+    - CREATE TYPE pair AS (a integer, b text)
+    - CREATE TYPE floatrange AS RANGE (subtype = float8)
+    - COMMENT ON TYPE mood IS 'feelings'
+  sqlserver:
+    - CREATE LOGIN u_ot WITH PASSWORD = 'Dbspecs-test1'
+    - CREATE USER u_ot FOR LOGIN u_ot
+    - CREATE TABLE t_priv (id int, c int)
+    - CREATE PROCEDURE p_priv AS SELECT 1
+    - GRANT INSERT ON t_priv TO u_ot WITH GRANT OPTION
+    - GRANT UPDATE (c) ON t_priv TO u_ot
+    - DENY DELETE ON t_priv TO u_ot
+    - GRANT EXECUTE ON p_priv TO u_ot
+    - CREATE TYPE posint FROM int NOT NULL
+    - CREATE TYPE tt_pair AS TABLE (a int, b nvarchar(10))
+
+cleanup:
+  mysql:
+    - DROP USER IF EXISTS 'u_ot'@'%'
+    - DROP TABLE IF EXISTS t_priv
+    - DROP PROCEDURE IF EXISTS p_priv
+  mariadb:
+    - DROP USER IF EXISTS 'u_ot'@'%'
+    - DROP ROLE IF EXISTS r_ot
+    - DROP TABLE IF EXISTS t_priv
+    - DROP PROCEDURE IF EXISTS p_priv
+  postgresql:
+    - DROP TABLE IF EXISTS t_priv
+    - DROP FUNCTION IF EXISTS f_priv()
+    - REVOKE ALL ON SCHEMA public FROM u_ot
+    - DROP ROLE IF EXISTS u_ot
+    - DROP ROLE IF EXISTS r_ot
+    - DROP TYPE IF EXISTS mood
+    - DROP DOMAIN IF EXISTS posint
+    - DROP TYPE IF EXISTS pair
+    - DROP TYPE IF EXISTS floatrange
+  sqlserver:
+    - DROP TABLE IF EXISTS t_priv
+    - DROP PROCEDURE IF EXISTS p_priv
+    - DROP USER IF EXISTS u_ot
+    - IF SUSER_ID('u_ot') IS NOT NULL DROP LOGIN u_ot
+    - DROP TYPE IF EXISTS posint
+    - DROP TYPE IF EXISTS tt_pair
+
+steps:
+  - query: introspection.list-databases
+    engines: { postgresql: {}, sqlserver: {} }
+    expect:
+      rows:
+        - match: { database_name: dbspecs }
+          values: { is_current: true, is_system: false }
+        - match: { database_name: template0 }
+          engine: postgresql
+          values: { is_system: true, is_current: false }
+        - match: { database_name: master }
+          engine: sqlserver
+          values: { is_system: true, owner: sa }
+
+  - query: introspection.list-users
+    expect:
+      rows:
+        - match: { user_name: u_ot }
+          values: { can_login: true, is_superuser: false, is_locked: false, is_system: false }
+        - match: { user_name: u_ot }
+          engine: mysql
+          values: { host: "%", kind: user }
+        - match: { user_name: u_ot }
+          engine: mysql
+          since: "8.0"
+          values: { auth_method: caching_sha2_password }
+        - match: { user_name: u_ot }
+          engine: mysql
+          until: "8.0"
+          values: { auth_method: mysql_native_password }
+        - match: { user_name: u_ot }
+          engine: mariadb
+          values: { host: "%", kind: user }
+        - match: { user_name: r_ot }
+          engine: mariadb
+          values: { kind: role, host: null, can_login: false }
+        - match: { user_name: r_ot }
+          engine: postgresql
+          values: { kind: role, can_login: false }
+        - match: { user_name: u_ot }
+          engine: sqlserver
+          values: { kind: login, auth_method: sql-login }
+        - match: { user_name: sysadmin }
+          engine: sqlserver
+          values: { kind: role, is_system: true }
+
+  - query: introspection.list-privileges
+    params: { grantee: u_ot }
+    expect:
+      rows:
+        - match: { object_type: table, object_name: t_priv, privilege: INSERT }
+          values: { is_grantable: true, is_denied: false }
+        - match: { object_type: column, object_name: t_priv, column_name: c, privilege: UPDATE }
+          values: { is_denied: false }
+        # MySQL / MariaDB: the grant option belongs to the table level, so it also covers column privileges
+        - match: { object_type: column, column_name: c }
+          engine: mysql
+          values: { is_grantable: true }
+        - match: { object_type: column, column_name: c }
+          engine: mariadb
+          values: { is_grantable: true }
+        - match: { object_type: column, column_name: c }
+          engine: postgresql
+          values: { is_grantable: false }
+        - match: { object_type: schema, privilege: SELECT }
+          engine: mysql
+          values: { schema_name: dbspecs }
+        - match: { object_type: routine, privilege: EXECUTE }
+          engine: mysql
+          values: { object_name: p_priv }
+        - match: { object_type: routine, privilege: EXECUTE }
+          engine: postgresql
+          values: { object_name: f_priv() }
+        - match: { object_type: schema, privilege: USAGE }
+          engine: postgresql
+          values: { schema_name: public }
+        - match: { object_type: table, privilege: DELETE }
+          engine: sqlserver
+          values: { is_denied: true }
+        - match: { object_type: global, privilege: CONNECT SQL }
+          engine: sqlserver
+          values: { is_denied: false }
+
+  - query: introspection.list-types
+    engines: { postgresql: {}, sqlserver: {} }
+    params: { schema: "{{schema}}" }
+    expect:
+      rows:
+        - match: { type_name: mood }
+          engine: postgresql
+          values: { kind: enum, enum_values: '["sad", "ok", "happy"]', comment: feelings }
+        - match: { type_name: posint }
+          engine: postgresql
+          values: { kind: domain, base_type: integer, is_nullable: false, default_raw: "1", check_expression: (VALUE > 0) }
+        - match: { type_name: pair }
+          engine: postgresql
+          values: { kind: composite, attributes: "a integer, b text" }
+        - match: { type_name: floatrange }
+          engine: postgresql
+          values: { kind: range, base_type: double precision }
+        - match: { type_name: posint }
+          engine: sqlserver
+          values: { kind: alias, base_type: int, is_nullable: false }
+        - match: { type_name: tt_pair }
+          engine: sqlserver
+          values: { kind: table-type, attributes: "[a] int, [b] nvarchar" }

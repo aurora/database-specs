@@ -34,6 +34,16 @@
           "setup": { "type": "array", "items": { "type": "string" } },
           "statements": { "type": "array", "minItems": 1, "items": { "type": "string" } },
           "check": { "type": "string" },
+          "result_sets": {
+            "description": "Minimum number of result sets the last statement must return (e.g. SELECT ... FACET).",
+            "type": "integer",
+            "minimum": 1
+          },
+          "rows": {
+            "description": "Exact number of rows the first result set of the last statement must return (for engines where 'check' cannot count, e.g. no derived tables).",
+            "type": "integer",
+            "minimum": 0
+          },
           "invert": {
             "description": "The capability shows as an error: the probe succeeds when the statements FAIL (e.g. a CHECK constraint rejecting a row). Setup must still succeed.",
             "type": "boolean"

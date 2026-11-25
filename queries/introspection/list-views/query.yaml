@@ -55,3 +55,6 @@ variants:
     notes:
       - "Reads main.sqlite_master (other schemas: no rows). definition is cut from the original text after the first ' AS '."
       - "Views are read-only unless INSTEAD OF triggers exist: is_updatable false."
+
+not_applicable:
+  manticore: "No views (CREATE VIEW is a syntax error)."

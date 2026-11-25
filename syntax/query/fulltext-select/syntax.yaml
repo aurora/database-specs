@@ -1,0 +1,133 @@
+# yaml-language-server: $schema=../../../schemas/syntax.schema.json
+id: query.fulltext-select
+title: SELECT with full-text search
+description: >
+  Where the full-text condition may stand in a SELECT, which differs fundamentally: in MySQL /
+  MariaDB MATCH ... AGAINST is an ordinary expression, in Manticore MATCH('...') is a clause-like
+  item of the top-level AND chain. The Manticore grammar also covers its grouping (GROUP n BY,
+  WITHIN GROUP ORDER BY), FACET and OPTION. Capabilities: query.fulltext-search,
+  query.top-n-per-group, query.multi-result-select.
+
+grammars:
+  manticore:
+    file: manticore.ebnf
+    start: select
+    notes:
+      - "Exactly one MATCH() per statement, only as an item of the top-level AND chain (anywhere in it); in OR, under NOT or in parentheses it is a syntax error, a second one 'too many MATCH() clauses'."
+      - "Full-text fields cannot be compared (title = 'x' is an error: filters only work on attributes)."
+      - "ORDER BY items need ASC or DESC. Without LIMIT 20 rows are returned."
+      - "GROUP n BY returns up to n rows per group; WITHIN GROUP ORDER BY chooses them; plain columns next to aggregates are allowed (one representative row per group)."
+      - "Each FACET adds a result set (query.multi-result-select)."
+      - "Subqueries only as SELECT * FROM (SELECT ...) ORDER BY ... (re-sorting); JOIN support is limited and not covered here."
+    sources: [{ evidence: tested }]
+  mysql:
+    file: mysql.ebnf
+    start: select
+    since: "5.7"
+    notes:
+      - "MATCH (cols) AGAINST ('...') can be combined freely (OR, NOT, several MATCH); its value is the relevance, usable in the select list and ORDER BY."
+      - "IN BOOLEAN MODE has its own operator language inside the string (+word -word \"phrase\" word* >word <word ~word (group)); not covered by a syntax spec yet."
+    sources: [{ evidence: tested }]
+  mariadb:
+    file: mariadb.ebnf
+    start: select
+    since: "10.6"
+    notes: ["Same MATCH ... AGAINST forms as MySQL."]
+    sources: [{ evidence: tested }]
+
+setup:
+  manticore:
+    - "CREATE TABLE t_fts (title TEXT, body TEXT, cat INT, price FLOAT, tags MULTI)"
+    - "INSERT INTO t_fts (id, title, body, cat, price, tags) VALUES (1, 'red apple pie', 'sweet dessert', 1, 3.5, (1,2))"
+  mysql:
+    - "CREATE TABLE t_fts (id INT PRIMARY KEY, title VARCHAR(200), body TEXT, cat INT, price FLOAT, FULLTEXT (title, body), FULLTEXT (title)) ENGINE=InnoDB"
+  mariadb:
+    - "CREATE TABLE t_fts (id INT PRIMARY KEY, title VARCHAR(200), body TEXT, cat INT, price FLOAT, FULLTEXT (title, body), FULLTEXT (title)) ENGINE=InnoDB"
+cleanup:
+  manticore: ["DROP TABLE IF EXISTS t_fts"]
+  mysql: ["DROP TABLE IF EXISTS t_fts"]
+  mariadb: ["DROP TABLE IF EXISTS t_fts"]
+
+examples:
+  # --- Manticore
+  - sql: "SELECT id, WEIGHT() AS w FROM t_fts WHERE MATCH('apple') ORDER BY w DESC LIMIT 10"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts WHERE MATCH('@title apple') AND cat = 1 AND price BETWEEN 1 AND 5"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts WHERE cat IN (1, 2) AND MATCH('apple') AND ANY(tags) = 2"
+    expect: valid
+    engines: { manticore: {} }
+    notes: ["MATCH does not have to come first."]
+  - sql: "SELECT id FROM t_fts WHERE MATCH('apple') AND (cat = 1 OR price > 2)"
+    expect: valid
+    engines: { manticore: {} }
+    notes: ["OR is fine among the attribute filters."]
+  - sql: "SELECT id FROM t_fts WHERE cat = 1 OR price > 2"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts WHERE MATCH('apple') OR cat = 2"
+    expect: invalid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts WHERE NOT MATCH('apple')"
+    expect: invalid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts WHERE (MATCH('apple') AND cat = 1)"
+    expect: invalid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts WHERE cat = 1 AND (price > 1 OR MATCH('apple'))"
+    expect: invalid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts WHERE MATCH('apple') AND MATCH('pie')"
+    expect: invalid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts WHERE MATCH(title, 'apple')"
+    expect: invalid
+    engines: { manticore: {} }
+    notes: ["No column list: restrict fields inside the query text (@title apple)."]
+  - sql: "SELECT id FROM t_fts WHERE MATCH('apple') ORDER BY id"
+    expect: invalid
+    engines: { manticore: {} }
+    notes: ["Server error 'no sort order defined'."]
+  - sql: "SELECT id FROM t_fts WHERE title = 'red apple pie'"
+    expect: semantic-error
+    engines: { manticore: {} }
+    notes: ["Full-text fields are not filterable."]
+  - sql: "SELECT id, cat, price FROM t_fts GROUP 2 BY cat WITHIN GROUP ORDER BY price DESC ORDER BY cat ASC"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT cat, COUNT(*) AS c FROM t_fts WHERE MATCH('apple') GROUP BY cat HAVING c > 0 ORDER BY c DESC"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT * FROM t_fts WHERE MATCH('apple') FACET cat FACET price ORDER BY COUNT(*) DESC"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts WHERE MATCH('apple') LIMIT 0, 10 OPTION ranker = bm25, max_matches = 2000"
+    expect: valid
+    engines: { manticore: {} }
+  # --- MySQL / MariaDB
+  - sql: "SELECT id, MATCH(title, body) AGAINST ('apple') AS score FROM t_fts WHERE MATCH(title, body) AGAINST ('apple') ORDER BY score DESC LIMIT 10"
+    expect: valid
+    engines: { mysql: {}, mariadb: {} }
+  - sql: "SELECT id FROM t_fts WHERE MATCH(title, body) AGAINST ('+apple -pear' IN BOOLEAN MODE)"
+    expect: valid
+    engines: { mysql: {}, mariadb: {} }
+  - sql: "SELECT id FROM t_fts WHERE MATCH(title, body) AGAINST ('apple' WITH QUERY EXPANSION)"
+    expect: valid
+    engines: { mysql: {}, mariadb: {} }
+  - sql: "SELECT id FROM t_fts WHERE MATCH(title, body) AGAINST ('apple' IN NATURAL LANGUAGE MODE) OR cat = 2"
+    expect: valid
+    engines: { mysql: {}, mariadb: {} }
+    notes: ["MATCH in OR is fine here - the Manticore form is not."]
+  - sql: "SELECT id FROM t_fts WHERE MATCH(title) AGAINST ('apple') AND NOT MATCH(title, body) AGAINST ('pie')"
+    expect: valid
+    engines: { mysql: {}, mariadb: {} }
+  - sql: "SELECT id FROM t_fts WHERE MATCH(body) AGAINST ('apple')"
+    expect: semantic-error
+    engines: { mysql: {}, mariadb: {} }
+    notes: ["No FULLTEXT index on exactly (body): error 1191."]
+  - sql: "SELECT id FROM t_fts WHERE MATCH('apple')"
+    expect: invalid
+    engines: { mysql: {}, mariadb: {} }
+    notes: ["The Manticore form."]

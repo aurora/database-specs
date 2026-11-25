@@ -212,3 +212,12 @@ implementations:
         - "SQLite keeps the original CREATE TABLE / CREATE INDEX text (incl. comments and formatting) - this is exact, not reconstructed. Automatic indexes of UNIQUE / PRIMARY KEY constraints have no text and come back with the table."
         - "Several statements: run them as a script (sqlite3_exec / executescript), not with a single prepare."
       sources: [{ evidence: tested }]
+  manticore:
+    - status: supported
+      template: "SHOW CREATE TABLE {{table}}"
+      requires: [table]
+      result_column: 2
+      caveats:
+        - "Includes the table settings (min_infix_len, morphology, ...) and normalized defaults (e.g. index_exact_words added by morphology); type names differ from DESCRIBE (integer vs uint, multi vs mva)."
+        - "Distributed tables: CREATE TABLE t type='distributed' local='a' agent='host:port:t' - the referenced tables must exist."
+      sources: [{ evidence: tested }]

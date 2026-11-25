@@ -5,33 +5,12 @@
 
 items:
   # --- object tree / client features ------------------------------------------
-  - id: introspection.list-databases
-    kind: query
-    title: List databases (server level above schemas)
-    priority: high
-    engines: [postgresql, sqlserver]
-    notes: ["MySQL/MariaDB databases are schemas (list-schemas); SQLite has attached databases only."]
-  - id: introspection.list-users
-    kind: query
-    title: List users / roles / logins
-    priority: high
-    engines: [mysql, mariadb, postgresql, sqlserver]
-  - id: introspection.list-privileges
-    kind: query
-    title: List privileges (grants) of a user or on an object
-    priority: high
-    engines: [mysql, mariadb, postgresql, sqlserver]
   - id: introspection.list-events
     kind: query
     title: List scheduled events
     priority: medium
     engines: [mysql, mariadb]
     notes: ["SQL Server Agent jobs live in msdb; possibly a separate item."]
-  - id: introspection.list-types
-    kind: query
-    title: List user-defined types (enum, domain, composite, range; alias and table types)
-    priority: high
-    engines: [postgresql, sqlserver]
   - id: introspection.list-extensions
     kind: query
     title: List installed extensions
@@ -48,31 +27,12 @@ items:
     priority: medium
 
   # --- session / admin operations -----------------------------------------------
-  - id: session.list-processes
-    kind: query
-    title: Running sessions and queries (process list)
-    priority: high
-    engines: [mysql, mariadb, postgresql, sqlserver]
-  - id: session.cancel-query
-    kind: operation
-    title: Cancel a running query / kill a session
-    priority: high
-    engines: [mysql, mariadb, postgresql, sqlserver]
-    notes: ["PostgreSQL also has a protocol-level cancel request (PQcancel); SQLite sqlite3_interrupt()."]
-  - id: query.explain
-    kind: operation
-    title: Execution plan (EXPLAIN variants and output formats)
-    priority: high
   - id: session.use-schema
     kind: operation
     title: Switch the current schema / database
     priority: medium
 
   # --- capabilities ------------------------------------------------------------------
-  - id: dml.upsert
-    kind: capability
-    title: Insert-or-update (ON DUPLICATE KEY / ON CONFLICT / MERGE / UPSERT)
-    priority: high
   - id: transactions.savepoints
     kind: capability
     title: Savepoints
@@ -111,6 +71,17 @@ items:
     kind: syntax
     title: INSERT incl. upsert clauses
     priority: medium
+  - id: fulltext.mysql-boolean-query
+    kind: syntax
+    title: Operator language inside AGAINST ('...' IN BOOLEAN MODE) for MySQL / MariaDB
+    priority: medium
+    engines: [mysql, mariadb]
+    notes: ["Counterpart of fulltext.manticore-query; referenced from the lexical specs' embedded_languages."]
+  - id: fulltext.postgresql-tsquery
+    kind: syntax
+    title: tsquery / websearch_to_tsquery input syntax
+    priority: low
+    engines: [postgresql]
 
   # --- lexical / protocol ------------------------------------------------------------
   - id: lexical.functions
@@ -142,8 +113,4 @@ items:
   - id: cockroachdb
     kind: engine
     title: CockroachDB (PostgreSQL protocol)
-    priority: low
-  - id: manticore
-    kind: engine
-    title: Manticore Search (MySQL protocol, own SQL dialect)
     priority: low

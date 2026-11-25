@@ -18,6 +18,19 @@ support:
   sqlite:
     - status: supported
       notes: ["Also LIMIT offset, count (offset first, as in MySQL). LIMIT -1 means no limit."]
+  manticore:
+    - status: supported
+      notes:
+        - "Also LIMIT offset, count. Without LIMIT a SELECT returns only 20 rows (the default limit), not all rows."
+        - "offset + count may not exceed max_matches (default 1000): 'offset out of bounds' error. Deeper pages need OPTION max_matches = n (costs memory) or keyset paging (WHERE id > last ORDER BY id ASC)."
+        - "ORDER BY needs an explicit ASC or DESC ('no sort order defined' otherwise). SHOW META after the SELECT gives total_found."
+      sources: [{ evidence: observed, notes: "manticore 32.1.3" }]
 probes:
   - engines: [mysql, mariadb, postgresql, sqlserver, sqlite]
     statements: ["SELECT n FROM (SELECT 1 AS n) t ORDER BY n LIMIT 1 OFFSET 0"]
+  - engines: [manticore]
+    setup:
+      - "CREATE TABLE probe_mt (title TEXT, v INT)"
+    statements:
+      - "SELECT id FROM probe_mt ORDER BY id ASC LIMIT 1 OFFSET 0"
+    cleanup: ["DROP TABLE IF EXISTS probe_mt"]

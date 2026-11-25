@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=../../../schemas/query.schema.json
+id: session.list-processes
+title: Running sessions and their current queries (process list)
+result:
+  order: session_id
+  columns:
+    - { name: session_id, type: integer, nullable: false, description: "Id used by session.cancel-query." }
+    - { name: user_name, type: string, nullable: true }
+    - { name: client_address, type: string, nullable: true }
+    - { name: database_name, type: string, nullable: true }
+    - { name: application_name, type: string, nullable: true }
+    - { name: state, type: string, nullable: true, description: "Engine-specific state text (Sleep / Query: executing, active / idle, running / sleeping, ...)." }
+    - { name: query, type: string, nullable: true, description: "Current (or last) statement text." }
+    - { name: query_seconds, type: integer, nullable: true, description: "Runtime of the current statement; NULL when idle." }
+    - { name: blocked_by, type: integer, nullable: true, description: "Session holding a lock this session waits for." }
+    - { name: is_current, type: boolean, nullable: false, description: "The session running this query." }
+variants:
+  - engine: mysql
+    since: "5.7"
+    file: mysql.sql
+    notes:
+      - "information_schema.PROCESSLIST (deprecated since 8.0.22 in favour of performance_schema.processlist, still available). Without PROCESS privilege only own sessions are listed."
+      - "Background threads (event_scheduler, replication) are included. client_address is host:port."
+      - "blocked_by is not available here (sys.innodb_lock_waits / performance_schema.data_lock_waits)."
+  - engine: mariadb
+    since: "10.6"
+    file: mysql.sql
+    notes: ["Same query as MySQL; MariaDB lists internal threads as user 'system user'."]
+  - engine: postgresql
+    since: "12"
+    file: postgresql.sql
+    notes:
+      - "Client backends of all databases (pg_stat_activity). query is the last statement while idle. Other users' queries need pg_read_all_stats."
+      - "blocked_by is the first of pg_blocking_pids()."
+  - engine: sqlserver
+    since: "14"
+    file: sqlserver.sql
+    notes:
+      - "User sessions (sys.dm_exec_sessions) with the running request, if any. Needs VIEW SERVER STATE to see other sessions."
+not_applicable:
+  sqlite: "Embedded library: no server sessions."
+
+gaps:
+  - "Manticore: SHOW THREADS lists working threads (ConnID = CONNECTION_ID(), Info = statement), not idle sessions; not mapped yet."

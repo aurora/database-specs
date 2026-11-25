@@ -76,6 +76,9 @@ def validate(specs: Specs) -> list[str]:
             errors.append(f"{rel}: engine cannot extend itself")
 
     for lid, lex in specs.docs["lexical"].items():
+        for emb in lex.get("embedded_languages", []):
+            if emb["syntax"] not in specs.docs["syntax"]:
+                errors.append(f"{specs.path('lexical', lid).relative_to(specs.root)}: unknown syntax '{emb['syntax']}'")
         kq = lex.get("keywords", {}).get("query")
         if kq and kq not in specs.docs["query"]:
             errors.append(f"{specs.path('lexical', lid).relative_to(specs.root)}: unknown query '{kq}'")
@@ -101,6 +104,21 @@ def validate(specs: Specs) -> list[str]:
             check_engine(rel, var["engine"])
             if not (path.parent / var["file"]).is_file():
                 errors.append(f"{rel}: variant file '{var['file']}' missing")
+            pnames = {p["name"] for p in q.get("parameters", [])}
+            for name in var.get("inline_parameters", {}):
+                if name not in pnames:
+                    errors.append(f"{rel}: {var['file']}: inline parameter '{name}' is not a query parameter")
+            if "transform" in var:
+                cols = [c["name"] for c in q["result"]["columns"]]
+                if list(var["transform"]) != cols:
+                    errors.append(f"{rel}: {var['file']}: transform must list the contract columns in order {cols}")
+                for name, rule in var["transform"].items():
+                    if "param" in rule and rule["param"] not in pnames:
+                        errors.append(f"{rel}: {var['file']}: transform {name}: unknown parameter '{rule['param']}'")
+                    if len({"map", "equals", "contains"} & set(rule)) > 1:
+                        errors.append(f"{rel}: {var['file']}: transform {name}: map/equals/contains are exclusive")
+            elif "extra_columns" in var:
+                errors.append(f"{rel}: {var['file']}: extra_columns need a transform")
 
     for doc_id, syn in specs.docs["syntax"].items():
         rel = specs.path("syntax", doc_id).relative_to(specs.root)
@@ -165,6 +183,11 @@ def validate(specs: Specs) -> list[str]:
     for doc_id, q in specs.docs["query"].items():
         for eid in q.get("not_applicable", {}):
             check_engine(specs.path("query", doc_id).relative_to(specs.root), eid)
+    for doc_id, syn in specs.docs["syntax"].items():
+        for eid in syn.get("not_applicable", {}):
+            check_engine(specs.path("syntax", doc_id).relative_to(specs.root), eid)
+            if eid in syn["grammars"]:
+                errors.append(f"{specs.path('syntax', doc_id).relative_to(specs.root)}: {eid} has a grammar and is not_applicable")
 
     for doc_id, t in specs.docs["test"].items():
         rel = specs.path("test", doc_id).relative_to(specs.root)

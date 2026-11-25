@@ -56,6 +56,9 @@ grammars:
       - "The grammar's expression built-in is loose: it also accepts some invalid indexed-column forms (e.g. 'b varchar_pattern_ops'), so such examples are not asserted for SQLite."
     sources: [{ evidence: tested }]
 
+not_applicable:
+  manticore: "No CREATE INDEX: full-text fields are indexed by the table, attribute indexes are managed by the engine (operation ddl.create-index)."
+
 setup:
   mysql: ["CREATE TABLE t_idx (a INT, b VARCHAR(50), c TEXT, d INT, g POINT NOT NULL)"]
   mariadb: ["CREATE TABLE t_idx (a INT, b VARCHAR(50), c TEXT, d INT, g POINT NOT NULL)"]

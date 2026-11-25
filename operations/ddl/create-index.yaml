@@ -38,3 +38,7 @@ implementations:
       transactional: true
       caveats: ["The table name must be unqualified; for another schema qualify the index name instead (CREATE INDEX aux.i ON t ...)."]
       sources: [{ evidence: tested }]
+  manticore:
+    - status: unsupported
+      caveats: ["No CREATE INDEX: full-text fields are indexed by the table, attribute indexes are managed by the engine (introspection.list-indexes)."]
+      sources: [{ evidence: observed, notes: "CREATE INDEX is a syntax error (32.1.3)" }]

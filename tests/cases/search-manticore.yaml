@@ -1,0 +1,53 @@
+# yaml-language-server: $schema=../../schemas/test.schema.json
+id: search-manticore
+description: >
+  Manticore search features a client builds on: grouping (GROUP n BY / WITHIN GROUP ORDER BY),
+  paging limits, REPLACE semantics and the explain operation.
+engines: [manticore]
+
+setup:
+  manticore:
+    - "CREATE TABLE t_s (title TEXT, cat INT, price INT)"
+    - "INSERT INTO t_s (id, title, cat, price) VALUES (1, 'red apple', 1, 10), (2, 'green apple', 1, 30), (3, 'apple pie', 1, 20), (4, 'pear', 2, 5), (5, 'pear tart', 2, 50), (6, 'plum', 3, 7)"
+
+cleanup:
+  manticore: [DROP TABLE IF EXISTS t_s]
+
+steps:
+  - sql: { manticore: "SELECT id, cat, price FROM t_s GROUP 2 BY cat WITHIN GROUP ORDER BY price DESC ORDER BY cat ASC" }
+    expect:
+      row_count: 5
+      rows:
+        - { match: { id: 2 }, values: { cat: 1, price: 30 } }
+        - { match: { id: 3 }, values: { cat: 1, price: 20 } }
+        - { match: { id: 1 }, count: 0 }
+        - { match: { id: 5 }, values: { cat: 2 } }
+        - { match: { id: 4 }, values: { cat: 2 } }
+        - { match: { id: 6 }, values: { cat: 3 } }
+  - sql: { manticore: "SELECT id, cat FROM t_s GROUP BY cat WITHIN GROUP ORDER BY price ASC ORDER BY cat ASC" }
+    expect:
+      row_count: 3
+      rows:
+        - { match: { cat: 1 }, values: { id: 1 } }
+        - { match: { cat: 2 }, values: { id: 4 } }
+  - sql: { manticore: "SELECT id, WEIGHT() AS w FROM t_s WHERE MATCH('apple -pie') AND cat = 1 ORDER BY id ASC" }
+    expect:
+      row_count: 2
+      rows:
+        - { match: { id: 1 } }
+        - { match: { id: 2 } }
+
+  - sql: { manticore: "REPLACE INTO t_s (id, cat) VALUES (1, 9)" }
+  - sql: { manticore: "SELECT title, cat, price FROM t_s WHERE id = 1" }
+    expect:
+      rows:
+        - match: {}
+          values: { title: "", cat: 9, price: 0 }
+
+  - operation: query.explain
+    params: { sql: "SELECT id FROM t_s WHERE MATCH('apple | pear')" }
+    expect:
+      row_count: 1
+      rows:
+        - match: { Variable: transformed_tree }
+          matches: { Value: "^OR\\(" }

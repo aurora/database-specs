@@ -15,7 +15,7 @@ result:
     - name: table_type
       type: string
       nullable: false
-      enum: [table, partitioned-table, view, materialized-view, foreign-table, virtual-table]
+      enum: [table, partitioned-table, view, materialized-view, foreign-table, virtual-table, percolate-table, distributed-table]
     - name: partition_of
       type: string
       nullable: true
@@ -76,3 +76,23 @@ variants:
       - "row_estimate from pg_class.reltuples. Before 14 a never-analyzed table reports 0 (not unknown); since 14 it reports -1, mapped to NULL."
       - "data_bytes / index_bytes call pg_table_size() / pg_indexes_size() per table; on schemas with thousands of tables consider fetching them lazily."
       - "partition_of is the parent's name only; the parent may live in another schema."
+  - engine: manticore
+    file: manticore.sql
+    transform:
+      schema_name: { param: schema }
+      table_name: { column: Table }
+      table_type:
+        column: Type
+        map: { rt: table, local: table, percolate: percolate-table, distributed: distributed-table }
+      partition_of: { const: null }
+      storage_engine: { column: Type }
+      row_estimate: { const: null }
+      data_bytes: { const: null }
+      index_bytes: { const: null }
+      collation: { const: null }
+      comment: { const: null }
+    notes:
+      - "SHOW TABLES ignores the schema (there is only the Manticore database); schema_name echoes the parameter."
+      - "storage_engine is the Manticore table type: rt (real-time), local (plain, built by the indexer tool), percolate (stored queries), distributed (agents / local tables, no own data)."
+      - "Sizes and document counts are in SHOW TABLE <name> STATUS (indexed_documents, ram_bytes, disk_bytes) - one statement per table."
+    sources: [{ evidence: observed, notes: "manticore 32.1.3" }]

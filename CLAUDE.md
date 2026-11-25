@@ -1,6 +1,6 @@
 # database-specs
 
-Machine-readable, versioned specifications of SQL engines (MySQL, MariaDB, PostgreSQL, SQL Server, SQLite so far)
+Machine-readable, versioned specifications of SQL engines (MySQL, MariaDB, PostgreSQL, SQL Server, SQLite, Manticore so far)
 for database clients: lexical rules, wire-protocol type codes, capabilities, introspection
 queries, client operations and curated statement syntax. Implementation-agnostic: nothing in
 here may depend on a particular client, language or driver. Content is written in English.
@@ -43,6 +43,11 @@ uv run dbspecs coverage     # COVERAGE.md + dist/coverage.html (also written aft
 - `syntax/<area>/<name>/`: `syntax.yaml` (examples) + `<engine>.ebnf`.
 - `COVERAGE.md` (generated, checked in): matrix spec x engine - tested / partial / documented /
   not applicable / missing. `roadmap.yaml`: planned specs that do not exist yet.
+- Engines without catalog views (Manticore: SHOW / DESCRIBE only) map engine-native result
+  columns to the query contract with a variant `transform` (+ `inline_parameters` for names that
+  cannot be placeholders, `extra_columns` for engine-specific data). Languages embedded in string
+  literals (Manticore's MATCH() query) are syntax specs with `wrap`, referenced from the lexical
+  spec's `embedded_languages`.
 - `keywords/<engine>/<version>.yaml`: generated keyword lists (never edit by hand; `test` fails
   when a stored list no longer matches its server version).
 - `tests/targets.yaml` (container images), `tests/cases/` (integration tests). Embedded engines

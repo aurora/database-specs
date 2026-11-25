@@ -39,3 +39,7 @@ implementations:
       transactional: true
       caveats: ["sqlite_autoindex_* indexes of constraints cannot be dropped."]
       sources: [{ evidence: tested }]
+  manticore:
+    - status: unsupported
+      caveats: ["No user-defined indexes (ddl.create-index)."]
+      sources: [{ evidence: observed }]

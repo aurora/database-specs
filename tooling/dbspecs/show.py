@@ -97,6 +97,25 @@ def resolve_capability(specs: Specs, cap_id: str, engine: str | None, version: s
     return res
 
 
+def _rule_text(rule: dict) -> str:
+    if "column" in rule:
+        text = f"column {rule['column']!r}"
+        if "map" in rule:
+            text += " mapped " + ", ".join(f"{k!r}->{v!r}" for k, v in rule["map"].items())
+        if "equals" in rule:
+            text += f" == {rule['equals']!r}"
+        if "contains" in rule:
+            text += f" contains word {rule['contains']!r}"
+        if rule.get("empty_as_null"):
+            text += " ('' -> NULL)"
+        return text
+    if "param" in rule:
+        return f"parameter :{rule['param']}"
+    if "const" in rule:
+        return f"constant {rule['const']!r}"
+    return "row number (1-based)"
+
+
 def resolve_query(specs: Specs, q_id: str, engine: str | None, version: str | None) -> dict:
     q = specs.get("query", q_id)
     base = specs.path("query", q_id).parent
@@ -114,6 +133,9 @@ def resolve_query(specs: Specs, q_id: str, engine: str | None, version: str | No
                               "file": str((base / var["file"]).relative_to(specs.root)),
                               "notes": var.get("notes", []),
                               "sql": (base / var["file"]).read_text(encoding="utf-8")}
+            for key in ("inline_parameters", "transform", "extra_columns"):
+                if key in var:
+                    res["variant"][key] = var[key]
         else:
             res["variant"] = None
     else:
@@ -358,6 +380,16 @@ def render_text(res: dict) -> str:
                 out += _bullets(v["notes"])
                 out.append("sql:")
                 out.append(v["sql"].rstrip())
+                if v.get("inline_parameters"):
+                    out.append("inline parameters (quote, then replace {{name}} in the SQL): "
+                               + ", ".join(f"{n} ({k})" for n, k in v["inline_parameters"].items()))
+                if v.get("transform"):
+                    out.append("transform (the SQL returns engine-native columns; build each contract column per raw row):")
+                    for name, rule in v["transform"].items():
+                        out.append(f"  {name} <- {_rule_text(rule)}")
+                for e in v.get("extra_columns", []):
+                    out.append(f"  extra column {e['name']} <- column {e['column']!r}"
+                               + (f" - {e['description']}" if e.get("description") else ""))
         else:
             out.append("variants:")
             out += [f"  {v['engine']} {v['applies']}: {v['file']}" for v in res["variants"]]

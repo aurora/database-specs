@@ -21,10 +21,24 @@
           "file": { "type": "string", "pattern": "^[a-z0-9._-]+\\.ebnf$" },
           "start": { "type": "string" },
           "since": { "$ref": "common.schema.json#/$defs/version", "description": "Oldest version the grammar describes." },
+          "wrap": {
+            "description": "For languages embedded in a string (e.g. the MATCH() argument): statement template that runs an example on the server; {{literal}} is the example quoted as a string literal of the engine.",
+            "type": "string"
+          },
+          "word_pattern": {
+            "description": "Regex for a bare word when tokenizing examples (default: SQL identifiers). Embedded languages use their own (e.g. Unicode words).",
+            "type": "string"
+          },
           "notes": { "$ref": "common.schema.json#/$defs/notes" },
           "sources": { "$ref": "common.schema.json#/$defs/sources" }
         }
       }
+    },
+    "not_applicable": {
+      "description": "Engines that do not have the statement at all, with the reason.",
+      "type": "object",
+      "propertyNames": { "$ref": "common.schema.json#/$defs/engineId" },
+      "additionalProperties": { "type": "string" }
     },
     "setup": {
       "description": "Statements run before every example (per engine).",

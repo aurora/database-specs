@@ -8,6 +8,7 @@ none).
 from __future__ import annotations
 
 import datetime as dt
+import re
 from pathlib import Path
 
 import yaml
@@ -45,7 +46,24 @@ PROBES = {
     "postgresql": ("CREATE TEMPORARY TABLE kw_probe ({w} INT)", "DROP TABLE kw_probe"),
     "sqlserver": ("DECLARE @kw_probe TABLE ({w} INT)", None),
     "sqlite": ("CREATE TEMP TABLE kw_probe ({w} INT)", "DROP TABLE kw_probe"),
+    # Manticore's CREATE TABLE accepts almost any word as column name, its SELECT parser does
+    # not: probe the select list against an existing table and count only syntax errors
+    # ("unknown column" means the word was parsed as an identifier).
+    "manticore": {
+        "setup": "CREATE TABLE kw_probe (f TEXT, a INT)",
+        "probe": "SELECT {w} FROM kw_probe",
+        "reserved_error": "syntax error",
+        "teardown": "DROP TABLE IF EXISTS kw_probe",
+    },
 }
+
+# words of Manticore's SQL grammar that the keyword lists of the SQL engines do not contain
+MANTICORE_CANDIDATES = """
+AGENT ATTACH ATTRIBUTES BIGINT CALL CLUSTER COLUMNAR DISTRIBUTED FACET FLOAT FLUSH FREEZE GROUPBY
+HOSTNAMES IMPORT INDEXES JOIN KILLLIST KNN LOGS MATCH META MULTI MULTI64 OPTIMIZE OPTION PERCOLATE
+PLAN PLUGINS PQ PROFILE QUERY RAMCHUNK RECONFIGURE RELOAD RTINDEX SETTINGS SNIPPET STATUS SYSVAR
+TABLES THREADS TIMESTAMP TOKENIZE UINT UNFREEZE WEIGHT WITHIN
+""".split()
 
 
 def stored_files() -> dict[str, dict[str, dict]]:
@@ -97,7 +115,7 @@ def _server_list(specs: Specs, server: Server, conn) -> list[str] | None:
 
 
 def _candidates(engine: str) -> set[str]:
-    words = set(TSQL_CANDIDATES) if engine == "sqlserver" else set()
+    words = set({"sqlserver": TSQL_CANDIDATES, "manticore": MANTICORE_CANDIDATES}.get(engine, ()))
     for eng, versions in stored_files().items():
         for doc in versions.values():
             if doc["complete"] or eng == engine:
@@ -106,19 +124,28 @@ def _candidates(engine: str) -> set[str]:
 
 
 def _probe_reserved(server: Server, conn, words) -> set[str]:
-    create, drop = PROBES[server.engine]
+    probe = PROBES[server.engine]
+    if isinstance(probe, tuple):
+        probe = {"probe": probe[0], "cleanup": probe[1]}
     reserved = set()
     with conn.cursor() as cur:
-        for w in sorted(words):
-            if not w.replace("_", "").isalnum() or w[0].isdigit():
-                continue
-            try:
-                cur.execute(create.format(w=w))
-            except Exception:  # connections are in autocommit mode: a failed statement leaves no state
-                reserved.add(w)
-                continue
-            if drop:
-                cur.execute(drop)
+        if probe.get("setup"):
+            cur.execute(probe["setup"])
+        try:
+            for w in sorted(words):
+                if not w.replace("_", "").isalnum() or w[0].isdigit():
+                    continue
+                try:
+                    cur.execute(probe["probe"].format(w=w))
+                except Exception as e:  # autocommit: a failed statement leaves no state
+                    if re.search(probe.get("reserved_error", ""), str(e)):
+                        reserved.add(w)
+                    continue
+                if probe.get("cleanup"):
+                    cur.execute(probe["cleanup"])
+        finally:
+            if probe.get("teardown"):
+                cur.execute(probe["teardown"])
     return reserved
 
 
@@ -139,8 +166,11 @@ def generate(specs: Specs, server: Server) -> dict:
     if not complete:
         doc["candidates"] = len(candidates)
         doc["notes"] = ["The server has no keyword list: candidate words (keywords of other engines"
-                        + (" and T-SQL keyword names" if server.engine == "sqlserver" else "")
-                        + ") were probed. Only reserved words are known; reserved words that no other list"
+                        + {"sqlserver": " and T-SQL keyword names",
+                           "manticore": " and words of Manticore's grammar"}.get(server.engine, "")
+                        + ") were probed"
+                        + (" as SELECT list items (CREATE TABLE accepts most of them as column names)"
+                           if server.engine == "manticore" else "") + ". Only reserved words are known; reserved words that no other list"
                         " contains can be missing."]
     doc["reserved"] = sorted(reserved)
     doc["nonreserved"] = sorted(candidates - reserved) if complete else []

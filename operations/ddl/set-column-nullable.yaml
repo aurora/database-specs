@@ -37,3 +37,7 @@ implementations:
   sqlite:
     - status: unsupported
       notes: ["No ALTER for this: rebuild the table (see the emulated steps of ddl.change-column-type)."]
+  manticore:
+    - status: unsupported
+      caveats: ["No NULL / NOT NULL in column definitions (attributes are never NULL except json)."]
+      sources: [{ evidence: observed, notes: "CREATE TABLE ... NOT NULL is a syntax error (32.1.3)" }]

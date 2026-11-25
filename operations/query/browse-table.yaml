@@ -31,3 +31,12 @@ implementations:
     - status: supported
       template: "SELECT * FROM {{table}}{{#where}} WHERE {{where}}{{/where}}{{#order_by}} ORDER BY {{order_by}}{{/order_by}} LIMIT {{limit}} OFFSET {{offset}}"
       notes: ["Without ORDER BY the row order is not stable between pages (no implicit clustering)."]
+  manticore:
+    - status: supported
+      template: "SELECT * FROM {{table}}{{#where}} WHERE {{where}}{{/where}}{{#order_by}} ORDER BY {{order_by}}{{/order_by}} LIMIT {{limit}} OFFSET {{offset}}"
+      caveats:
+        - "Always send LIMIT: without it only 20 rows come back. offset + limit above max_matches (1000) fails ('offset out of bounds'); append OPTION max_matches = n or page by id (WHERE id > last ORDER BY id ASC)."
+        - "Every ORDER BY item needs ASC or DESC ('no sort order defined'); full-text fields cannot be sorted or filtered with =, only attributes."
+        - "SELECT * returns the attributes first and the stored full-text fields last - not the DESCRIBE order. Fields that are indexed but not stored are missing."
+        - "The where fragment must follow Manticore's restrictions: at most one MATCH(), not inside OR / NOT (query.fulltext-search)."
+      sources: [{ evidence: tested }]

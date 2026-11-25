@@ -71,3 +71,7 @@ implementations:
   sqlite:
     - status: unsupported
       notes: ["No stored routines (capability schema.stored-routines)."]
+  manticore:
+    - status: unsupported
+      caveats: ["No stored routines."]
+      sources: [{ evidence: observed }]

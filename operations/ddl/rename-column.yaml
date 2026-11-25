@@ -58,3 +58,7 @@ implementations:
       transactional: true
       caveats: ["References in indexes, triggers and views are rewritten too."]
       sources: [{ evidence: tested }]
+  manticore:
+    - status: unsupported
+      caveats: ["No RENAME COLUMN (syntax error): recreate the table and re-insert the documents."]
+      sources: [{ evidence: observed, notes: "manticore 32.1.3" }]

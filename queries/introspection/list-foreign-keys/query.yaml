@@ -67,6 +67,9 @@ variants:
       - "is_enforced reflects PRAGMA foreign_keys of the current connection (OFF by default!), not a property of the constraint."
       - "DEFERRABLE INITIALLY DEFERRED is not exposed by pragmas: is_deferrable / initially_deferred are NULL."
 
+not_applicable:
+  manticore: "No foreign keys (no constraints at all)."
+
 gaps:
   - "Incoming foreign keys (tables referencing this one) need a separate query."
   - "PostgreSQL 15+ ON DELETE SET NULL (column list) is not represented."

@@ -140,6 +140,20 @@
         "notes": { "$ref": "common.schema.json#/$defs/notes" }
       }
     },
+    "embedded_languages": {
+      "description": "Languages inside string literals in certain positions (e.g. the full-text query in MATCH('...')). Highlighters can switch to the referenced syntax there.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["context", "syntax"],
+        "additionalProperties": false,
+        "properties": {
+          "context": { "type": "string", "description": "Where the string appears." },
+          "syntax": { "$ref": "common.schema.json#/$defs/id", "description": "Syntax spec id describing the embedded language." },
+          "notes": { "$ref": "common.schema.json#/$defs/notes" }
+        }
+      }
+    },
     "keywords": {
       "type": "object",
       "additionalProperties": false,

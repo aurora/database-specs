@@ -7,8 +7,9 @@ import re
 from dataclasses import dataclass, field
 
 from .servers import Server, fetch_dicts
-from .specs import Specs, in_range, quote_identifier, quote_literal, render, statement_for, variant_for
-from .syntax import examples_for, grammar_accepts, grammar_should_accept, server_should_accept
+from .specs import (Specs, apply_transform, in_range, query_sql, quote_identifier, quote_literal, render,
+                    statement_for, variant_for)
+from .syntax import examples_for, grammar_accepts, grammar_should_accept, server_should_accept, server_sql
 
 
 @dataclass
@@ -37,11 +38,20 @@ class Report:
         return [r for r in self.results if r.outcome == "fail"]
 
 
-def _exec_all(conn, statements):
+def _exec_all(conn, statements, count_sets: bool = False) -> int | tuple[int, int]:
+    """Run statements; with count_sets, returns (result sets, rows of the first set) of the last one."""
+    sets = nrows = 0
     with conn.cursor() as cur:
         for sql in statements:
             if sql.strip():  # rendered templates can leave empty optional steps
                 cur.execute(sql)
+                if not count_sets:
+                    continue
+                sets = 1 if cur.description else 0
+                nrows = len(cur.fetchall()) if cur.description else 0
+                while cur.nextset():
+                    sets += 1 if cur.description else 0
+    return (sets, nrows) if count_sets else sets
 
 
 def _statements(items, version: str) -> list[str]:
@@ -81,13 +91,20 @@ def run_probes(specs: Specs, server: Server, report: Report):
                 with server.connect() as conn:
                     _exec_all(conn, probe.get("setup", []))
                     try:
-                        _exec_all(conn, probe["statements"])
-                        ok = True
-                        if "check" in probe:
+                        ok, err = True, ""
+                        if "result_sets" in probe or "rows" in probe:
+                            sets, nrows = _exec_all(conn, probe["statements"], True)
+                            if sets < probe.get("result_sets", 0):
+                                ok, err = False, f"{sets} result set(s), expected {probe['result_sets']}"
+                            elif "rows" in probe and nrows != probe["rows"]:
+                                ok, err = False, f"{nrows} row(s), expected {probe['rows']}"
+                        else:
+                            _exec_all(conn, probe["statements"])
+                        if ok and "check" in probe:
                             with conn.cursor() as cur:
                                 cur.execute(probe["check"])
                                 ok = bool(cur.fetchone()[0])
-                        err = "" if ok else "check returned false"
+                            err = "" if ok else "check returned false"
                     except Exception as exc:  # the statement under test failed
                         ok, err = False, f"{type(exc).__name__}: {exc}".splitlines()[0]
             except Exception as exc:  # setup failed -> probe itself is broken
@@ -114,7 +131,55 @@ def run_probes(specs: Specs, server: Server, report: Report):
 # --- tests ------------------------------------------------------------------
 
 def _resolve_params(params: dict, server: Server) -> dict:
-    return {k: (v.replace("{{schema}}", server.schema) if isinstance(v, str) else v) for k, v in params.items()}
+    def sub(v):
+        if not isinstance(v, str):
+            return v
+        v = v.replace("{{schema}}", server.schema)
+        bg = getattr(server, "background", None)
+        return v.replace("{{background_session}}", str(bg["session_id"])) if bg else v
+    return {k: sub(v) for k, v in params.items()}
+
+
+class _Background:
+    """A second session running one long statement in a thread (for cancel / kill tests)."""
+
+    def __init__(self, specs: Specs, server: Server, sql: str):
+        import threading
+        import time
+        self.error = None
+        self.session_id = None
+        self.started = time.monotonic()
+        self.finished = None
+        id_query = specs.get("engine", server.engine)["identification"]["session_id_query"]
+        ready = threading.Event()
+
+        def run():
+            try:
+                conn = server.connect()
+                with conn.cursor() as cur:
+                    cur.execute(id_query)
+                    self.session_id = int(cur.fetchone()[0])
+                    ready.set()
+                    cur.execute(sql)
+                    try:
+                        cur.fetchall()
+                    except Exception:
+                        pass
+                conn.close()
+            except Exception as exc:  # expected when cancelled / killed
+                self.error = f"{type(exc).__name__}: {exc}".splitlines()[0]
+            finally:
+                ready.set()
+                self.finished = time.monotonic()
+
+        self.thread = threading.Thread(target=run, daemon=True)
+        self.thread.start()
+        ready.wait(30)
+        time.sleep(1.5)  # let the statement start before it is cancelled
+
+    def wait(self, timeout: float) -> float:
+        self.thread.join(timeout)
+        return (self.finished or float("inf")) - self.started
 
 
 def _render_operation(specs: Specs, op_id: str, server: Server, params: dict) -> list[str]:
@@ -176,11 +241,17 @@ def _run_query(specs: Specs, server: Server, conn, query_id: str, params: dict) 
     if not var:
         return [], [f"no variant of {query_id} for {server.engine} {server.version}"]
     sql = (specs.path("query", query_id).parent / var["file"]).read_text(encoding="utf-8")
+    lexical = specs.get("lexical", specs.get("engine", server.engine)["lexical"])
+    sql, bind = query_sql(var, sql, lexical, params)
     with conn.cursor() as cur:
-        cur.execute(server.format_sql(sql), params)
+        cur.execute(server.format_sql(sql), bind or None)
         rows = fetch_dicts(cur)
     problems = []
-    expected_cols = [c["name"] for c in query["result"]["columns"]]
+    try:
+        rows = apply_transform(var, rows, params)
+    except (KeyError, ValueError) as exc:
+        return rows, [f"transform failed: {exc}"]
+    expected_cols = [c["name"] for c in query["result"]["columns"]] + [e["name"] for e in var.get("extra_columns", [])]
     if rows and list(rows[0]) != expected_cols:
         problems.append(f"columns {list(rows[0])} != contract {expected_cols}")
     problems += _check_contract(query, rows)
@@ -291,6 +362,23 @@ def run_tests(specs: Specs, server: Server, report: Report):
                     if "engines" in step and not (server.engine in step["engines"]
                                                   and in_range(server.version, step["engines"][server.engine])):
                         continue
+                    if "background" in step:
+                        if server.engine in step["background"]:
+                            bg = _Background(specs, server, step["background"][server.engine])
+                            server.background = {"session_id": bg.session_id, "obj": bg}
+                        continue
+                    if "await_background" in step:
+                        spec = step["await_background"]
+                        bg = (getattr(server, "background", None) or {}).get("obj")
+                        if bg is None:
+                            continue
+                        took = bg.wait(spec["within_seconds"] + 5)
+                        if took > spec["within_seconds"]:
+                            problems.append(f"background statement still ran after {spec['within_seconds']}s")
+                        if spec.get("expect_error") and not bg.error:
+                            problems.append("background statement ended without error")
+                        server.background = None
+                        continue
                     params = _step_params(step, server)
                     if "roundtrip" in step:
                         label = f"roundtrip {step['roundtrip']['operation']}"
@@ -336,7 +424,7 @@ def run_syntax(specs: Specs, server: Server, report: Report):
                 with server.connect() as conn:
                     _exec_all(conn, syn.get("setup", {}).get(server.engine, []))
                     try:
-                        _exec_all(conn, [ex["sql"]])
+                        _exec_all(conn, [server_sql(specs, syn_id, server.engine, ex["sql"])])
                         ok = True
                     except Exception as exc:
                         ok, error = False, f"{exc}".splitlines()[0]

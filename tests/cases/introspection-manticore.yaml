@@ -1,0 +1,81 @@
+# yaml-language-server: $schema=../../schemas/test.schema.json
+id: introspection-manticore
+description: >
+  Object tree on Manticore: SHOW DATABASES / SHOW TABLES / DESCRIBE mapped to the query contracts
+  by the variants' transforms.
+engines: [manticore]
+
+setup:
+  manticore:
+    - "CREATE TABLE t_mi (title TEXT, body TEXT indexed, tag STRING, label STRING attribute indexed, n INT, b BIGINT, f FLOAT, ok BOOL, ts TIMESTAMP, j JSON, m MULTI, vec FLOAT_VECTOR knn_type='hnsw' knn_dims='2' hnsw_similarity='l2') morphology='stem_en'"
+    - "CREATE TABLE t_mi_col (title TEXT, n INT engine='columnar')"
+    - "CREATE TABLE t_mi_pq (title TEXT) type='percolate'"
+    - "CREATE TABLE t_mi_dist type='distributed' local='t_mi' local='t_mi_col'"
+
+cleanup:
+  manticore:
+    - DROP TABLE IF EXISTS t_mi_dist
+    - DROP TABLE IF EXISTS t_mi
+    - DROP TABLE IF EXISTS t_mi_col
+    - DROP TABLE IF EXISTS t_mi_pq
+
+steps:
+  - query: introspection.list-schemas
+    expect:
+      rows:
+        - match: { schema_name: Manticore }
+          values: { is_system: false }
+        - match: { schema_name: information_schema }
+          values: { is_system: true }
+
+  - query: introspection.list-tables
+    params: { schema: "{{schema}}" }
+    expect:
+      rows:
+        - match: { table_name: t_mi }
+          values: { schema_name: Manticore, table_type: table, storage_engine: rt }
+        - match: { table_name: t_mi_col }
+          values: { table_type: table, storage_engine: rt }
+        - match: { table_name: t_mi_pq }
+          values: { table_type: percolate-table, storage_engine: percolate }
+        - match: { table_name: t_mi_dist }
+          values: { table_type: distributed-table, storage_engine: distributed }
+
+  - query: introspection.list-columns
+    params: { schema: "{{schema}}", table: t_mi }
+    expect:
+      row_count: 13
+      rows:
+        - match: { column_name: id }
+          values: { ordinal_position: 1, data_type: bigint, is_auto_increment: true, is_nullable: false, properties: "" }
+        - match: { column_name: title }
+          values: { ordinal_position: 2, data_type: text, properties: indexed stored, is_auto_increment: false }
+        - match: { column_name: body }
+          values: { data_type: text, properties: indexed }
+        - match: { column_name: tag }
+          values: { data_type: string, properties: "" }
+        - match: { column_name: label }
+          values: { data_type: string, properties: indexed attribute }
+        - match: { column_name: n }
+          values: { data_type: uint }
+        - match: { column_name: j }
+          values: { data_type: json, is_nullable: true }
+        - match: { column_name: m }
+          values: { data_type: mva }
+        - match: { column_name: vec }
+          values: { data_type: float_vector, properties: knn }
+
+  - query: introspection.list-columns
+    params: { schema: "{{schema}}", table: t_mi_col }
+    expect:
+      rows:
+        - match: { column_name: n }
+          values: { ordinal_position: 3, properties: columnar }
+
+  - query: introspection.list-columns
+    params: { schema: "{{schema}}", table: t_mi_pq }
+    expect:
+      row_count: 4
+      rows:
+        - match: { column_name: query }
+          values: { data_type: string }

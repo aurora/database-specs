@@ -44,6 +44,11 @@ ENGINE_SETUP = {
         "env": {"ACCEPT_EULA": "Y", "MSSQL_SA_PASSWORD": MSSQL_PASSWORD, "MSSQL_PID": "Developer"},
         "schema": "dbo",
     },
+    "manticore": {
+        "port": 9306,
+        "env": {},
+        "schema": "Manticore",  # no databases: DATABASE() always returns 'Manticore'
+    },
     # embedded: no container port; a worker process (tooling/dbspecs/sqlite_worker.py) runs
     # locally or inside a python:*-slim image and uses the SQLite linked into that Python
     "sqlite": {"embedded": True, "schema": "main"},
@@ -184,6 +189,9 @@ class Server:
         if self.engine in ("mysql", "mariadb"):  # mysql wire protocol
             return pymysql.connect(host=self.host, port=self.port, user="root", password=PASSWORD,
                                    database=DATABASE, autocommit=True, connect_timeout=3)
+        if self.engine == "manticore":  # mysql wire protocol, no authentication, no databases
+            return pymysql.connect(host=self.host, port=self.port, user="root", autocommit=True,
+                                   connect_timeout=3)
         if self.engine == "sqlserver":
             return pymssql.connect(server=self.host, port=self.port, user="sa", password=MSSQL_PASSWORD,
                                    database=database, autocommit=True, login_timeout=3)
@@ -205,7 +213,7 @@ class Server:
                 cur.execute(f"IF DB_ID('{DATABASE}') IS NULL CREATE DATABASE [{DATABASE}]")
             return self.version
         with self.connect() as conn, conn.cursor() as cur:
-            if self.engine in ("mysql", "mariadb"):
+            if self.engine in ("mysql", "mariadb", "manticore"):
                 cur.execute("SELECT VERSION()")
                 self.version = re.match(r"\d+\.\d+\.\d+", cur.fetchone()[0]).group(0)
             else:

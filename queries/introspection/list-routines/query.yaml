@@ -66,3 +66,4 @@ variants:
 
 not_applicable:
   sqlite: "No stored routines (capability schema.stored-routines)."
+  manticore: "No stored routines (capability schema.stored-routines); UDF plugins are listed by SHOW PLUGINS."

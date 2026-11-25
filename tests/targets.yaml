@@ -20,6 +20,7 @@ targets:
   - { id: sqlserver-2019, engine: sqlserver,  image: mcr.microsoft.com/mssql/server:2019-latest }
   - { id: sqlserver-2022, engine: sqlserver,  image: mcr.microsoft.com/mssql/server:2022-latest }
   - { id: sqlserver-2025, engine: sqlserver,  image: mcr.microsoft.com/mssql/server:2025-latest }
+  - { id: manticore,      engine: manticore,  image: docker.io/manticoresearch/manticore:latest }
   # SQLite: embedded - the worker runs in a python:*-slim image (Debian's libsqlite3) or locally
   - { id: sqlite-3.27,    engine: sqlite,     image: docker.io/library/python:3.9-slim-buster }
   - { id: sqlite-3.34,    engine: sqlite,     image: docker.io/library/python:3.11-slim-bullseye }

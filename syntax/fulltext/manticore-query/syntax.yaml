@@ -1,0 +1,67 @@
+# yaml-language-server: $schema=../../../schemas/syntax.schema.json
+id: fulltext.manticore-query
+title: Manticore full-text query language (MATCH argument)
+description: >
+  The language inside MATCH('...'). It is not SQL: it lives in a string literal, so a client
+  highlights and validates it separately (lexical spec manticore, embedded_languages). Examples
+  are the query text only; the test runner wraps them into a SELECT on a table with the fields
+  title and body.
+
+grammars:
+  manticore:
+    file: manticore.ebnf
+    start: fulltext_query
+    wrap: "SELECT id FROM t_ft WHERE MATCH({{literal}})"
+    word_pattern: '(?!\d+(?!\w))\w+'
+    notes:
+      - "Operator keywords (MAYBE, NEAR/n, NOTNEAR/n, SENTENCE, PARAGRAPH, ZONE) are upper case; the grammar matches them case-insensitively."
+      - "Precedence and how operators combine (e.g. NEAR inside phrases, nested field limits) are simplified: the grammar is for highlighting and quick checks, the server decides."
+      - "A query must contain a positive term: '-word' alone parses but is rejected ('non-computable')."
+      - "Field names in @field must exist in the table; unknown ones are an error at query time."
+      - "Special characters as text need a backslash: \\- \\| \\@ ... - and inside the SQL string literal the backslash itself doubles ('a \\\\- b')."
+      - "Wildcards (* ? %) need min_infix_len or min_prefix_len on the table; without, they parse but match nothing."
+    sources: [{ evidence: tested }]
+
+setup:
+  manticore:
+    - "CREATE TABLE t_ft (title TEXT, body TEXT, cat INT) min_infix_len = '2'"
+    - "INSERT INTO t_ft (id, title, body, cat) VALUES (1, 'red apple pie', 'sweet dessert with apples', 1)"
+cleanup:
+  manticore: ["DROP TABLE IF EXISTS t_ft"]
+
+examples:
+  - { sql: "apple", expect: valid, engines: { manticore: {} } }
+  - { sql: "apple pie", expect: valid, engines: { manticore: {} }, notes: ["Implicit AND."] }
+  - { sql: "apple | pear", expect: valid, engines: { manticore: {} } }
+  - { sql: "apple -pie", expect: valid, engines: { manticore: {} } }
+  - { sql: "apple !pie", expect: valid, engines: { manticore: {} } }
+  - { sql: "(apple | pear) -(pie | tart)", expect: valid, engines: { manticore: {} } }
+  - { sql: "@title apple", expect: valid, engines: { manticore: {} } }
+  - { sql: "@(title,body) apple", expect: valid, engines: { manticore: {} } }
+  - { sql: "@!title apple", expect: valid, engines: { manticore: {} } }
+  - { sql: "@* apple", expect: valid, engines: { manticore: {} } }
+  - { sql: "@title[2] red", expect: valid, engines: { manticore: {} }, notes: ["Only the first 2 positions of the field."] }
+  - { sql: "@title apple @body sweet", expect: valid, engines: { manticore: {} } }
+  - { sql: '"red apple"', expect: valid, engines: { manticore: {} } }
+  - { sql: '"red pie"~2', expect: valid, engines: { manticore: {} }, notes: ["Proximity: at most 2 words between."] }
+  - { sql: '"red apple pie"/2', expect: valid, engines: { manticore: {} }, notes: ["Quorum: at least 2 of the words."] }
+  - { sql: "red << pie", expect: valid, engines: { manticore: {} }, notes: ["Strict order."] }
+  - { sql: "red NEAR/2 pie", expect: valid, engines: { manticore: {} } }
+  - { sql: "red NOTNEAR/2 pie", expect: valid, engines: { manticore: {} } }
+  - { sql: "apple MAYBE pear", expect: valid, engines: { manticore: {} } }
+  - { sql: "red SENTENCE pie", expect: valid, engines: { manticore: {} } }
+  - { sql: "red PARAGRAPH pie", expect: valid, engines: { manticore: {} } }
+  - { sql: "^red", expect: valid, engines: { manticore: {} } }
+  - { sql: "pie$", expect: valid, engines: { manticore: {} } }
+  - { sql: "=apples", expect: valid, engines: { manticore: {} } }
+  - { sql: "app*", expect: valid, engines: { manticore: {} } }
+  - { sql: "*ple", expect: valid, engines: { manticore: {} } }
+  - { sql: "a?ple", expect: valid, engines: { manticore: {} } }
+  - { sql: "apple^2", expect: valid, engines: { manticore: {} }, notes: ["Boost the term's weight."] }
+  - { sql: "äpfel", expect: valid, engines: { manticore: {} } }
+  - { sql: "ZONE:(h1) apple", expect: valid, engines: { manticore: {} } }
+  - { sql: "-apple", expect: semantic-error, engines: { manticore: {} } }
+  - { sql: "@nosuch apple", expect: semantic-error, engines: { manticore: {} } }
+  - { sql: "apple |", expect: invalid, engines: { manticore: {} } }
+  - { sql: "apple ((", expect: invalid, engines: { manticore: {} } }
+  - { sql: '"unterminated', expect: invalid, engines: { manticore: {} } }

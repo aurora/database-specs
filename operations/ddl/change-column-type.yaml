@@ -88,3 +88,10 @@ implementations:
         - "Without an assignment cast between old and new type, USING is required (e.g. text -> integer: USING col::integer)."
         - "Usually rewrites the table under ACCESS EXCLUSIVE lock (except binary-coercible changes such as varchar(n) -> varchar(m>n) or -> text)."
         - "Fails if views or rules depend on the column; they must be dropped and recreated."
+  manticore:
+    - status: partial
+      template: "ALTER TABLE {{table}} MODIFY COLUMN {{column}} {{new_type}}"
+      requires: [new_type]
+      transactional: false
+      caveats: ["Only int (uint) to bigint ('only alter from rowise int to bigint supported'); any other change means a new column or a new table plus re-inserting the documents."]
+      sources: [{ evidence: tested }]

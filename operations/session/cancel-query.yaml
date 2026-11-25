@@ -1,0 +1,43 @@
+# yaml-language-server: $schema=../../schemas/operation.schema.json
+id: session.cancel-query
+title: Cancel a running statement or end a session
+description: >
+  Sent from a second connection (the busy one cannot run anything); session_id comes from
+  session.list-processes or the engine's session_id_query.
+parameters:
+  - { name: session_id, kind: integer }
+  - { name: terminate, kind: boolean, description: "End the whole session instead of only the running statement." }
+
+implementations:
+  mysql:
+    - status: supported
+      template: "KILL {{^terminate}}QUERY {{/terminate}}{{session_id}}"
+      caveats:
+        - "KILL QUERY stops the statement, the connection stays open; KILL ends the connection. Own sessions always, others need CONNECTION_ADMIN / SUPER."
+        - "The cancelled statement fails with error 1317 (query execution was interrupted); a transaction is not rolled back automatically by KILL QUERY."
+      sources: [{ evidence: tested }]
+  mariadb:
+    - status: supported
+      template: "KILL {{^terminate}}QUERY {{/terminate}}{{session_id}}"
+      caveats: ["As MySQL; KILL [HARD | SOFT] and KILL QUERY ID <query_id> are MariaDB extensions."]
+      sources: [{ evidence: tested }]
+  postgresql:
+    - status: supported
+      template: "SELECT {{#terminate}}pg_terminate_backend{{/terminate}}{{^terminate}}pg_cancel_backend{{/terminate}}({{session_id}})"
+      caveats:
+        - "Returns true if the signal was sent. Same user or pg_signal_backend role needed. The cancelled statement fails with SQLSTATE 57014."
+        - "libpq can also cancel without SQL: PQcancel / PQcancelBlocking (17+) on the busy connection's cancel key."
+      sources: [{ evidence: tested }]
+  sqlserver:
+    - status: partial
+      template: "KILL {{session_id}}"
+      caveats:
+        - "KILL always ends the session (and rolls back its transaction); there is no SQL to cancel only the statement."
+        - "To cancel just the running statement, the client sends a TDS attention signal: ODBC SQLCancel on the busy statement handle."
+      sources: [{ evidence: tested }]
+  sqlite:
+    - status: supported
+      method: protocol
+      protocol_call: sqlite3_interrupt(db) from another thread
+      caveats: ["Embedded: there are no other sessions; interrupts the statement running on that database handle (SQLITE_INTERRUPT)."]
+      sources: [{ evidence: docs, url: "https://sqlite.org/c3ref/interrupt.html" }]

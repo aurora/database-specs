@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=../../../schemas/query.schema.json
+id: introspection.list-types
+title: List user-defined types of a schema
+parameters:
+  - { name: schema, type: string }
+result:
+  order: type_name
+  columns:
+    - { name: schema_name, type: string, nullable: false }
+    - { name: type_name, type: string, nullable: false }
+    - { name: kind, type: string, nullable: false, enum: [enum, domain, composite, range, alias, table-type, base] }
+    - { name: base_type, type: string, nullable: true, description: "Underlying type of a domain / alias type, subtype of a range." }
+    - { name: enum_values, type: string, nullable: true, description: "Enum labels in order, as a JSON array." }
+    - { name: attributes, type: string, nullable: true, description: "Composite / table type: 'name type, name type, ...'." }
+    - { name: is_nullable, type: boolean, nullable: true }
+    - { name: default_raw, type: string, nullable: true }
+    - { name: check_expression, type: string, nullable: true, description: "Domain CHECK constraints, joined with AND." }
+    - { name: comment, type: string, nullable: true }
+variants:
+  - engine: postgresql
+    since: "12"
+    file: postgresql.sql
+    notes:
+      - "Array types, multiranges and the implicit row types of tables are left out. kind base = types created by extensions or CREATE TYPE (input/output functions)."
+  - engine: sqlserver
+    since: "14"
+    file: sqlserver.sql
+    notes:
+      - "Alias types (CREATE TYPE ... FROM) and table types; CLR types are kind base. No enum / domain / composite types."
+      - "Table type attributes use TYPE_NAME only (no lengths): [b] nvarchar."
+not_applicable:
+  mysql: "No user-defined types (ENUM / SET are column types)."
+  mariadb: "No user-defined types (ENUM / SET are column types)."
+  sqlite: "No user-defined types."
+  manticore: "No user-defined types."

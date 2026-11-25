@@ -27,6 +27,10 @@ support:
     - status: supported
       notes:
         - "All DDL is transactional. Exceptions: VACUUM and some PRAGMAs (e.g. journal_mode, foreign_keys) cannot run inside a transaction or are no-ops there."
+  manticore:
+    - status: unsupported
+      notes: ["BEGIN / COMMIT / ROLLBACK only cover INSERT/REPLACE/DELETE on one real-time table; DDL takes effect immediately."]
+      sources: [{ evidence: observed, notes: "manticore 32.1.3" }]
 probes:
   - name: rollback-create-table
     engines: [mysql, mariadb]
@@ -59,4 +63,14 @@ probes:
       - "CREATE TABLE probe_tx_ddl (id INT)"
       - "ROLLBACK"
     check: "SELECT COUNT(*) = 0 FROM sqlite_master WHERE name = 'probe_tx_ddl'"
+    cleanup: ["DROP TABLE IF EXISTS probe_tx_ddl"]
+  - name: rollback-create-table
+    engines: [manticore]
+    invert: true
+    setup:
+      - "BEGIN"
+      - "CREATE TABLE probe_tx_ddl (v INT)"
+      - "ROLLBACK"
+    statements:
+      - "SELECT id FROM probe_tx_ddl"
     cleanup: ["DROP TABLE IF EXISTS probe_tx_ddl"]

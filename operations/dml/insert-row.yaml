@@ -33,3 +33,11 @@ implementations:
       template: "INSERT INTO {{table}} ({{columns}}) VALUES ({{values}}){{#returning}} RETURNING {{returning}}{{/returning}}"
       caveats: ["RETURNING since 3.35; before, read sqlite3_last_insert_rowid() / last_insert_rowid()."]
       sources: [{ evidence: tested }]
+  manticore:
+    - status: supported
+      template: "INSERT INTO {{table}} ({{columns}}) VALUES ({{values}})"
+      caveats:
+        - "Without an id column the server generates a unique 64-bit id; SELECT LAST_INSERT_ID() returns it (as a string)."
+        - "Inserting an existing id fails (duplicate id); REPLACE INTO replaces the whole document (dml.upsert)."
+        - "No RETURNING and no server-side placeholders: values must be inlined as escaped literals (client-side prepared statements)."
+      sources: [{ evidence: tested }]

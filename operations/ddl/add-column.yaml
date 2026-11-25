@@ -45,3 +45,13 @@ implementations:
       transactional: true
       caveats: ["Always appended. Not allowed: PRIMARY KEY / UNIQUE, a non-constant default (CURRENT_TIMESTAMP, expressions), NOT NULL without a non-NULL default, a STORED generated column."]
       sources: [{ evidence: tested }]
+  manticore:
+    - status: supported
+      template: "ALTER TABLE {{table}} ADD COLUMN {{column}} {{column_definition}}"
+      requires: [column_definition]
+      transactional: false
+      caveats:
+        - "column_definition is a Manticore type (int, bigint, float, bool, timestamp, string, json, multi, multi64, text, float_vector ...) plus options; no NULL / DEFAULT / AFTER."
+        - "New attributes read 0 / empty for existing documents. A new text field is only filled for documents inserted or replaced afterwards."
+        - "Full-text fields are listed before attributes (DESCRIBE), whatever the order of ADD COLUMN."
+      sources: [{ evidence: tested }]

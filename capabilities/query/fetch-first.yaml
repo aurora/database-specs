@@ -22,6 +22,15 @@ support:
   sqlite:
     - status: unsupported
       notes: ["Use LIMIT ... OFFSET."]
+  manticore:
+    - status: unsupported
+      notes: ["Use LIMIT (query.limit-offset)."]
 probes:
   - engines: [mysql, mariadb, postgresql, sqlserver, sqlite]
     statements: ["SELECT n FROM (SELECT 1 AS n) t ORDER BY n OFFSET 0 ROWS FETCH FIRST 1 ROWS ONLY"]
+  - engines: [manticore]
+    setup:
+      - "CREATE TABLE probe_mt (title TEXT, v INT)"
+    statements:
+      - "SELECT id FROM probe_mt ORDER BY id ASC OFFSET 0 ROWS FETCH FIRST 1 ROWS ONLY"
+    cleanup: ["DROP TABLE IF EXISTS probe_mt"]

@@ -36,6 +36,7 @@
       "properties": {
         "version_query": { "type": "string" },
         "version_pattern": { "type": "string", "description": "Regex with groups major, minor, patch." },
+        "session_id_query": { "type": "string", "description": "Id of the current session as used by session.list-processes / session.cancel-query." },
         "notes": { "$ref": "common.schema.json#/$defs/notes" }
       }
     },

@@ -38,3 +38,9 @@ implementations:
       transactional: true
       caveats: ["There is no TRUNCATE; DELETE without WHERE uses the truncate optimization (unless triggers exist). AUTOINCREMENT counters in sqlite_sequence are not reset."]
       sources: [{ evidence: tested }]
+  manticore:
+    - status: supported
+      template: "TRUNCATE TABLE {{table}}"
+      transactional: false
+      caveats: ["Real-time tables only. WITH RECONFIGURE re-reads settings from the config file and fails in RT mode without one."]
+      sources: [{ evidence: tested }]

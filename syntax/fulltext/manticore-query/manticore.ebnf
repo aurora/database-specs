@@ -1,0 +1,42 @@
+/* Manticore - full-text query language (the string argument of MATCH())
+   Built-ins: identifier (a word that is not an operator keyword), string_literal (a "phrase"),
+   integer, number. Whitespace between tokens is not significant for this grammar, so it
+   accepts a few spellings the server reads differently (e.g. 'app *'). */
+
+fulltext_query ::= sequence ( '|' sequence )*
+
+/* implicit AND between elements; a field limit applies to everything after it */
+sequence ::= element+
+
+element ::= field_limit
+          | zone_limit
+          | operand ( binary_operator operand )*
+
+binary_operator ::= '<<'
+                  | 'MAYBE'
+                  | ( 'NEAR' | 'NOTNEAR' ) '/' integer
+                  | 'SENTENCE'
+                  | 'PARAGRAPH'
+
+operand ::= ( '-' | '!' )? atom ( '^' number )?
+
+atom ::= term
+       | phrase
+       | '(' fulltext_query ')'
+
+/* ^word = at field start, word$ = at field end, =word = exact form; * ? % are wildcards
+   (they need min_infix_len / min_prefix_len on the table to match anything) */
+term ::= ( '^' | '=' )? wildcard? word ( wildcard word? )* '$'?
+
+wildcard ::= '*' | '?' | '%'
+
+word ::= identifier | integer
+
+/* "exact phrase", "proximity phrase"~n, "quorum of words"/n */
+phrase ::= string_literal ( '~' integer | '/' number )?
+
+field_limit ::= '@' ( fields | '!' fields | '*' ) ( '[' integer ']' )?
+
+fields ::= identifier | '(' identifier ( ',' identifier )* ')'
+
+zone_limit ::= ( 'ZONE' | 'ZONESPAN' ) ':' '(' identifier ( ',' identifier )* ')'

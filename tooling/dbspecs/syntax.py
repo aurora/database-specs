@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 
 from .ebnf import Grammar, matches, parse_grammar, tokenize
-from .specs import Specs, in_range, parse_version
+from .specs import Specs, in_range, parse_version, quote_literal, render
 
 
 def grammar_path(specs: Specs, syn_id: str, engine: str):
@@ -30,8 +30,21 @@ def lexical_for(specs: Specs, engine: str) -> dict:
 
 def grammar_accepts(specs: Specs, syn_id: str, engine: str, version: str, sql: str) -> bool:
     syn = specs.get("syntax", syn_id)
+    entry = syn["grammars"][engine]
     g = load_grammar(specs, syn_id, engine).for_version(version)
-    return matches(g, syn["grammars"][engine]["start"], tokenize(sql, lexical_for(specs, engine)))
+    try:
+        tokens = tokenize(sql, lexical_for(specs, engine), entry.get("word_pattern"))
+    except ValueError:  # e.g. unterminated string: not a valid statement
+        return False
+    return matches(g, entry["start"], tokens)
+
+
+def server_sql(specs: Specs, syn_id: str, engine: str, sql: str) -> str:
+    """The statement sent to the server: the example itself, or wrapped (embedded languages)."""
+    wrap = specs.get("syntax", syn_id)["grammars"][engine].get("wrap")
+    if not wrap:
+        return sql
+    return render(wrap, {"literal": quote_literal(lexical_for(specs, engine), sql)})
 
 
 def grammar_should_accept(expect: str) -> bool:

@@ -9,6 +9,7 @@ catalogs: [pg_catalog, information_schema]
 identification:
   version_query: SHOW server_version_num
   version_pattern: '^(?<major>\d+)(?<minor>\d{2})(?<patch>\d{2})$'
+  session_id_query: SELECT pg_backend_pid()
   notes:
     - "server_version_num is an integer (e.g. 170002 = 17.2). From 10 on the middle two digits are always 00; version 9.6.x was 9060x."
     - "libpq exposes the same value via PQserverVersion() without a round trip."

@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=../schemas/engine.schema.json
+id: manticore
+name: Manticore Search
+vendor: Manticore Software
+description: >
+  Full-text search engine with an SQL interface over the MySQL protocol (port 9306) and a JSON
+  HTTP API (port 9308). Not a MySQL fork: its SQL dialect, data model (full-text fields vs
+  attributes, real-time / plain / percolate / distributed tables) and catalog are its own.
+protocols: [mysql]
+lexical: manticore
+catalogs: [SHOW / DESCRIBE statements]
+
+identification:
+  version_query: SELECT VERSION()
+  version_pattern: '^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+) [0-9a-f]+@'
+  session_id_query: SELECT CONNECTION_ID()
+  notes:
+    - "VERSION() looks like '32.1.3 9d4cd4df2@26112010 (columnar 14.5.8 ...) (secondary ...) (knn ...)': version, commit, build date and the versions of the optional libraries."
+    - "Over the mysql protocol it can be mistaken for MySQL: detect it by this version format (no '-MariaDB', commit hash after the version). DATABASE() always returns 'Manticore'."
+    - "There is no authentication by default; user and password are ignored."
+    - "information_schema (TABLES, COLUMNS, ...) is a small emulation for MySQL tools: only some columns are real, others return the string 'null'. Use SHOW TABLES / DESCRIBE (the introspection queries do)."
+    - "CONNECTION_ID() matches the ConnID column of SHOW THREADS, which lists working threads only (not idle sessions)."
+    - "32.1.3 with authentication disabled crashed (connection lost, container gone) on GRANT ... TO a user that does not exist - do not probe user management on a shared server."
+
+versions:
+  - series: "32"
+    notes: ["Tested with 32.1.3 (official image, November 2026). Older release lines (6.x - 13.x) differ in SQL coverage (e.g. JOIN since 7.x, verify)."]
+
+documentation:
+  - title: Manticore Search manual
+    url: https://manual.manticoresearch.com/
+
+sources:
+  - evidence: observed
+    notes: Behaviour observed against manticoresearch/manticore 32.1.3.

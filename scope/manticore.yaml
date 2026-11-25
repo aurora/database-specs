@@ -14,8 +14,8 @@ rules:
     status: covered
     specs: ["syntax:query.fulltext-select", "capability:query.fulltext-search"]
   - match: ["sphinxql:like_filter: *"]
-    status: covered
-    specs: ["query:introspection.list-tables"]
+    status: planned
+    roadmap: introspection.server-variables
   - match: ["sphinxql:ident_*", "sphinxql:names_transaction_collate: *", "sphinxql:reserved_tokens_without_option: *",
             "sphinxql:ident_or_string_or_num_or_null*", "sphinxql_second:ident: *", "sphinxql_second:ident_all: *",
             "ddl:tableident: *"]
@@ -25,10 +25,14 @@ rules:
   - match: ["sphinxql:expr_ident: *"]
     status: covered
     specs: ["syntax:query.fulltext-select"]
+  - match: ["sphinxql:limit_clause: LIMIT - <const_int>"]
+    status: covered
+    specs: ["engine:manticore"]
+    reason: "Accepted but breaks the result for the client; documented as a trap in the engine notes."
   - match: ["sphinxquery:*"]
     status: covered
     specs: ["syntax:fulltext.manticore-query"]
-  - match: ["sphinxql:filter_item: *", "sphinxql:filter_expr: *", "sphinxql:mva_aggr: *", "sphinxql:streq: *",
+  - match: ["sphinxql:on_clause_type_cast: *", "sphinxql:filter_item: *", "sphinxql:filter_expr: *", "sphinxql:mva_aggr: *", "sphinxql:streq: *",
             "sphinxql:subkey: *", "sphinxql:select_item: *", "sphinxql:named_const: *", "sphinxql:option_item: *",
             "sphinxql:const_int: *", "sphinxql:const_float: *", "sphinxexpr:expr: *", "sphinxexpr:streq: *",
             "sphinxexpr:subkey: *", "sphinxexpr:attr: *", "sphinxexpr:json_attr_name: *", "sphinxexpr:iterator: *",
@@ -59,11 +63,28 @@ rules:
             "docs-page:Searching/Options: *", "buddy:Knn", "buddy:Fuzzy",
             "sphinxql:select_expr: *", "sphinxql:group_concat_order_item: *", "sphinxql:opt_group_concat_separator: *",
             "sphinxql:order_clause: *", "sphinxql:function: *", "sphinxql:json_aggr: *", "sphinxql:option_clause_item: *",
-            "sphinxql:option_name: *", "sphinxql:on_clause_type_cast: *", "sphinxql:hash_key: *", "sphinxql:expr: *",
+            "sphinxql:option_name: *", "sphinxql:hash_key: *", "sphinxql:expr: *",
             "sphinxql:opt_collate: *", "docs:SQL commands / SELECT: OPTION", "docs:SQL commands / SELECT: SUB-SELECTS",
             "docs:SQL commands / SELECT: SHOW WARNINGS"]
     status: planned
     roadmap: dml.select
+  - match: ["docs-page:Searching/KNN: *", "docs-page:Searching/Sorting_and_ranking: *",
+            "docs-page:Searching/Joining: Join batching", "docs-page:Searching/Joining: Join caching",
+            "docs-page:Searching/Joining: Search options and match weights"]
+    status: planned
+    roadmap: dml.select
+  - match: ["docs-page:Searching/Joining: *"]
+    status: covered
+    specs: ["syntax:query.fulltext-select"]
+  - match: ["docs-page:Searching/Autocomplete: *", "docs-page:Searching/Spell_correction: *", "docs-page:Searching/Percolate_query: *"]
+    status: planned
+    roadmap: dml.call
+  - match: ["docs-page:Data_creation_and_modification/Updating_documents/UPDATE: *"]
+    status: covered
+    specs: ["operation:dml.update-row"]
+  - match: ["docs-page:Creating_a_table/Data_types: *"]
+    status: planned
+    roadmap: ddl.create-table
   - match: ["docs:Functions / *", "sphinxql:accepted_funcs: *", "sphinxql:time_unit: *", "sphinxexpr:function: *",
             "docs-page:Functions/*", "docs-page:Searching/Highlighting: *"]
     status: planned
@@ -126,6 +147,9 @@ rules:
             "sphinxql_extra:read_or_write: *"]
     status: covered
     specs: ["engine:manticore"]
+  - match: ["sphinxql_extra:set_global_stmt: *", "sphinxql_extra:global_or_session: *"]
+    status: planned
+    roadmap: connection-parameters
   - match: ["sphinxql_extra:savepoint_sp: *"]
     status: planned
     roadmap: transactions.savepoints
@@ -138,10 +162,19 @@ rules:
   - match: ["sphinxql:show_what: CREATE TABLE *", "docs:SQL commands / Schema management: SHOW CREATE TABLE"]
     status: covered
     specs: ["operation:introspection.table-ddl"]
+  - match: ["sphinxql:show_what: <index_or_table> <one_index_opt_chunk> INDEXES *", "docs:SQL commands / Schema management: SHOW TABLE INDEXES"]
+    status: covered
+    specs: ["query:introspection.list-indexes"]
   - match: ["sphinxql:show_what: <index_or_table> *", "sphinxql:show_what: TABLE STATUS *", "sphinxql:index_or_table: *", "sphinxql:chunk: *",
             "docs:SQL commands / Schema management: SHOW TABLE *"]
     status: planned
     roadmap: introspection.table-statistics
+  - match: ["docs-page:Listing_tables: SELECT FROM name.@table"]
+    status: open
+    reason: "SELECT * FROM t.@table (schema as a result set) crashes 32.1.3 (signal 11, see engine notes); use DESCRIBE."
+  - match: ["docs-page:Listing_tables: *"]
+    status: covered
+    specs: ["query:introspection.list-tables", "query:introspection.list-columns", "operation:introspection.table-ddl"]
   - match: ["docs:SQL commands / Schema management: *SOURCE*", "docs:SQL commands / Schema management: *MATERIALIZED VIEW*",
             "docs:SQL commands / Schema management: *MV*", "buddy:Queue"]
     status: open
@@ -214,7 +247,7 @@ rules:
     reason: "Replication clusters and distributed agents are server administration, not something a database client edits."
   - match: ["sphinxql:show_what: PLUGINS"]
     status: open
-    reason: "Loaded UDFs are callable in SELECT (autocomplete), and SHOW PLUGINS lists them; introspection.list-routines is not applicable for Manticore and does not cover them."
+    reason: "Loaded UDFs are callable in SELECT (autocomplete), and SHOW PLUGINS lists them; introspection.list-routines has no Manticore variant (gap) - candidate source."
   - match: ["ddl:create_function: *", "ddl:drop_function: *", "buddy:Plugin", "ddl:create_plugin: *", "ddl:drop_plugin: *", "ddl:udf_type: *",
             "sphinxql_second:reload_plugins: *", "docs:SQL commands / Plugins: *"]
     status: out-of-scope

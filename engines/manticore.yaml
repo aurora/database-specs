@@ -58,6 +58,8 @@ identification:
     - "32.1.3 also crashes (signal 11) on the documented SELECT * FROM <table>.@table (table schema as a result set); use DESCRIBE."
     - "Statements accepted without effect (observed 32.1.3): CREATE DATABASE (SHOW DATABASES unchanged), SAVEPOINT (ROLLBACK TO SAVEPOINT is a syntax error), SET TRANSACTION ISOLATION LEVEL (no variable changes). LOCK TABLES t READ does lock: writes fail with 'table is locked' until UNLOCK TABLES."
     - "MySQL compatibility for GUI tools (Buddy / extra parser): SHOW COLUMNS FROM t returns Field, Type, Null, Key, Default, Extra (Null always NO); SHOW FULL TABLES returns Tables_in_Manticore, Table_type (BASE TABLE); SHOW SCHEMAS = SHOW DATABASES."
+    - "Buddy answers MySQL catalog statements that Manticore does not have with empty results (no error): SHOW INDEX / KEYS FROM t, SHOW FUNCTION STATUS, SHOW PROCEDURE STATUS, SHOW TRIGGERS, SHOW FULL PROCESSLIST, ...; SHOW ENGINES returns one invented MyISAM row. A MySQL-oriented client must not read them as 'no indexes / routines' - use SHOW TABLE t INDEXES (introspection.list-indexes). SHOW FULL COLUMNS FROM t fails ('error in your query'). SHOW ... results observed on 32.1.3; per the Buddy source (Select plugin) queries the C++ parser rejects may also be rewritten, keyed on the error text (not verified)."
+    - "LIMIT -n is accepted by the parser but the result breaks the client (pymysql: decimal conversion error, the connection is unusable afterwards; observed 32.1.3) - never send a negative LIMIT."
     - "SHOW QUERIES lists running statements of all protocols (id, query, time, protocol, host) including Buddy's internal HTTP requests; KILL takes that query id, not CONNECTION_ID()."
 
 versions:

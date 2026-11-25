@@ -94,9 +94,37 @@ variants:
       - "Expression elements have column_name NULL; their expression text is not exposed by pragmas (expression is NULL)."
       - "predicate is cut from the CREATE INDEX text after ' WHERE ' (main schema only)."
 
+  - engine: manticore
+    file: manticore.sql
+    inline_parameters: { table: identifier }
+    transform:
+      schema_name: { param: schema }
+      table_name: { param: table }
+      index_name: { column: Name }
+      is_unique: { const: false }
+      is_primary: { const: false }
+      index_type: { const: secondary }
+      is_clustered: { const: null }
+      column_position: { const: 1 }
+      column_name: { column: Name }
+      expression: { const: null }
+      sort_order: { const: null }
+      nulls_first: { const: null }
+      prefix_length: { const: null }
+      is_included: { const: false }
+      is_visible: { column: Enabled, equals: "1" }
+      predicate: { const: null }
+      comment: { const: null }
+    extra_columns:
+      - { name: value_type, column: Type, description: "Indexed value type (uint32, int64, string, ...)." }
+      - { name: percent, column: Percent, description: "Share of the documents the index covers." }
+    notes:
+      - "SHOW TABLE t INDEXES lists the secondary (attribute) indexes the engine built automatically, one per attribute; there is no CREATE INDEX. Indexes exist per disk chunk: rows still in the RAM chunk are not covered, a fresh table lists nothing until FLUSH RAMCHUNK / auto-flush."
+      - "Full-text fields are indexed by the table itself and do not appear. Buddy's SHOW INDEX FROM t (MySQL form) always returns no rows - do not use it."
+    sources: [{ evidence: observed, notes: "manticore 32.1.3" }]
+
 not_applicable:
   sphinx: "No user-defined indexes: full-text fields are indexed by the index itself."
-  manticore: "No CREATE INDEX: full-text fields are indexed by the table itself, secondary indexes on attributes are managed by the engine; DESCRIBE shows the per-column flags (introspection.list-columns properties)."
 
 gaps:
   - "MariaDB < 10.6: the variant reads information_schema.STATISTICS.IGNORED (10.6+); 10.3 - 10.5 need a variant without it (tested)."

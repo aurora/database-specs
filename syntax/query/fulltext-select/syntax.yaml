@@ -59,8 +59,8 @@ setup:
   manticore:
     - "CREATE TABLE t_fts (title TEXT, body TEXT, cat INT, price FLOAT, tags MULTI, brand STRING, meta JSON)"
     - "INSERT INTO t_fts (id, title, body, cat, price, tags, brand, meta) VALUES (1, 'red apple pie', 'sweet dessert', 1, 3.5, (1,2), 'acme', '{\"a\":{\"b\":1},\"k\":[5,6]}')"
-    - "CREATE TABLE t_cat (name TEXT, cid INT)"
-    - "INSERT INTO t_cat (id, name, cid) VALUES (1, 'fruit apple', 1)"
+    - "CREATE TABLE t_cat (name TEXT, cid INT, attrs JSON)"
+    - "INSERT INTO t_cat (id, name, cid, attrs) VALUES (1, 'fruit apple', 1, '{\"cid\":1}')"
   mysql:
     - "CREATE TABLE t_fts (id INT PRIMARY KEY, title VARCHAR(200), body TEXT, cat INT, price FLOAT, FULLTEXT (title, body), FULLTEXT (title)) ENGINE=InnoDB"
   mariadb:
@@ -213,6 +213,23 @@ examples:
     expect: invalid
     engines: { manticore: {} }
     notes: ["No LIKE in WHERE (LIKE only filters SHOW / DESCRIBE output); use MATCH() or REGEX() on string attributes."]
+  - sql: "SELECT id, price * 2 AS p, cat DIV 2 AS d, -cat AS n, cat | 4 AS b FROM t_fts"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts WHERE cat + 1 > 1"
+    expect: invalid
+    engines: { manticore: {} }
+    notes: ["No arithmetic in WHERE; compute it in the select list and filter by the alias."]
+  - sql: "SELECT id FROM t_fts WHERE meta.k[cat - 1] = 5"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT t_fts.id FROM t_fts INNER JOIN t_cat ON t_fts.cat = int(t_cat.attrs.cid)"
+    expect: valid
+    engines: { manticore: { since: "27.1" } }
+  - sql: "SELECT t_fts.id FROM t_fts INNER JOIN t_cat ON t_fts.cat = int(t_cat.cid)"
+    expect: semantic-error
+    engines: { manticore: { since: "27.1" } }
+    notes: ["Explicit casts only on JSON attributes."]
   # --- Sphinx
   - sql: "SELECT id, WEIGHT() AS w FROM t_ft WHERE MATCH('apple') ORDER BY w DESC LIMIT 10"
     expect: valid

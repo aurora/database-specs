@@ -9,6 +9,8 @@ setup:
   manticore:
     - "CREATE TABLE t_mi (title TEXT, body TEXT indexed, tag STRING, label STRING attribute indexed, n INT, b BIGINT, f FLOAT, ok BOOL, ts TIMESTAMP, j JSON, m MULTI, vec FLOAT_VECTOR knn_type='hnsw' knn_dims='2' hnsw_similarity='l2') morphology='stem_en'"
     - "CREATE TABLE t_mi_col (title TEXT, n INT engine='columnar')"
+    - "INSERT INTO t_mi_col (id, title, n) VALUES (1, 'a', 1), (2, 'b', 2)"
+    - "FLUSH RAMCHUNK t_mi_col"
     - "CREATE TABLE t_mi_pq (title TEXT) type='percolate'"
     - "CREATE TABLE t_mi_dist type='distributed' local='t_mi' local='t_mi_col'"
 
@@ -79,3 +81,12 @@ steps:
       rows:
         - match: { column_name: query }
           values: { data_type: string }
+
+  - query: introspection.list-indexes
+    params: { schema: "{{schema}}", table: t_mi_col }
+    expect:
+      rows:
+        - match: { index_name: n }
+          values: { column_name: n, index_type: secondary, is_visible: true, value_type: uint32 }
+        - match: { index_name: id }
+          values: { value_type: int64 }

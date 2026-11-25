@@ -1,8 +1,9 @@
 /* Manticore - SELECT with full-text search, grouping and facets (curated subset)
    Built-ins: identifier, string_literal, integer, number.
    The MATCH() argument is its own language: syntax fulltext.manticore-query.
-   Not covered: index hints (an optimizer-hint comment like SecondaryIndex(col) after the statement - the
-   tokenizer drops comments), sub-selects, table functions, KNN / HYBRID_MATCH. */
+   Not covered: index hints (a hint comment with SecondaryIndex(col) after the statement is a token for the server
+   but a comment for this tokenizer - see lexical manticore), sub-selects, table functions,
+   KNN / HYBRID_MATCH, LIMIT -n (accepted, but breaks the result: see engine notes). */
 
 select ::= 'SELECT' select_item ( ',' select_item )*
            'FROM' table_name ( ',' table_name )* /* @since 27.1 */ join_clause*
@@ -17,7 +18,12 @@ select ::= 'SELECT' select_item ( ',' select_item )*
 /* cluster:table addresses a table of a replication cluster */
 table_name ::= ( identifier ':' )? identifier
 
-select_item ::= '*' | identifier '.' '*' | value_expr ( 'AS'? identifier )?
+select_item ::= '*' | identifier '.' '*' | arith_expr ( 'AS'? identifier )?
+
+/* arithmetic and bitwise operators: in the select list (and subscripts) only - WHERE takes
+   plain comparisons ('WHERE v + 1 > 5' is a syntax error) */
+arith_expr ::= '-'? value_expr ( arith_operator '-'? value_expr )*
+arith_operator ::= '+' | '-' | '*' | '/' | '%' | '&' | '|' | 'DIV' | 'MOD'
 
 /* MATCH() items belong to the top-level AND chain only (not in OR, not under NOT; parentheses
    only around a single MATCH). Several MATCH items need a JOIN: one per table, named by the
@@ -35,7 +41,10 @@ match_call ::= 'MATCH' '(' string_literal ( ',' identifier )? ')'
 
 join_clause ::= ( 'INNER' | 'LEFT' ) 'JOIN' identifier 'ON' join_condition ( 'AND' join_condition )*
 
-join_condition ::= column_ref '=' column_ref
+join_condition ::= join_operand '=' join_operand
+
+/* casts like int(t.json.key) / string(...) work on JSON attributes only */
+join_operand ::= column_ref | identifier '(' column_ref ')'
 
 condition ::= condition_term ( 'OR' condition_term )*
 condition_term ::= condition_factor ( 'AND' condition_factor )*
@@ -57,7 +66,7 @@ value_expr ::= function_call | column_ref | literal | sysvar | 'FACET' '(' ')' |
 mva_aggr ::= ( 'ANY' | 'ALL' ) '(' column_ref ')'
 
 /* table.column, json.path.keys and json['key'] / json[0] */
-column_ref ::= identifier ( '.' identifier | '[' ( string_literal | integer ) ']' )*
+column_ref ::= identifier ( '.' identifier | '[' ( string_literal | arith_expr ) ']' )*
 
 sysvar ::= '@' '@' identifier ( '.' identifier )*
 

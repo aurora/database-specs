@@ -213,6 +213,16 @@ MANTICORE_DOC_PAGES = [
     "manual/english/Node_info_and_management/SHOW_QUERIES.md",
     "manual/english/Node_info_and_management/KILL.md",
     "manual/english/Functions/*.md",
+    # option / parameter names live on these pages (not in the grammar, not in the reference index)
+    "manual/english/Searching/Spell_correction.md",
+    "manual/english/Searching/Autocomplete.md",
+    "manual/english/Searching/KNN.md",
+    "manual/english/Searching/Joining.md",
+    "manual/english/Searching/Percolate_query.md",
+    "manual/english/Searching/Sorting_and_ranking.md",
+    "manual/english/Listing_tables.md",
+    "manual/english/Creating_a_table/Data_types.md",
+    "manual/english/Data_creation_and_modification/Updating_documents/UPDATE.md",
 ]
 BUDDY_REPO = "manticoresoftware/manticoresearch-buddy"
 
@@ -285,7 +295,7 @@ def generate_manticore(version: str, short_commit: str, buddy_commit: str | None
         ] + ([{"kind": "plugins", "repository": BUDDY_REPO, "commit": buddy_ref, "files": ["src/Plugin/*"]}] if buddy_ref else []),
         "notes": [
             "Statements handled by the Buddy sidecar (SHOW QUERIES, SHOW FULL TABLES, CREATE SOURCE / MATERIALIZED VIEW, the information_schema emulation, ...) are not in the C++ grammar: buddy: items name its plugins, the manual pages describe their statements.",
-            "Function, OPTION and setting names are resolved in C++ tables, not by the grammar: docs-page: items (headings of the manual pages) are the source for them.",
+            "Function, OPTION and setting names are resolved in C++ tables, not by the grammar: docs-page: items (headings of the manual pages) are the source for them. Names that the pages only list inside text or tables (most OPTION names, CALL SUGGEST / AUTOCOMPLETE / KEYWORDS / PQ options, knn() options, ranker names and ranking factors) are not separate items - the specs for them (dml.select, dml.call) must take them from the pages.",
             "Grammar items: alternatives with a keyword, a syntax character or (expression / full-text parsers, which have no keyword lexer) an operator token; plain sequences of nonterminals are internal structure.",
         ],
         "items": list(unique.values()),

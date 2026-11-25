@@ -92,7 +92,7 @@ variants:
       collation: { const: null }
       comment: { const: null }
     notes:
-      - "SHOW TABLES ignores the schema (there is only the Manticore database); schema_name echoes the parameter."
+      - "SHOW TABLES ignores the schema (there is only the Manticore database); schema_name echoes the parameter. System tables are listed separately by SHOW TABLES FROM system (empty on a fresh server)."
       - "storage_engine is the Manticore table type: rt (real-time), local (plain, built by the indexer tool), percolate (stored queries), distributed (agents / local tables, no own data)."
       - "Sizes and document counts are in SHOW TABLE <name> STATUS (indexed_documents, ram_bytes, disk_bytes) - one statement per table."
     sources: [{ evidence: observed, notes: "manticore 32.1.3" }]

@@ -10,10 +10,10 @@ Planned items come from [roadmap.yaml](roadmap.yaml).
 
 | | MySQL | MariaDB | PostgreSQL | Microsoft SQL Server | SQLite | Manticore Search | Sphinx Search |
 |---|---|---|---|---|---|---|---|
-| ✅ tested against real servers | 42 | 41 | 44 | 52 | 39 | 33 | 27 |
+| ✅ tested against real servers | 42 | 41 | 44 | 52 | 39 | 34 | 27 |
 | ◐ partly: some versions missing or unsupported | 12 | 14 | 11 | 1 | 2 |  | 3 |
 | 📄 documented, no automated test | 3 | 3 | 3 | 4 | 4 | 1 | 1 |
-| ➖ not applicable: the engine has no such feature | 3 | 2 |  | 1 | 13 | 20 | 26 |
+| ➖ not applicable: the engine has no such feature | 3 | 2 |  | 1 | 13 | 19 | 26 |
 | ⬜ missing | 1 | 1 | 3 | 3 | 3 | 7 | 4 |
 
 ## Capabilities
@@ -44,7 +44,7 @@ Planned items come from [roadmap.yaml](roadmap.yaml).
 | `introspection.list-constraints` | List primary key, unique, check and exclusion constraints of a table | ◐ | ◐ | ◐ | ✅ | ✅ | ➖ | ➖ | mysql: no variant for: 5.6; mariadb: no variant for: 10.3, 10.4; postgresql: no variant for: 11 |
 | `introspection.list-databases` | List databases (server level above schemas) | ➖ | ➖ | ✅ | ✅ | ➖ | ➖ | ➖ |  |
 | `introspection.list-foreign-keys` | List the foreign keys of a table | ✅ | ◐ | ◐ | ✅ | ✅ | ➖ | ➖ | mariadb: no variant for: 10.3, 10.4, 10.5; postgresql: no variant for: 11 |
-| `introspection.list-indexes` | List the indexes of a table | ◐ | ◐ | ◐ | ✅ | ✅ | ➖ | ➖ | mysql: no variant for: 8.0; mariadb: no variant for: 10.3, 10.4, 10.5; postgresql: no variant for: 11 |
+| `introspection.list-indexes` | List the indexes of a table | ◐ | ◐ | ◐ | ✅ | ✅ | ✅ | ➖ | mysql: no variant for: 8.0; mariadb: no variant for: 10.3, 10.4, 10.5; postgresql: no variant for: 11 |
 | `introspection.list-privileges` | List the privileges granted to a user or role | ◐ | ◐ | ✅ | ✅ | ➖ | ⬜ | ➖ | mysql: no variant for: 5.6; mariadb: no variant for: 10.3; manticore: no variant |
 | `introspection.list-referencing-foreign-keys` | List foreign keys that reference a table | ◐ | ◐ | ◐ | ✅ | ✅ | ➖ | ➖ | mysql: no variant for: 5.6; mariadb: no variant for: 10.3, 10.4; postgresql: no variant for: 11 |
 | `introspection.list-routines` | List functions and procedures of a schema | ◐ | ◐ | ◐ | ✅ | ➖ | ➖ | ➖ | mysql: no variant for: 5.6; mariadb: no variant for: 10.3, 10.4; postgresql: no variant for: 11 |
@@ -113,12 +113,12 @@ Everything the engine has, from its own parser grammar and the manual's referenc
 
 | engine | version | items (keywords / grammar / docs) | ✅ covered | 🗓 planned | ⬜ open | ➖ out-of-scope | ❓ unclassified |
 |---|---|---|---|---|---|---|---|
-| manticore | 25.0.0 | 1496 (223 / 599 / 674) | 551 | 599 | 22 | 352 |  |
-| manticore | 27.1.5 | 1569 (241 / 633 / 695) | 574 | 605 | 56 | 365 |  |
-| manticore | 28.4.4 | 1587 (242 / 636 / 709) | 578 | 606 | 68 | 366 |  |
-| manticore | 28.6.6 | 1594 (243 / 642 / 709) | 579 | 612 | 68 | 366 |  |
-| manticore | 29.9.0 | 1630 (250 / 670 / 710) | 587 | 625 | 69 | 380 |  |
-| manticore | 32.1.3 | 1641 (251 / 673 / 717) | 589 | 629 | 70 | 384 |  |
+| manticore | 25.0.0 | 1612 (223 / 599 / 790) | 581 | 687 | 23 | 349 |  |
+| manticore | 27.1.5 | 1685 (241 / 633 / 811) | 604 | 693 | 57 | 362 |  |
+| manticore | 28.4.4 | 1703 (242 / 636 / 825) | 608 | 694 | 69 | 363 |  |
+| manticore | 28.6.6 | 1711 (243 / 642 / 826) | 609 | 701 | 69 | 363 |  |
+| manticore | 29.9.0 | 1754 (250 / 670 / 834) | 617 | 721 | 70 | 377 |  |
+| manticore | 32.1.3 | 1767 (251 / 673 / 843) | 619 | 727 | 71 | 381 |  |
 | sphinx | 2.2.11 | 856 (111 / 346 / 399) | 369 | 292 | 75 | 120 |  |
 | sphinx | 3.9.1 | 451 (0 / 0 / 451) | 40 | 223 | 166 | 22 |  |
 
@@ -130,19 +130,25 @@ Everything the engine has, from its own parser grammar and the manual's referenc
 | open | No transaction-control spec: transactions.transactional-ddl only mentions BEGIN / COMMIT / ROLLBACK in a note; START TRANSACTION and SET AUTOCOMMIT = 0 (observed: changes autocommit) are not described. | 7 | `sphinxql:start_transaction: BEGIN`; `sphinxql:start_transaction: START TRANSACTION`; `sphinxql:transact_op: COMMIT` |
 | open | session.list-processes has no Manticore variant: SHOW THREADS lists working threads only; SHOW QUERIES (Buddy) lists running statements of all protocols with the id KILL takes - variant candidate (no idle sessions either). | 3 | `sphinxql:show_what: THREADS`; `docs:SQL commands / Server status: SHOW THREADS`; `docs-page:Node_info_and_management/SHOW_QUERIES: SHOW QUERIES` |
 | open | session.cancel-query: KILL takes a query id from SHOW QUERIES, not CONNECTION_ID(); needs a test with a long-running SELECT (KILL on DEBUG SLEEP returned OK without effect). | 3 | `sphinxql_second:kill_connid: KILL <opt_word_query> <const_int>`; `sphinxql_second:opt_word_query: QUERY`; `docs-page:Node_info_and_management/KILL: KILL` |
-| open | Loaded UDFs are callable in SELECT (autocomplete), and SHOW PLUGINS lists them; introspection.list-routines is not applicable for Manticore and does not cover them. | 1 | `sphinxql:show_what: PLUGINS` |
+| open | Loaded UDFs are callable in SELECT (autocomplete), and SHOW PLUGINS lists them; introspection.list-routines has no Manticore variant (gap) - candidate source. | 1 | `sphinxql:show_what: PLUGINS` |
+| open | SELECT * FROM t.@table (schema as a result set) crashes 32.1.3 (signal 11, see engine notes); use DESCRIBE. | 1 | `docs-page:Listing_tables: SELECT FROM name.@table` |
 | planned | roadmap `lexical.functions` | 258 | `sphinxexpr:function: <accepted_funcs> ( <arglist> )`; `sphinxexpr:function: <func> ( )`; `sphinxexpr:function: <func> ( <arglist> )` |
-| planned | roadmap `dml.select` | 140 | `sphinxexpr:arg: { <maparg> }`; `sphinxexpr:for_loop: <for> <ident> <func_in> <json_field>`; `sphinxexpr:maparg: <map_key> <eq> <const_float>` |
+| planned | roadmap `dml.select` | 137 | `sphinxexpr:arg: { <maparg> }`; `sphinxexpr:for_loop: <for> <ident> <func_in> <json_field>`; `sphinxexpr:maparg: <map_key> <eq> <const_float>` |
 | planned | roadmap `ddl.create-table` | 133 | `ddl:_if_not_exists: IF NOT EXISTS`; `ddl:attribute_type: BIGINT`; `ddl:attribute_type: BOOL` |
+| planned | roadmap `ddl.create-table` | 37 | `docs-page:Creating_a_table/Data_types: Data types`; `docs-page:Creating_a_table/Data_types: Full-text fields and attributes`; `docs-page:Creating_a_table/Data_types: Field name syntax` |
+| planned | roadmap `dml.select` | 27 | `docs-page:Searching/Joining: Search options and match weights`; `docs-page:Searching/Joining: Join batching`; `docs-page:Searching/Joining: Join caching` |
+| planned | roadmap `dml.call` | 25 | `docs-page:Searching/Autocomplete: Autocomplete`; `docs-page:Searching/Autocomplete: CALL AUTOCOMPLETE`; `docs-page:Searching/Autocomplete: General syntax` |
 | planned | roadmap `introspection.server-variables` | 19 | `sphinxql:bool_or_integer_value: FALSE`; `sphinxql:bool_or_integer_value: TRUE`; `sphinxql:global_or_session: GLOBAL` |
 | planned | roadmap `ddl.alter-table` | 12 | `ddl:alter: <alter_table_name> KILLLIST_TARGET = <quoted_string>`; `ddl:alter: <alter_table_name> MODIFY COLUMN <ident> API_KEY = <quoted_string>`; `ddl:alter: <alter_table_name> MODIFY COLUMN <ident> API_TIMEOUT = <quoted_string>` |
-| planned | roadmap `introspection.table-statistics` | 10 | `sphinxql:chunk: CHUNK <const_int>`; `sphinxql:index_or_table: INDEX`; `sphinxql:index_or_table: TABLE` |
 | planned | roadmap `dml.call` | 9 | `sphinxql:call_arg: ( <const_string_list> )`; `sphinxql:call_opt_name: LIMIT`; `sphinxql:call_proc: CALL <ident> ( <call_args_list> <opt_call_opts_list> )` |
+| planned | roadmap `introspection.table-statistics` | 8 | `sphinxql:chunk: CHUNK <const_int>`; `sphinxql:index_or_table: INDEX`; `sphinxql:index_or_table: TABLE` |
 | planned | roadmap `dml.insert` | 5 | `sphinxql:insert_val: ( )`; `sphinxql:insert_val: ( <const_list> )`; `buddy:DistributedInsert` |
 | planned | roadmap `transactions.isolation-levels` | 5 | `sphinxql_second:isolation_level: READ COMMITTED`; `sphinxql_second:isolation_level: READ UNCOMMITTED`; `sphinxql_second:isolation_level: REPEATABLE READ` |
+| planned | roadmap `connection-parameters` | 3 | `sphinxql_extra:global_or_session: GLOBAL`; `sphinxql_extra:global_or_session: SESSION`; `sphinxql_extra:set_global_stmt: SET <set_clause_list>` |
 | planned | roadmap `connection-parameters` | 2 | `sphinxql:set_stmt: SET CHARACTER SET <ident_or_string_or_num_or_nulls>`; `sphinxql:set_stmt: SET NAMES <ident_or_string_or_num_or_nulls> <opt_collate>` |
 | planned | roadmap `introspection.server-variables` | 2 | `sphinxql:show_what: CHARACTER SET`; `sphinxql:show_what: COLLATION` |
 | planned | roadmap `dml.select` | 2 | `sphinxql:show_what: SCROLL`; `sphinxql:show_what: WARNINGS` |
+| planned | roadmap `introspection.server-variables` | 1 | `sphinxql:like_filter: LIKE <quoted_string>` |
 | planned | roadmap `transactions.savepoints` | 1 | `sphinxql_extra:savepoint_sp: SAVEPOINT <savepoint_ident>` |
 | planned | roadmap `session.use-schema` | 1 | `sphinxql_extra:use_database: USE <database_ident>` |
 
@@ -156,20 +162,26 @@ Everything the engine has, from its own parser grammar and the manual's referenc
 | open | session.list-processes has no Manticore variant: SHOW THREADS lists working threads only; SHOW QUERIES (Buddy) lists running statements of all protocols with the id KILL takes - variant candidate (no idle sessions either). | 3 | `sphinxql:show_what: THREADS`; `docs:SQL commands / Server status: SHOW THREADS`; `docs-page:Node_info_and_management/SHOW_QUERIES: SHOW QUERIES` |
 | open | session.cancel-query: KILL takes a query id from SHOW QUERIES, not CONNECTION_ID(); needs a test with a long-running SELECT (KILL on DEBUG SLEEP returned OK without effect). | 3 | `sphinxql_second:kill_connid: KILL <opt_word_query> <const_int>`; `sphinxql_second:opt_word_query: QUERY`; `docs-page:Node_info_and_management/KILL: KILL` |
 | open | User management needs a server with authentication enabled (see introspection.list-users gaps). | 2 | `sphinxql:set_stmt: SET PASSWORD <quoted_string>`; `sphinxql:set_stmt: SET PASSWORD <quoted_string> FOR <quoted_string>` |
-| open | Loaded UDFs are callable in SELECT (autocomplete), and SHOW PLUGINS lists them; introspection.list-routines is not applicable for Manticore and does not cover them. | 1 | `sphinxql:show_what: PLUGINS` |
+| open | Loaded UDFs are callable in SELECT (autocomplete), and SHOW PLUGINS lists them; introspection.list-routines has no Manticore variant (gap) - candidate source. | 1 | `sphinxql:show_what: PLUGINS` |
+| open | SELECT * FROM t.@table (schema as a result set) crashes 32.1.3 (signal 11, see engine notes); use DESCRIBE. | 1 | `docs-page:Listing_tables: SELECT FROM name.@table` |
 | open | Conversational search (Buddy): CHAT MODEL objects (CREATE / SHOW / DESCRIBE / DROP CHAT MODEL) and CALL CHAT - no specs yet. | 1 | `buddy:ConversationalSearch` |
 | planned | roadmap `lexical.functions` | 258 | `sphinxexpr:function: <accepted_funcs> ( <arglist> )`; `sphinxexpr:function: <func> ( )`; `sphinxexpr:function: <func> ( <arglist> )` |
-| planned | roadmap `dml.select` | 147 | `sphinxexpr:arg: { <maparg> }`; `sphinxexpr:for_loop: <for> <ident> <func_in> <json_field>`; `sphinxexpr:maparg: <map_key> <eq> <const_float>` |
+| planned | roadmap `dml.select` | 144 | `sphinxexpr:arg: { <maparg> }`; `sphinxexpr:for_loop: <for> <ident> <func_in> <json_field>`; `sphinxexpr:maparg: <map_key> <eq> <const_float>` |
 | planned | roadmap `ddl.create-table` | 133 | `ddl:_if_not_exists: IF NOT EXISTS`; `ddl:attribute_type: BIGINT`; `ddl:attribute_type: BOOL` |
+| planned | roadmap `ddl.create-table` | 37 | `docs-page:Creating_a_table/Data_types: Data types`; `docs-page:Creating_a_table/Data_types: Full-text fields and attributes`; `docs-page:Creating_a_table/Data_types: Field name syntax` |
+| planned | roadmap `dml.select` | 27 | `docs-page:Searching/Joining: Search options and match weights`; `docs-page:Searching/Joining: Join batching`; `docs-page:Searching/Joining: Join caching` |
+| planned | roadmap `dml.call` | 25 | `docs-page:Searching/Autocomplete: Autocomplete`; `docs-page:Searching/Autocomplete: CALL AUTOCOMPLETE`; `docs-page:Searching/Autocomplete: General syntax` |
 | planned | roadmap `introspection.server-variables` | 19 | `sphinxql:bool_or_integer_value: FALSE`; `sphinxql:bool_or_integer_value: TRUE`; `sphinxql:global_or_session: GLOBAL` |
 | planned | roadmap `ddl.alter-table` | 12 | `ddl:alter: <alter_table_name> KILLLIST_TARGET = <quoted_string>`; `ddl:alter: <alter_table_name> MODIFY COLUMN <ident> API_KEY = <quoted_string>`; `ddl:alter: <alter_table_name> MODIFY COLUMN <ident> API_TIMEOUT = <quoted_string>` |
-| planned | roadmap `introspection.table-statistics` | 10 | `sphinxql:chunk: CHUNK <const_int>`; `sphinxql:index_or_table: INDEX`; `sphinxql:index_or_table: TABLE` |
 | planned | roadmap `dml.call` | 9 | `sphinxql:call_arg: ( <const_string_list> )`; `sphinxql:call_opt_name: LIMIT`; `sphinxql:call_proc: CALL <ident> ( <call_args_list> <opt_call_opts_list> )` |
+| planned | roadmap `introspection.table-statistics` | 8 | `sphinxql:chunk: CHUNK <const_int>`; `sphinxql:index_or_table: INDEX`; `sphinxql:index_or_table: TABLE` |
 | planned | roadmap `transactions.isolation-levels` | 5 | `sphinxql_second:isolation_level: READ COMMITTED`; `sphinxql_second:isolation_level: READ UNCOMMITTED`; `sphinxql_second:isolation_level: REPEATABLE READ` |
 | planned | roadmap `dml.insert` | 4 | `sphinxql:insert_val: ( )`; `sphinxql:insert_val: ( <const_list> )`; `buddy:Insert` |
+| planned | roadmap `connection-parameters` | 3 | `sphinxql_extra:global_or_session: GLOBAL`; `sphinxql_extra:global_or_session: SESSION`; `sphinxql_extra:set_global_stmt: SET <set_clause_list>` |
 | planned | roadmap `connection-parameters` | 2 | `sphinxql:set_stmt: SET CHARACTER SET <ident_or_string_or_num_or_nulls>`; `sphinxql:set_stmt: SET NAMES <ident_or_string_or_num_or_nulls> <opt_collate>` |
 | planned | roadmap `introspection.server-variables` | 2 | `sphinxql:show_what: CHARACTER SET`; `sphinxql:show_what: COLLATION` |
 | planned | roadmap `dml.select` | 2 | `sphinxql:show_what: SCROLL`; `sphinxql:show_what: WARNINGS` |
+| planned | roadmap `introspection.server-variables` | 1 | `sphinxql:like_filter: LIKE <quoted_string>` |
 | planned | roadmap `transactions.savepoints` | 1 | `sphinxql_extra:savepoint_sp: SAVEPOINT <savepoint_ident>` |
 | planned | roadmap `session.use-schema` | 1 | `sphinxql_extra:use_database: USE <database_ident>` |
 
@@ -184,19 +196,25 @@ Everything the engine has, from its own parser grammar and the manual's referenc
 | open | session.list-processes has no Manticore variant: SHOW THREADS lists working threads only; SHOW QUERIES (Buddy) lists running statements of all protocols with the id KILL takes - variant candidate (no idle sessions either). | 3 | `sphinxql:show_what: THREADS`; `docs:SQL commands / Server status: SHOW THREADS`; `docs-page:Node_info_and_management/SHOW_QUERIES: SHOW QUERIES` |
 | open | session.cancel-query: KILL takes a query id from SHOW QUERIES, not CONNECTION_ID(); needs a test with a long-running SELECT (KILL on DEBUG SLEEP returned OK without effect). | 3 | `sphinxql_second:kill_connid: KILL <opt_word_query> <const_int>`; `sphinxql_second:opt_word_query: QUERY`; `docs-page:Node_info_and_management/KILL: KILL` |
 | open | User management needs a server with authentication enabled (see introspection.list-users gaps). | 2 | `sphinxql:set_stmt: SET PASSWORD <quoted_string>`; `sphinxql:set_stmt: SET PASSWORD <quoted_string> FOR <quoted_string>` |
-| open | Loaded UDFs are callable in SELECT (autocomplete), and SHOW PLUGINS lists them; introspection.list-routines is not applicable for Manticore and does not cover them. | 1 | `sphinxql:show_what: PLUGINS` |
+| open | Loaded UDFs are callable in SELECT (autocomplete), and SHOW PLUGINS lists them; introspection.list-routines has no Manticore variant (gap) - candidate source. | 1 | `sphinxql:show_what: PLUGINS` |
+| open | SELECT * FROM t.@table (schema as a result set) crashes 32.1.3 (signal 11, see engine notes); use DESCRIBE. | 1 | `docs-page:Listing_tables: SELECT FROM name.@table` |
 | planned | roadmap `lexical.functions` | 258 | `sphinxexpr:function: <accepted_funcs> ( <arglist> )`; `sphinxexpr:function: <func> ( )`; `sphinxexpr:function: <func> ( <arglist> )` |
-| planned | roadmap `dml.select` | 148 | `sphinxexpr:arg: { <maparg> }`; `sphinxexpr:for_loop: <for> <ident> <func_in> <json_field>`; `sphinxexpr:maparg: <map_key> <eq> <const_float>` |
+| planned | roadmap `dml.select` | 145 | `sphinxexpr:arg: { <maparg> }`; `sphinxexpr:for_loop: <for> <ident> <func_in> <json_field>`; `sphinxexpr:maparg: <map_key> <eq> <const_float>` |
 | planned | roadmap `ddl.create-table` | 133 | `ddl:_if_not_exists: IF NOT EXISTS`; `ddl:attribute_type: BIGINT`; `ddl:attribute_type: BOOL` |
+| planned | roadmap `ddl.create-table` | 37 | `docs-page:Creating_a_table/Data_types: Data types`; `docs-page:Creating_a_table/Data_types: Full-text fields and attributes`; `docs-page:Creating_a_table/Data_types: Field name syntax` |
+| planned | roadmap `dml.select` | 27 | `docs-page:Searching/Joining: Search options and match weights`; `docs-page:Searching/Joining: Join batching`; `docs-page:Searching/Joining: Join caching` |
+| planned | roadmap `dml.call` | 25 | `docs-page:Searching/Autocomplete: Autocomplete`; `docs-page:Searching/Autocomplete: CALL AUTOCOMPLETE`; `docs-page:Searching/Autocomplete: General syntax` |
 | planned | roadmap `introspection.server-variables` | 19 | `sphinxql:bool_or_integer_value: FALSE`; `sphinxql:bool_or_integer_value: TRUE`; `sphinxql:global_or_session: GLOBAL` |
 | planned | roadmap `ddl.alter-table` | 12 | `ddl:alter: <alter_table_name> KILLLIST_TARGET = <quoted_string>`; `ddl:alter: <alter_table_name> MODIFY COLUMN <ident> API_KEY = <quoted_string>`; `ddl:alter: <alter_table_name> MODIFY COLUMN <ident> API_TIMEOUT = <quoted_string>` |
-| planned | roadmap `introspection.table-statistics` | 10 | `sphinxql:chunk: CHUNK <const_int>`; `sphinxql:index_or_table: INDEX`; `sphinxql:index_or_table: TABLE` |
 | planned | roadmap `dml.call` | 9 | `sphinxql:call_arg: ( <const_string_list> )`; `sphinxql:call_opt_name: LIMIT`; `sphinxql:call_proc: CALL <ident> ( <call_args_list> <opt_call_opts_list> )` |
+| planned | roadmap `introspection.table-statistics` | 8 | `sphinxql:chunk: CHUNK <const_int>`; `sphinxql:index_or_table: INDEX`; `sphinxql:index_or_table: TABLE` |
 | planned | roadmap `transactions.isolation-levels` | 5 | `sphinxql_second:isolation_level: READ COMMITTED`; `sphinxql_second:isolation_level: READ UNCOMMITTED`; `sphinxql_second:isolation_level: REPEATABLE READ` |
 | planned | roadmap `dml.insert` | 4 | `sphinxql:insert_val: ( )`; `sphinxql:insert_val: ( <const_list> )`; `buddy:Insert` |
+| planned | roadmap `connection-parameters` | 3 | `sphinxql_extra:global_or_session: GLOBAL`; `sphinxql_extra:global_or_session: SESSION`; `sphinxql_extra:set_global_stmt: SET <set_clause_list>` |
 | planned | roadmap `connection-parameters` | 2 | `sphinxql:set_stmt: SET CHARACTER SET <ident_or_string_or_num_or_nulls>`; `sphinxql:set_stmt: SET NAMES <ident_or_string_or_num_or_nulls> <opt_collate>` |
 | planned | roadmap `introspection.server-variables` | 2 | `sphinxql:show_what: CHARACTER SET`; `sphinxql:show_what: COLLATION` |
 | planned | roadmap `dml.select` | 2 | `sphinxql:show_what: SCROLL`; `sphinxql:show_what: WARNINGS` |
+| planned | roadmap `introspection.server-variables` | 1 | `sphinxql:like_filter: LIKE <quoted_string>` |
 | planned | roadmap `transactions.savepoints` | 1 | `sphinxql_extra:savepoint_sp: SAVEPOINT <savepoint_ident>` |
 | planned | roadmap `session.use-schema` | 1 | `sphinxql_extra:use_database: USE <database_ident>` |
 
@@ -211,19 +229,25 @@ Everything the engine has, from its own parser grammar and the manual's referenc
 | open | session.list-processes has no Manticore variant: SHOW THREADS lists working threads only; SHOW QUERIES (Buddy) lists running statements of all protocols with the id KILL takes - variant candidate (no idle sessions either). | 3 | `sphinxql:show_what: THREADS`; `docs:SQL commands / Server status: SHOW THREADS`; `docs-page:Node_info_and_management/SHOW_QUERIES: SHOW QUERIES` |
 | open | session.cancel-query: KILL takes a query id from SHOW QUERIES, not CONNECTION_ID(); needs a test with a long-running SELECT (KILL on DEBUG SLEEP returned OK without effect). | 3 | `sphinxql_second:kill_connid: KILL <opt_word_query> <const_int>`; `sphinxql_second:opt_word_query: QUERY`; `docs-page:Node_info_and_management/KILL: KILL` |
 | open | User management needs a server with authentication enabled (see introspection.list-users gaps). | 2 | `sphinxql:set_stmt: SET PASSWORD <quoted_string>`; `sphinxql:set_stmt: SET PASSWORD <quoted_string> FOR <quoted_string>` |
-| open | Loaded UDFs are callable in SELECT (autocomplete), and SHOW PLUGINS lists them; introspection.list-routines is not applicable for Manticore and does not cover them. | 1 | `sphinxql:show_what: PLUGINS` |
+| open | Loaded UDFs are callable in SELECT (autocomplete), and SHOW PLUGINS lists them; introspection.list-routines has no Manticore variant (gap) - candidate source. | 1 | `sphinxql:show_what: PLUGINS` |
+| open | SELECT * FROM t.@table (schema as a result set) crashes 32.1.3 (signal 11, see engine notes); use DESCRIBE. | 1 | `docs-page:Listing_tables: SELECT FROM name.@table` |
 | planned | roadmap `lexical.functions` | 258 | `sphinxexpr:function: <accepted_funcs> ( <arglist> )`; `sphinxexpr:function: <func> ( )`; `sphinxexpr:function: <func> ( <arglist> )` |
-| planned | roadmap `dml.select` | 154 | `sphinxexpr:arg: { <maparg> }`; `sphinxexpr:for_loop: <for> <ident> <func_in> <json_field>`; `sphinxexpr:maparg: <map_key> <eq> <const_float>` |
+| planned | roadmap `dml.select` | 151 | `sphinxexpr:arg: { <maparg> }`; `sphinxexpr:for_loop: <for> <ident> <func_in> <json_field>`; `sphinxexpr:maparg: <map_key> <eq> <const_float>` |
 | planned | roadmap `ddl.create-table` | 133 | `ddl:_if_not_exists: IF NOT EXISTS`; `ddl:attribute_type: BIGINT`; `ddl:attribute_type: BOOL` |
+| planned | roadmap `ddl.create-table` | 38 | `docs-page:Creating_a_table/Data_types: Data types`; `docs-page:Creating_a_table/Data_types: Full-text fields and attributes`; `docs-page:Creating_a_table/Data_types: Field name syntax` |
+| planned | roadmap `dml.select` | 27 | `docs-page:Searching/Joining: Search options and match weights`; `docs-page:Searching/Joining: Join batching`; `docs-page:Searching/Joining: Join caching` |
+| planned | roadmap `dml.call` | 25 | `docs-page:Searching/Autocomplete: Autocomplete`; `docs-page:Searching/Autocomplete: CALL AUTOCOMPLETE`; `docs-page:Searching/Autocomplete: General syntax` |
 | planned | roadmap `introspection.server-variables` | 19 | `sphinxql:bool_or_integer_value: FALSE`; `sphinxql:bool_or_integer_value: TRUE`; `sphinxql:global_or_session: GLOBAL` |
 | planned | roadmap `ddl.alter-table` | 12 | `ddl:alter: <alter_table_name> KILLLIST_TARGET = <quoted_string>`; `ddl:alter: <alter_table_name> MODIFY COLUMN <ident> API_KEY = <quoted_string>`; `ddl:alter: <alter_table_name> MODIFY COLUMN <ident> API_TIMEOUT = <quoted_string>` |
-| planned | roadmap `introspection.table-statistics` | 10 | `sphinxql:chunk: CHUNK <const_int>`; `sphinxql:index_or_table: INDEX`; `sphinxql:index_or_table: TABLE` |
 | planned | roadmap `dml.call` | 9 | `sphinxql:call_arg: ( <const_string_list> )`; `sphinxql:call_opt_name: LIMIT`; `sphinxql:call_proc: CALL <ident> ( <call_args_list> <opt_call_opts_list> )` |
+| planned | roadmap `introspection.table-statistics` | 8 | `sphinxql:chunk: CHUNK <const_int>`; `sphinxql:index_or_table: INDEX`; `sphinxql:index_or_table: TABLE` |
 | planned | roadmap `transactions.isolation-levels` | 5 | `sphinxql_second:isolation_level: READ COMMITTED`; `sphinxql_second:isolation_level: READ UNCOMMITTED`; `sphinxql_second:isolation_level: REPEATABLE READ` |
 | planned | roadmap `dml.insert` | 4 | `sphinxql:insert_val: ( )`; `sphinxql:insert_val: ( <const_list> )`; `buddy:Insert` |
+| planned | roadmap `connection-parameters` | 3 | `sphinxql_extra:global_or_session: GLOBAL`; `sphinxql_extra:global_or_session: SESSION`; `sphinxql_extra:set_global_stmt: SET <set_clause_list>` |
 | planned | roadmap `connection-parameters` | 2 | `sphinxql:set_stmt: SET CHARACTER SET <ident_or_string_or_num_or_nulls>`; `sphinxql:set_stmt: SET NAMES <ident_or_string_or_num_or_nulls> <opt_collate>` |
 | planned | roadmap `introspection.server-variables` | 2 | `sphinxql:show_what: CHARACTER SET`; `sphinxql:show_what: COLLATION` |
 | planned | roadmap `dml.select` | 2 | `sphinxql:show_what: SCROLL`; `sphinxql:show_what: WARNINGS` |
+| planned | roadmap `introspection.server-variables` | 1 | `sphinxql:like_filter: LIKE <quoted_string>` |
 | planned | roadmap `transactions.savepoints` | 1 | `sphinxql_extra:savepoint_sp: SAVEPOINT <savepoint_ident>` |
 | planned | roadmap `session.use-schema` | 1 | `sphinxql_extra:use_database: USE <database_ident>` |
 
@@ -238,19 +262,25 @@ Everything the engine has, from its own parser grammar and the manual's referenc
 | open | session.list-processes has no Manticore variant: SHOW THREADS lists working threads only; SHOW QUERIES (Buddy) lists running statements of all protocols with the id KILL takes - variant candidate (no idle sessions either). | 3 | `sphinxql:show_what: THREADS`; `docs:SQL commands / Server status: SHOW THREADS`; `docs-page:Node_info_and_management/SHOW_QUERIES: SHOW QUERIES` |
 | open | session.cancel-query: KILL takes a query id from SHOW QUERIES, not CONNECTION_ID(); needs a test with a long-running SELECT (KILL on DEBUG SLEEP returned OK without effect). | 3 | `sphinxql_second:kill_connid: KILL <opt_word_query> <const_int>`; `sphinxql_second:opt_word_query: QUERY`; `docs-page:Node_info_and_management/KILL: KILL` |
 | open | User management needs a server with authentication enabled (see introspection.list-users gaps). | 2 | `sphinxql:set_stmt: SET PASSWORD <quoted_string>`; `sphinxql:set_stmt: SET PASSWORD <quoted_string> FOR <quoted_string>` |
-| open | Loaded UDFs are callable in SELECT (autocomplete), and SHOW PLUGINS lists them; introspection.list-routines is not applicable for Manticore and does not cover them. | 1 | `sphinxql:show_what: PLUGINS` |
+| open | Loaded UDFs are callable in SELECT (autocomplete), and SHOW PLUGINS lists them; introspection.list-routines has no Manticore variant (gap) - candidate source. | 1 | `sphinxql:show_what: PLUGINS` |
+| open | SELECT * FROM t.@table (schema as a result set) crashes 32.1.3 (signal 11, see engine notes); use DESCRIBE. | 1 | `docs-page:Listing_tables: SELECT FROM name.@table` |
 | planned | roadmap `lexical.functions` | 258 | `sphinxexpr:function: <accepted_funcs> ( <arglist> )`; `sphinxexpr:function: <func> ( )`; `sphinxexpr:function: <func> ( <arglist> )` |
-| planned | roadmap `dml.select` | 154 | `sphinxexpr:arg: { <maparg> }`; `sphinxexpr:for_loop: <for> <ident> <func_in> <json_field>`; `sphinxexpr:maparg: <map_key> <eq> <const_float>` |
+| planned | roadmap `dml.select` | 151 | `sphinxexpr:arg: { <maparg> }`; `sphinxexpr:for_loop: <for> <ident> <func_in> <json_field>`; `sphinxexpr:maparg: <map_key> <eq> <const_float>` |
 | planned | roadmap `ddl.create-table` | 139 | `ddl:_if_not_exists: IF NOT EXISTS`; `ddl:attribute_type: BIGINT`; `ddl:attribute_type: BOOL` |
+| planned | roadmap `ddl.create-table` | 43 | `docs-page:Creating_a_table/Data_types: Data types`; `docs-page:Creating_a_table/Data_types: Full-text fields and attributes`; `docs-page:Creating_a_table/Data_types: Table and field name syntax` |
+| planned | roadmap `dml.select` | 29 | `docs-page:Searching/Joining: Search options and match weights`; `docs-page:Searching/Joining: Join batching`; `docs-page:Searching/Joining: Join caching` |
+| planned | roadmap `dml.call` | 25 | `docs-page:Searching/Autocomplete: Autocomplete`; `docs-page:Searching/Autocomplete: CALL AUTOCOMPLETE`; `docs-page:Searching/Autocomplete: General syntax` |
 | planned | roadmap `introspection.server-variables` | 19 | `sphinxql:bool_or_integer_value: FALSE`; `sphinxql:bool_or_integer_value: TRUE`; `sphinxql:global_or_session: GLOBAL` |
 | planned | roadmap `ddl.alter-table` | 13 | `ddl:alter: <alter_table_name> KILLLIST_TARGET = <quoted_string>`; `ddl:alter: <alter_table_name> MODIFY COLUMN <columnident> API_KEY = <quoted_string>`; `ddl:alter: <alter_table_name> MODIFY COLUMN <columnident> API_TIMEOUT = <quoted_string>` |
-| planned | roadmap `introspection.table-statistics` | 10 | `sphinxql:chunk: CHUNK <const_int>`; `sphinxql:index_or_table: INDEX`; `sphinxql:index_or_table: TABLE` |
 | planned | roadmap `dml.insert` | 10 | `sphinxql:insert_val: ( )`; `sphinxql:insert_val: ( <const_list> )`; `sphinxql:vec_array: [ <vec_group_list> ]` |
 | planned | roadmap `dml.call` | 9 | `sphinxql:call_arg: ( <const_string_list> )`; `sphinxql:call_opt_name: LIMIT`; `sphinxql:call_proc: CALL <ident> ( <call_args_list> <opt_call_opts_list> )` |
+| planned | roadmap `introspection.table-statistics` | 8 | `sphinxql:chunk: CHUNK <const_int>`; `sphinxql:index_or_table: INDEX`; `sphinxql:index_or_table: TABLE` |
 | planned | roadmap `transactions.isolation-levels` | 5 | `sphinxql_second:isolation_level: READ COMMITTED`; `sphinxql_second:isolation_level: READ UNCOMMITTED`; `sphinxql_second:isolation_level: REPEATABLE READ` |
+| planned | roadmap `connection-parameters` | 3 | `sphinxql_extra:global_or_session: GLOBAL`; `sphinxql_extra:global_or_session: SESSION`; `sphinxql_extra:set_global_stmt: SET <set_clause_list>` |
 | planned | roadmap `connection-parameters` | 2 | `sphinxql:set_stmt: SET CHARACTER SET <ident_or_string_or_num_or_nulls>`; `sphinxql:set_stmt: SET NAMES <ident_or_string_or_num_or_nulls> <opt_collate>` |
 | planned | roadmap `introspection.server-variables` | 2 | `sphinxql:show_what: CHARACTER SET`; `sphinxql:show_what: COLLATION` |
 | planned | roadmap `dml.select` | 2 | `sphinxql:show_what: SCROLL`; `sphinxql:show_what: WARNINGS` |
+| planned | roadmap `introspection.server-variables` | 1 | `sphinxql:like_filter: LIKE <quoted_string>` |
 | planned | roadmap `transactions.savepoints` | 1 | `sphinxql_extra:savepoint_sp: SAVEPOINT <savepoint_ident>` |
 | planned | roadmap `session.use-schema` | 1 | `sphinxql_extra:use_database: USE <database_ident>` |
 
@@ -265,19 +295,25 @@ Everything the engine has, from its own parser grammar and the manual's referenc
 | open | session.list-processes has no Manticore variant: SHOW THREADS lists working threads only; SHOW QUERIES (Buddy) lists running statements of all protocols with the id KILL takes - variant candidate (no idle sessions either). | 3 | `sphinxql:show_what: THREADS`; `docs:SQL commands / Server status: SHOW THREADS`; `docs-page:Node_info_and_management/SHOW_QUERIES: SHOW QUERIES` |
 | open | session.cancel-query: KILL takes a query id from SHOW QUERIES, not CONNECTION_ID(); needs a test with a long-running SELECT (KILL on DEBUG SLEEP returned OK without effect). | 3 | `sphinxql_second:kill_connid: KILL <opt_word_query> <const_int>`; `sphinxql_second:opt_word_query: QUERY`; `docs-page:Node_info_and_management/KILL: KILL` |
 | open | User management needs a server with authentication enabled (see introspection.list-users gaps). | 2 | `sphinxql:set_stmt: SET PASSWORD <quoted_string>`; `sphinxql:set_stmt: SET PASSWORD <quoted_string> FOR <quoted_string>` |
-| open | Loaded UDFs are callable in SELECT (autocomplete), and SHOW PLUGINS lists them; introspection.list-routines is not applicable for Manticore and does not cover them. | 1 | `sphinxql:show_what: PLUGINS` |
+| open | Loaded UDFs are callable in SELECT (autocomplete), and SHOW PLUGINS lists them; introspection.list-routines has no Manticore variant (gap) - candidate source. | 1 | `sphinxql:show_what: PLUGINS` |
+| open | SELECT * FROM t.@table (schema as a result set) crashes 32.1.3 (signal 11, see engine notes); use DESCRIBE. | 1 | `docs-page:Listing_tables: SELECT FROM name.@table` |
 | planned | roadmap `lexical.functions` | 259 | `sphinxexpr:function: <accepted_funcs> ( <arglist> )`; `sphinxexpr:function: <func> ( )`; `sphinxexpr:function: <func> ( <arglist> )` |
-| planned | roadmap `dml.select` | 154 | `sphinxexpr:arg: { <maparg> }`; `sphinxexpr:for_loop: <for> <ident> <func_in> <json_field>`; `sphinxexpr:maparg: <map_key> <eq> <const_float>` |
+| planned | roadmap `dml.select` | 151 | `sphinxexpr:arg: { <maparg> }`; `sphinxexpr:for_loop: <for> <ident> <func_in> <json_field>`; `sphinxexpr:maparg: <map_key> <eq> <const_float>` |
 | planned | roadmap `ddl.create-table` | 139 | `ddl:_if_not_exists: IF NOT EXISTS`; `ddl:attribute_type: BIGINT`; `ddl:attribute_type: BOOL` |
+| planned | roadmap `ddl.create-table` | 43 | `docs-page:Creating_a_table/Data_types: Data types`; `docs-page:Creating_a_table/Data_types: Full-text fields and attributes`; `docs-page:Creating_a_table/Data_types: Table and field name syntax` |
+| planned | roadmap `dml.select` | 31 | `docs-page:Searching/Joining: Search options and match weights`; `docs-page:Searching/Joining: Join batching`; `docs-page:Searching/Joining: Join caching` |
+| planned | roadmap `dml.call` | 25 | `docs-page:Searching/Autocomplete: Autocomplete`; `docs-page:Searching/Autocomplete: CALL AUTOCOMPLETE`; `docs-page:Searching/Autocomplete: General syntax` |
 | planned | roadmap `introspection.server-variables` | 19 | `sphinxql:bool_or_integer_value: FALSE`; `sphinxql:bool_or_integer_value: TRUE`; `sphinxql:global_or_session: GLOBAL` |
 | planned | roadmap `ddl.alter-table` | 14 | `ddl:alter: <alter_table_name> KILLLIST_TARGET = <quoted_string>`; `ddl:alter: <alter_table_name> MODIFY COLUMN <columnident> <tableident>`; `ddl:alter: <alter_table_name> MODIFY COLUMN <columnident> API_KEY = <quoted_string>` |
 | planned | roadmap `dml.insert` | 12 | `sphinxql:insert_val: ( )`; `sphinxql:insert_val: ( <const_list> )`; `sphinxql:vec_array: [ <vec_group_list> ]` |
-| planned | roadmap `introspection.table-statistics` | 10 | `sphinxql:chunk: CHUNK <const_int>`; `sphinxql:index_or_table: INDEX`; `sphinxql:index_or_table: TABLE` |
 | planned | roadmap `dml.call` | 9 | `sphinxql:call_arg: ( <const_string_list> )`; `sphinxql:call_opt_name: LIMIT`; `sphinxql:call_proc: CALL <ident> ( <call_args_list> <opt_call_opts_list> )` |
+| planned | roadmap `introspection.table-statistics` | 8 | `sphinxql:chunk: CHUNK <const_int>`; `sphinxql:index_or_table: INDEX`; `sphinxql:index_or_table: TABLE` |
 | planned | roadmap `transactions.isolation-levels` | 5 | `sphinxql_second:isolation_level: READ COMMITTED`; `sphinxql_second:isolation_level: READ UNCOMMITTED`; `sphinxql_second:isolation_level: REPEATABLE READ` |
+| planned | roadmap `connection-parameters` | 3 | `sphinxql_extra:global_or_session: GLOBAL`; `sphinxql_extra:global_or_session: SESSION`; `sphinxql_extra:set_global_stmt: SET <set_clause_list>` |
 | planned | roadmap `connection-parameters` | 2 | `sphinxql:set_stmt: SET CHARACTER SET <ident_or_string_or_num_or_nulls>`; `sphinxql:set_stmt: SET NAMES <ident_or_string_or_num_or_nulls> <opt_collate>` |
 | planned | roadmap `introspection.server-variables` | 2 | `sphinxql:show_what: CHARACTER SET`; `sphinxql:show_what: COLLATION` |
 | planned | roadmap `dml.select` | 2 | `sphinxql:show_what: SCROLL`; `sphinxql:show_what: WARNINGS` |
+| planned | roadmap `introspection.server-variables` | 1 | `sphinxql:like_filter: LIKE <quoted_string>` |
 | planned | roadmap `transactions.savepoints` | 1 | `sphinxql_extra:savepoint_sp: SAVEPOINT <savepoint_ident>` |
 | planned | roadmap `session.use-schema` | 1 | `sphinxql_extra:use_database: USE <database_ident>` |
 

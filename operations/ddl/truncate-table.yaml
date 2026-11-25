@@ -42,7 +42,7 @@ implementations:
     - status: supported
       template: "TRUNCATE TABLE {{table}}"
       transactional: false
-      caveats: ["Real-time tables only. WITH RECONFIGURE re-reads settings from the config file and fails in RT mode without one."]
+      caveats: ["Real-time tables only; TRUNCATE RTINDEX t is an alias (Sphinx heritage). WITH RECONFIGURE re-reads settings from the config file and fails in RT mode without one."]
       sources: [{ evidence: tested }]
   sphinx:
     - status: supported

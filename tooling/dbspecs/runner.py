@@ -84,7 +84,7 @@ def _cleanup(server: Server, statements):
 def run_probes(specs: Specs, server: Server, report: Report):
     for cap_id, cap in sorted(specs.docs["capability"].items()):
         for probe in cap.get("probes", []):
-            if server.engine not in probe["engines"]:
+            if server.engine not in probe["engines"] or not in_range(server.version, probe):
                 continue
             name = cap_id + (f"#{probe['name']}" if "name" in probe else "")
             try:
@@ -346,6 +346,27 @@ def _check(expect: dict, rows: list[dict], server: Server) -> list[str]:
     return problems
 
 
+def _missing_variant(specs: Specs, test: dict, server: Server) -> str | None:
+    """First query / operation a test needs that has no variant for this server version."""
+    for step in test["steps"]:
+        if "engines" in step and not (server.engine in step["engines"]
+                                      and in_range(server.version, step["engines"][server.engine])):
+            continue
+        queries = [step["query"]] if "query" in step else []
+        ops = [step["operation"]] if "operation" in step else []
+        if "roundtrip" in step:
+            ops.append(step["roundtrip"]["operation"])
+            queries += [c["query"] for c in step["roundtrip"]["compare"]]
+        for q in queries:
+            if variant_for(specs.get("query", q), server.engine, server.version) is None:
+                return f"no variant of {q} for {server.version} (documented gap)"
+        for o in ops:
+            impl = statement_for(specs.get("operation", o)["implementations"].get(server.engine, []), server.version)
+            if not impl or impl["status"] in ("unsupported", "unknown"):
+                return f"operation {o} not available for {server.version}"
+    return None
+
+
 def run_tests(specs: Specs, server: Server, report: Report):
     for test_id, test in sorted(specs.docs["test"].items()):
         if server.engine not in test["engines"]:
@@ -353,6 +374,10 @@ def run_tests(specs: Specs, server: Server, report: Report):
         if not in_range(server.version, test.get("versions", {}).get(server.engine, {})):
             report.add(Result(server.target["id"], server.version, "test", test_id, "skip",
                               "outside the test's version range"))
+            continue
+        gap = _missing_variant(specs, test, server)
+        if gap:  # a documented gap (query without variant / operation not available), not a failure
+            report.add(Result(server.target["id"], server.version, "test", test_id, "skip", gap))
             continue
         problems: list[str] = []
         try:
@@ -413,6 +438,11 @@ def run_syntax(specs: Specs, server: Server, report: Report):
     """Each example: grammar (for the server's exact version) and server must agree with `expect`."""
     for syn_id, syn in sorted(specs.docs["syntax"].items()):
         if server.engine not in syn["grammars"]:
+            continue
+        floor = syn["grammars"][server.engine].get("since")
+        if floor and not in_range(server.version, {"since": floor}):
+            report.add(Result(server.target["id"], server.version, "syntax", syn_id, "skip",
+                              f"grammar describes {floor}+"))
             continue
         for i, ex in examples_for(syn, server.engine, server.version):
             name = f"{syn_id}#{i}"
@@ -498,7 +528,7 @@ def run_protocol(specs: Specs, server: Server, report: Report):
         problems = []
         try:
             with server.connect() as conn:
-                _exec_all(conn, probe["setup"])
+                _exec_all(conn, _statements(probe["setup"], server.version))
                 with conn.cursor() as cur:
                     cur.execute(probe["query"])
                     cur.fetchall()
@@ -510,13 +540,16 @@ def run_protocol(specs: Specs, server: Server, report: Report):
             continue
         finally:
             _cleanup(server, probe.get("cleanup", []))
+        # a column may name alternatives (mva|uint_set): the first type mapped for this version
+        columns = {c: next((t for t in spec.split("|") if t in mapping), spec.split("|")[0])
+                   for c, spec in probe["columns"].items()}
         flagbits = TYPE_FLAGS.get(prof["id"], {})
         seen = {c[0] for c in cols}
-        for col, etype in probe["columns"].items():
-            if col not in seen:
+        for col, etype in columns.items():
+            if col not in seen and etype in mapping:
                 problems.append(f"{col}: column missing from the result")
         for col, code, flags, charsetnr in cols:
-            etype = probe["columns"].get(col)
+            etype = columns.get(col)
             m = mapping.get(etype)
             if m is None:
                 continue

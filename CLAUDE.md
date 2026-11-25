@@ -1,6 +1,6 @@
 # database-specs
 
-Machine-readable, versioned specifications of SQL engines (MySQL, MariaDB, PostgreSQL, SQL Server, SQLite, Manticore so far)
+Machine-readable, versioned specifications of SQL engines (MySQL, MariaDB, PostgreSQL, SQL Server, SQLite, Manticore, Sphinx so far)
 for database clients: lexical rules, wire-protocol type codes, capabilities, introspection
 queries, client operations and curated statement syntax. Implementation-agnostic: nothing in
 here may depend on a particular client, language or driver. Content is written in English.
@@ -29,10 +29,12 @@ version (a documented gap, see `gaps`).
 uv run dbspecs validate     # schemas, cross references, offline grammar/example checks - run after every change
 uv run dbspecs test         # real servers in containers (docker/podman); ~15 min for all targets
 uv run dbspecs test --target mariadb-10.6 --target postgresql   # subset: target id or engine
+uv run dbspecs test --target manticore --extended  # include tier: extended targets (older versions)
 uv run dbspecs build        # dist/db-specs.json + dist/syntax/ (railroad diagrams)
 uv run dbspecs keywords     # regenerate keywords/<engine>/<version>.yaml from the test targets
 uv run dbspecs coverage     # COVERAGE.md + dist/coverage.html (also written after every test run)
-uv run dbspecs inventory --target manticore   # regenerate inventory/<engine>/<version>.yaml from the server's sources
+uv run dbspecs inventory --target manticore --extended   # inventory/<engine>/<version>.yaml from each server's sources
+uv run dbspecs inventory-diff manticore 27.1.5 28.4.4    # grammar items added (+) / removed (-) between versions
 ```
 
 ## Layout
@@ -50,8 +52,9 @@ uv run dbspecs inventory --target manticore   # regenerate inventory/<engine>/<v
 - Engines without catalog views (Manticore: SHOW / DESCRIBE only) map engine-native result
   columns to the query contract with a variant `transform` (+ `inline_parameters` for names that
   cannot be placeholders, `extra_columns` for engine-specific data). Languages embedded in string
-  literals (Manticore's MATCH() query) are syntax specs with `wrap`, referenced from the lexical
-  spec's `embedded_languages`.
+  literals (the MATCH() query of Manticore / Sphinx) are syntax specs with `wrap` and their own
+  tokenizer lexical (`lexical: fulltext-query`), referenced from the engine lexical spec's
+  `embedded_languages`.
 - `inventory/<engine>/<version>.yaml` (generated): everything the engine has - keywords and grammar
   forms from its parser sources at the build commit, plus the manual's reference index.
   `scope/<engine>.yaml` classifies every item (covered by specs / planned in the roadmap / open /
@@ -59,7 +62,10 @@ uv run dbspecs inventory --target manticore   # regenerate inventory/<engine>/<v
   runs an independent review in a fresh subagent and writes `dist/audit/`.
 - `keywords/<engine>/<version>.yaml`: generated keyword lists (never edit by hand; `test` fails
   when a stored list no longer matches its server version).
-- `tests/targets.yaml` (container images), `tests/cases/` (integration tests). Embedded engines
+- `tests/targets.yaml` (container images; `build: tests/images/<dir>` for engines without an
+  official image - the Dockerfile uses the vendor's release files and pins their checksum, and a
+  fixture config can predefine tables, as for Sphinx 2.x which has no CREATE TABLE),
+  `tests/cases/` (integration tests). Embedded engines
   (SQLite) run `tooling/dbspecs/sqlite_worker.py` inside a `python:*-slim` image (that Debian's
   libsqlite3) or locally; setup entries can be `{sql, since, until}` for version-specific DDL.
 - `schemas/` JSON Schemas; `tooling/dbspecs/` Python tooling.
@@ -78,6 +84,16 @@ uv run dbspecs inventory --target manticore   # regenerate inventory/<engine>/<v
   variant when an engine reports something differently.
 - **New version range?** Add a test target to `tests/targets.yaml` if an image exists, so the
   range boundary is exercised.
+- **Older versions** (`tier: extended` targets, run with `--extended`): test a sample - every
+  supported release line, the oldest version still in real use, and every known boundary - then
+  narrow failures by bisecting with intermediate images. For engines with an inventory, the
+  grammar diff (`inventory-diff`) gives syntax boundaries directly; bisect only for behaviour
+  (wire flags, no-ops, semantics). Record what was tested: `since` = first version observed with
+  the feature, a counter-example `until` the next series after the last version observed without
+  it; never claim anything for versions without an image (say so in a note). Keep boundary
+  versions as permanent extended targets. A test whose query has no variant for a version is
+  skipped as a documented gap; to widen a range, run the oldest variant against the older server
+  (all tests that exercise it must pass) and record failed attempts in `gaps`.
 - **Syntax examples** declare `expect: valid | invalid | semantic-error` per engine/version
   range; `validate` checks them offline for every version series, `test` against servers.
   Version annotations in EBNF (`/* @since X */`) apply to the single next item.

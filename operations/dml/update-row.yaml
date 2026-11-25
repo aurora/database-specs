@@ -49,3 +49,14 @@ implementations:
         - "Only attributes can be updated; a full-text field (TEXT) gives 'can not be updated (full-text field)'. To change one, REPLACE INTO the whole document (all columns) or REPLACE INTO t SET col = ... WHERE id = n."
         - "The document id is always unique: use id = ? as key_predicate; no_unique_key never applies (there is no UPDATE ... LIMIT)."
       sources: [{ evidence: tested }]
+  sphinx:
+    - until: "3"
+      status: partial
+      template: "UPDATE {{table}} SET {{assignments}} WHERE {{key_predicate}}"
+      caveats: ["Only numeric / MVA / JSON attributes; string attributes and full-text fields cannot be updated (syntax error) - use REPLACE with the whole document."]
+      sources: [{ evidence: tested }]
+    - since: "3"
+      status: partial
+      template: "UPDATE {{table}} SET {{assignments}} WHERE {{key_predicate}}"
+      caveats: ["Attributes including strings; full-text fields cannot be updated ('attribute not found') - use REPLACE."]
+      sources: [{ evidence: tested }]

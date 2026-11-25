@@ -40,3 +40,10 @@ implementations:
         - "SELECT * returns the attributes first and the stored full-text fields last - not the DESCRIBE order. Fields that are indexed but not stored are missing."
         - "The where fragment must follow Manticore's restrictions: at most one MATCH(), not inside OR / NOT (query.fulltext-search)."
       sources: [{ evidence: tested }]
+  sphinx:
+    - status: supported
+      template: "SELECT * FROM {{table}}{{#where}} WHERE {{where}}{{/where}}{{#order_by}} ORDER BY {{order_by}}{{/order_by}} LIMIT {{offset}}, {{limit}}"
+      caveats:
+        - "Only LIMIT offset, count (no OFFSET keyword). As in Manticore: offset + limit up to max_matches (1000), ORDER BY items need ASC / DESC."
+        - "Full-text fields are not returned (2.2 has no stored fields; 3.x only stored ones)."
+      sources: [{ evidence: tested }]

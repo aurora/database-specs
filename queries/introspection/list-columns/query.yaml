@@ -105,6 +105,52 @@ variants:
       - "Percolate tables report id, query, tags, filters (the stored queries); distributed tables return (Agent, Type) rows instead - the transform fails for them, list their columns from a local table."
     sources: [{ evidence: observed, notes: "manticore 32.1.3" }]
 
+  - engine: sphinx
+    until: "3"
+    file: sphinx.sql
+    inline_parameters: { table: identifier }
+    transform:
+      schema_name: { param: schema }
+      table_name: { param: table }
+      column_name: { column: Field }
+      ordinal_position: { row_number: true }
+      data_type: { column: Type }
+      is_nullable: { column: Type, equals: json }
+      default_raw: { const: null }
+      is_auto_increment: { const: false }
+      generation_expression: { const: null }
+      generation_kind: { const: null }
+      collation: { const: null }
+      comment: { const: null }
+    notes:
+      - "DESCRIBE returns (Field, Type) only. Full-text fields have Type 'field' (not text) and are not returned by SELECT (2.2 has no stored fields)."
+      - "No generated ids: INSERT must give the id (is_auto_increment false)."
+    sources: [{ evidence: observed, notes: "Sphinx 2.2.11, 3.9.1" }]
+  - engine: sphinx
+    since: "3"
+    file: sphinx.sql
+    inline_parameters: { table: identifier }
+    transform:
+      schema_name: { param: schema }
+      table_name: { param: table }
+      column_name: { column: Field }
+      ordinal_position: { row_number: true }
+      data_type: { column: Type }
+      is_nullable: { column: Type, equals: json }
+      default_raw: { const: null }
+      is_auto_increment: { const: false }
+      generation_expression: { const: null }
+      generation_kind: { const: null }
+      collation: { const: null }
+      comment: { const: null }
+    extra_columns:
+      - { name: properties, column: Properties, description: "e.g. indexed (full-text fields)." }
+      - { name: key, column: Key, description: "Index flag of the attribute as DESCRIBE reports it (empty for plain attributes)." }
+    notes:
+      - "DESCRIBE returns Field, Type, Properties, Key. Fields have Type 'field'; MVA attributes are uint_set / bigint_set."
+      - "No generated ids: INSERT must give the id (is_auto_increment false)."
+    sources: [{ evidence: observed, notes: "Sphinx 2.2.11, 3.9.1" }]
+
 gaps:
   - "MySQL < 5.7 (no GENERATION_EXPRESSION column)."
   - "PostgreSQL < 12 (no attgenerated)."

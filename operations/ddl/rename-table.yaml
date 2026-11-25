@@ -46,3 +46,7 @@ implementations:
       transactional: false
       caveats: ["RENAME TO new_name works as well (observed 32.1.3)."]
       sources: [{ evidence: tested }]
+  sphinx:
+    - status: unsupported
+      caveats: ["No ALTER TABLE ... RENAME (syntax error in 2.2 and 3.x)."]
+      sources: [{ evidence: observed, notes: "Sphinx 2.2.11, 3.9.1" }]

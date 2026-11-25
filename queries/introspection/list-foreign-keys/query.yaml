@@ -31,7 +31,7 @@ result:
 
 variants:
   - engine: mysql
-    since: "5.7"
+    since: "5.6"
     file: mysql.sql
     notes:
       - "Without an explicit ON UPDATE/ON DELETE, 5.7 reports restrict and 8.x reports no-action (observed 5.7.44 vs 8.0.46). InnoDB treats both the same (checked immediately)."
@@ -68,6 +68,7 @@ variants:
       - "DEFERRABLE INITIALLY DEFERRED is not exposed by pragmas: is_deferrable / initially_deferred are NULL."
 
 not_applicable:
+  sphinx: "No foreign keys."
   manticore: "No foreign keys (no constraints at all)."
 
 gaps:

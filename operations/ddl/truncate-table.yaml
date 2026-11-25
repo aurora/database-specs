@@ -44,3 +44,8 @@ implementations:
       transactional: false
       caveats: ["Real-time tables only. WITH RECONFIGURE re-reads settings from the config file and fails in RT mode without one."]
       sources: [{ evidence: tested }]
+  sphinx:
+    - status: supported
+      template: "TRUNCATE RTINDEX {{table}}"
+      caveats: ["TRUNCATE RTINDEX, not TRUNCATE TABLE (syntax error); RT (and in 3.x PQ) indexes only."]
+      sources: [{ evidence: tested }]

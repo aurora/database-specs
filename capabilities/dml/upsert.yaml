@@ -42,6 +42,10 @@ support:
         - "REPLACE INTO t SET col = value WHERE id = n replaces only the given attributes (partial replace), but does not insert a missing document."
         - "No INSERT ... ON DUPLICATE KEY UPDATE; the key is always the document id."
       sources: [{ evidence: observed, notes: "manticore 32.1.3" }]
+  sphinx:
+    - status: partial
+      notes: ["REPLACE INTO replaces the whole document (missing columns get defaults); no REPLACE ... SET, no ON DUPLICATE KEY UPDATE. INSERT requires the id column (no generated ids)."]
+      sources: [{ evidence: observed, notes: "Sphinx 2.2.11, 3.9.1" }]
 probes:
   - engines: [mysql, mariadb]
     setup:
@@ -77,3 +81,12 @@ probes:
       - "REPLACE INTO probe_mt (id, v) VALUES (1, 2)"
     check: "SELECT v = 2 FROM probe_mt WHERE id = 1"
     cleanup: ["DROP TABLE IF EXISTS probe_mt"]
+  - engines: [sphinx]
+    setup:
+      - "TRUNCATE RTINDEX t_ed"
+      - "INSERT INTO t_ed (id, title, n) VALUES (1, 'a', 1)"
+    statements:
+      - "REPLACE INTO t_ed (id, n) VALUES (1, 2)"
+    check: "SELECT n = 2 FROM t_ed WHERE id = 1"
+    cleanup:
+      - "TRUNCATE RTINDEX t_ed"

@@ -1,0 +1,71 @@
+# yaml-language-server: $schema=../schemas/engine.schema.json
+id: sphinx
+name: Sphinx Search
+vendor: Sphinx Technologies / Andrew Aksyonoff
+description: >
+  Full-text search server with SphinxQL over the MySQL protocol. Manticore Search was forked from
+  the Sphinx 2.3 development line in 2017; Sphinx 2.2.11 is the last open-source release, Sphinx
+  3.x continued as freely downloadable binaries. Both lines diverged from Manticore since: shared
+  heritage (MATCH(), GROUP n BY, FACET) but different SQL coverage, config syntax and catalog.
+protocols:
+  - id: mysql
+    default_port: 9306
+    handshake:
+      server_version: "2.x: '2.2.11-id64-release (95ae9a6)'; 3.x: '3.9.1 (commit 141d2ea31)' - version and source commit."
+      capabilities: [CONNECT_WITH_DB, PROTOCOL_41, SECURE_CONNECTION]
+      tls: "Not announced (no CLIENT_SSL) by either line with default settings."
+      notes:
+        - "3.x additionally announces PLUGIN_AUTH (mysql_native_password); 2.2.11 sends no auth plugin name."
+        - "No MULTI_RESULTS capability, but SELECT ... FACET still returns several result sets."
+        - "COM_STMT_PREPARE: 2.2.11 answers 'unknown command (code=22)'; clients must inline literals."
+    notes:
+      - "SELECT * on an empty index returns only the id column: take the column list from DESCRIBE, not from an empty result."
+      - "COUNT(*) is LONG (3) in 2.2, LONGLONG (8) in 3.x; AVG() is FLOAT (4), where Manticore sends DOUBLE. No UNSIGNED flags (Manticore sets them since 27.1)."
+    type_mapping:
+      - { type: bigint, code: 8, binary: false, notes: ["Also the id column."] }
+      - { type: uint, code: 3, notes: ["Unsigned 32 bit, but no UNSIGNED flag: 4294967295 arrives as text 4294967295."] }
+      - { type: float, code: 4 }
+      - { type: bool, code: 3, value: "0 or 1" }
+      - { type: timestamp, code: 3, until: "3", value: "Unix time in seconds" }
+      - { type: string, code: 254, binary: false }
+      - { type: json, code: 254, binary: false, value: "JSON text" }
+      - { type: mva, code: 254, binary: false, until: "3", value: "Comma-separated integers, e.g. 1,2" }
+      - { type: mva64, code: 254, binary: false, until: "3", value: "Comma-separated integers" }
+      - { type: uint_set, code: 254, binary: false, since: "3", value: "Comma-separated integers, e.g. 1,2" }
+      - { type: bigint_set, code: 254, binary: false, since: "3", value: "Comma-separated integers" }
+    type_probe:
+      setup:
+        - "TRUNCATE RTINDEX probe_rt"
+        - { sql: "INSERT INTO probe_rt (id, title, body, n, b, f, ok, ts, s, j, m, m64) VALUES (1, 'a', 'b', 1, -2, 1.5, 1, 1700000000, 'x', '{}', (1,2), (3,4))", until: "3" }
+        - { sql: "INSERT INTO probe_rt (id, title, body, n, b, f, ok, s, j, m, m64) VALUES (1, 'a', 'b', 1, -2, 1.5, 1, 'x', '{}', (1,2), (3,4))", since: "3" }
+      query: "SELECT * FROM probe_rt"
+      columns: { id: bigint, n: uint, b: bigint, f: float, ok: bool, ts: timestamp, s: string, j: json, m: "mva|uint_set", m64: "mva64|bigint_set" }
+      cleanup: ["TRUNCATE RTINDEX probe_rt"]
+    sources: [{ evidence: tested }]
+lexical: sphinx
+catalogs: [SHOW / DESCRIBE statements]
+
+identification:
+  version_pattern: '^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)'
+  notes:
+    - "2.x has no VERSION() (and no DATABASE()); the version is only in the handshake (mysql_get_server_info). 3.x: SELECT VERSION() returns e.g. '3.9.1 (commit 141d2ea31)'."
+    - "Tell it apart from Manticore by the version text: Sphinx 2.x ends in '-release (commit)' / '-id64-release', 3.x has '(commit ...)' after the version; Manticore has 'commit@builddate' and much higher major versions (6+)."
+    - "No databases: SHOW DATABASES is empty (2.2.11)."
+
+versions:
+  - series: "2.2"
+    notes:
+      - "2.2.11 (2016, date unverified) is the last open-source release (GPLv2). No CREATE TABLE: real-time indexes are declared in sphinx.conf (rt_field / rt_attr_*)."
+  - series: "3"
+    notes:
+      - "Binaries from sphinxsearch.com (tested 3.9.1). CREATE TABLE / DROP TABLE only in datadir mode (common { datadir = ... }; no path / pid_file / binlog_path keys then); new config syntax field / attr_uint / attr_uint_set, no attr_timestamp / attr_multi."
+
+documentation:
+  - title: Sphinx 3 documentation
+    url: https://sphinxsearch.com/docs/sphinx3.html
+  - title: Sphinx 2.2 documentation
+    url: https://sphinxsearch.com/docs/sphinx2.html
+
+sources:
+  - evidence: observed
+    notes: Behaviour observed against Sphinx 2.2.11 (Debian bookworm package) and 3.9.1 (vendor binaries), images built from tests/images/sphinx-*.

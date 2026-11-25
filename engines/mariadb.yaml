@@ -53,6 +53,18 @@ identification:
     - "Do not reuse MySQL version ranges: MariaDB 10.x is not comparable to MySQL 8.x."
 
 versions:
+  - series: "10.3"
+    kind: stable
+    released: 2018-05-25
+    eol: 2023-05-25
+  - series: "10.4"
+    kind: stable
+    released: 2019-06-18
+    eol: 2024-06-18
+  - series: "10.5"
+    kind: stable
+    released: 2020-06-24
+    eol: 2025-06-24
   - series: "10.6"
     kind: lts
     released: 2021-07-06

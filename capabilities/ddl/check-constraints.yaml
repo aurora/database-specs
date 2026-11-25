@@ -28,6 +28,9 @@ support:
   manticore:
     - status: unsupported
       notes: ["CREATE TABLE has no CHECK clause (parse error); Manticore tables have no constraints besides the unique document id."]
+  sphinx:
+    - status: unsupported
+      notes: ["No constraints besides the unique document id."]
 probes:
   - engines: [mysql, mariadb, postgresql, sqlite]
     invert: true
@@ -43,3 +46,7 @@ probes:
     statements:
       - "CREATE TABLE probe_mt (a INT CHECK (a > 0))"
     cleanup: ["DROP TABLE IF EXISTS probe_mt"]
+  - engines: [sphinx]
+    since: "3"
+    statements:
+      - "CREATE TABLE probe_check (id bigint, a uint CHECK (a > 0))"

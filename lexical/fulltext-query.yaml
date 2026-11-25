@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=../schemas/lexical.schema.json
+id: fulltext-query
+description: >
+  Tokens of the Sphinx / Manticore full-text query language (the MATCH() argument), used to
+  tokenize syntax fulltext.manticore-query: double quotes delimit phrases, a backslash escapes
+  operator characters. Not an engine's SQL lexical spec.
+
+identifiers:
+  quotes: []
+
+strings:
+  - kind: string
+    open: '"'
+    close: '"'
+    escape: [backslash]
+    notes: ["A phrase: \"exact words\", followed by ~N (proximity) or /N (quorum)."]
+
+comments: []
+
+statements:
+  terminator: ""
+  notes: ["One query per MATCH() argument; no statements."]
+
+sources:
+  - evidence: tested
+    notes: "Through the examples of syntax fulltext.manticore-query on Manticore and Sphinx."

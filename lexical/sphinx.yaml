@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=../schemas/lexical.schema.json
+id: sphinx
+description: >
+  Lexical rules of SphinxQL (Sphinx 2.2 / 3.x). Close to Manticore's dialect, but stricter: only
+  single-quoted strings. The argument of MATCH() is the full-text query language
+  (syntax fulltext.manticore-query describes the shared heritage).
+
+identifiers:
+  quotes:
+    - { open: "`", close: "`", escape: [] }
+  preferred_quote: "`"
+  unquoted_pattern: '^[A-Za-z_][A-Za-z0-9_]*$'
+  case_folding: lower
+  notes:
+    - "Index (table) and column names are case-insensitive. Escaping a backtick inside a quoted name is not verified."
+
+strings:
+  - kind: string
+    open: "'"
+    close: "'"
+    escape: [backslash]
+    notes: ["Backslash escapes. Double quotes are not string delimiters (syntax error), unlike Manticore."]
+
+comments:
+  - { kind: block, open: "/*", close: "*/", nestable: false }
+
+operators: ["!=", "<>", "<=", ">=", "=", "<", ">", "+", "-", "*", "/", "%", "|", "&", "AND", "OR", "NOT", "IN", "BETWEEN", "IS", "DIV", "MOD"]
+
+statements:
+  terminator: ";"
+  notes:
+    - "Only /* */ comments: '-- comment' is a syntax error."
+    - "No placeholders: '?' is a syntax error."
+
+embedded_languages:
+  - context: "String argument of MATCH() in WHERE"
+    syntax: fulltext.manticore-query
+
+keywords:
+  notes: ["No keyword list on the server; keywords/sphinx/ holds probed reserved words."]
+
+sources:
+  - evidence: observed
+    notes: "Sphinx 2.2.11 and 3.9.1"

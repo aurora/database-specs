@@ -49,6 +49,11 @@ PROBES = {
     # Manticore's CREATE TABLE accepts almost any word as column name, its SELECT parser does
     # not: probe the select list against an existing table and count only syntax errors
     # ("unknown column" means the word was parsed as an identifier).
+    # Sphinx: 2.x has no CREATE TABLE - probe against the fixture index of tests/images/sphinx-*
+    "sphinx": {
+        "probe": "SELECT {w} FROM probe_rt",
+        "reserved_error": "syntax error",
+    },
     "manticore": {
         "setup": "CREATE TABLE kw_probe (f TEXT, a INT)",
         "probe": "SELECT {w} FROM kw_probe",
@@ -115,7 +120,8 @@ def _server_list(specs: Specs, server: Server, conn) -> list[str] | None:
 
 
 def _candidates(engine: str) -> set[str]:
-    words = set({"sqlserver": TSQL_CANDIDATES, "manticore": MANTICORE_CANDIDATES}.get(engine, ()))
+    words = set({"sqlserver": TSQL_CANDIDATES, "manticore": MANTICORE_CANDIDATES,
+                 "sphinx": MANTICORE_CANDIDATES}.get(engine, ()))
     for eng, versions in stored_files().items():
         for doc in versions.values():
             if doc["complete"] or eng == engine:

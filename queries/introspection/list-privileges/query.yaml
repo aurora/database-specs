@@ -27,11 +27,11 @@ variants:
       - "USAGE means 'no global privileges'. Privileges of granted roles (8.0) are not expanded."
       - "The grant option belongs to a level (global / schema / table / routine), not to a single privilege: WITH GRANT OPTION on any table privilege makes the column privileges of that table grantable too (observed)."
   - engine: mariadb
-    since: "10.6"
+    since: "10.4"
     file: mysql.sql
     notes: ["Same query as MySQL; role privileges are not expanded."]
   - engine: postgresql
-    since: "12"
+    since: "11"
     file: postgresql.sql
     notes:
       - "From the ACLs of the current database, its schemas, relations, columns and functions (system schemas excluded). Objects without an explicit ACL use the default ACL, so owners appear with their implicit privileges."
@@ -43,7 +43,9 @@ variants:
       - "Database permissions (database, schema, object, column) of a database principal plus server permissions of a login with that name."
       - "Fixed role memberships (db_owner, sysadmin, ...) grant implicit permissions that are not listed."
 not_applicable:
+  sphinx: "No users or privileges."
   sqlite: "No users or privileges."
 gaps:
+  - "MariaDB 10.3: no mysql.global_priv table (10.4+) (tested)."
   - "Manticore: SHOW PERMISSIONS (username, action, target, allow, budget); not mapped yet (needs a server with auth enabled)."
   - "Role memberships (who is member of which role) need their own query."

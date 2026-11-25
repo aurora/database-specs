@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=../../schemas/test.schema.json
+id: ddl-roundtrip-sphinx
+description: SHOW CREATE TABLE on Sphinx 3 (datadir mode) - drop, re-run, compare columns.
+engines: [sphinx]
+versions: { sphinx: { since: "3" } }
+
+setup:
+  sphinx: ["CREATE TABLE t_rt (id bigint, title field indexed, n uint, b bigint, s string, j json, m uint_set)"]
+cleanup:
+  sphinx: ["DROP TABLE t_rt"]
+
+steps:
+  - roundtrip:
+      operation: introspection.table-ddl
+      params: { table: t_rt }
+      drop: { sphinx: [DROP TABLE t_rt] }
+      compare:
+        - { query: introspection.list-columns, params: { schema: "{{schema}}", table: t_rt } }

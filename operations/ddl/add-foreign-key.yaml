@@ -47,3 +47,6 @@ implementations:
     - status: unsupported
       caveats: ["No foreign keys."]
       sources: [{ evidence: observed }]
+  sphinx:
+    - status: unsupported
+      sources: [{ evidence: observed, notes: "Sphinx 2.2.11, 3.9.1" }]

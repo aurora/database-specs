@@ -1,16 +1,22 @@
 # Servers the integration tests run against (one container each).
-# Run a subset with: uv run dbspecs test --target mysql-8.4
+# Run a subset with: uv run dbspecs test --target mysql-8.4 (add --extended for tier: extended targets)
 targets:
   - { id: mysql-5.7,      engine: mysql,      image: docker.io/library/mysql:5.7 }
   - { id: mysql-8.0,      engine: mysql,      image: docker.io/library/mysql:8.0 }
   - { id: mysql-8.4,      engine: mysql,      image: docker.io/library/mysql:8.4 }
   - { id: mysql-9,        engine: mysql,      image: docker.io/library/mysql:9 }
+  - { id: mysql-5.6,      engine: mysql,      image: docker.io/library/mysql:5.6, tier: extended }
+  - { id: postgresql-11,  engine: postgresql, image: docker.io/library/postgres:11, tier: extended }
+  - { id: postgresql-12,  engine: postgresql, image: docker.io/library/postgres:12, tier: extended }
   - { id: postgresql-13,  engine: postgresql, image: docker.io/library/postgres:13 }
   - { id: postgresql-14,  engine: postgresql, image: docker.io/library/postgres:14 }
   - { id: postgresql-15,  engine: postgresql, image: docker.io/library/postgres:15 }
   - { id: postgresql-16,  engine: postgresql, image: docker.io/library/postgres:16 }
   - { id: postgresql-17,  engine: postgresql, image: docker.io/library/postgres:17 }
   - { id: postgresql-18,  engine: postgresql, image: docker.io/library/postgres:18 }
+  - { id: mariadb-10.3,   engine: mariadb,    image: docker.io/library/mariadb:10.3, tier: extended }
+  - { id: mariadb-10.4,   engine: mariadb,    image: docker.io/library/mariadb:10.4, tier: extended }
+  - { id: mariadb-10.5,   engine: mariadb,    image: docker.io/library/mariadb:10.5, tier: extended }
   - { id: mariadb-10.6,   engine: mariadb,    image: docker.io/library/mariadb:10.6 }
   - { id: mariadb-10.11,  engine: mariadb,    image: docker.io/library/mariadb:10.11 }
   - { id: mariadb-11.4,   engine: mariadb,    image: docker.io/library/mariadb:11.4 }
@@ -21,6 +27,15 @@ targets:
   - { id: sqlserver-2022, engine: sqlserver,  image: mcr.microsoft.com/mssql/server:2022-latest }
   - { id: sqlserver-2025, engine: sqlserver,  image: mcr.microsoft.com/mssql/server:2025-latest }
   - { id: manticore,      engine: manticore,  image: docker.io/manticoresearch/manticore:latest }
+  # tier: extended = older versions / range boundaries; run with `dbspecs test --extended` or by id
+  - { id: manticore-29.9, engine: manticore,  image: docker.io/manticoresearch/manticore:29.9.0, tier: extended }
+  - { id: manticore-28.6, engine: manticore,  image: docker.io/manticoresearch/manticore:28.6.6, tier: extended }
+  - { id: manticore-28.4, engine: manticore,  image: docker.io/manticoresearch/manticore:28.4.4, tier: extended }
+  - { id: manticore-27.1, engine: manticore,  image: docker.io/manticoresearch/manticore:27.1.5, tier: extended }
+  - { id: manticore-25.0, engine: manticore,  image: docker.io/manticoresearch/manticore:25.0.0, tier: extended }
+  # Sphinx: no official image - built from the vendor's releases (Dockerfile + fixture config)
+  - { id: sphinx-3,       engine: sphinx,     build: tests/images/sphinx-3 }
+  - { id: sphinx-2.2,     engine: sphinx,     build: tests/images/sphinx-2.2 }
   # SQLite: embedded - the worker runs in a python:*-slim image (Debian's libsqlite3) or locally
   - { id: sqlite-3.27,    engine: sqlite,     image: docker.io/library/python:3.9-slim-buster }
   - { id: sqlite-3.34,    engine: sqlite,     image: docker.io/library/python:3.11-slim-bullseye }

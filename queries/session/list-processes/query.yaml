@@ -16,18 +16,18 @@ result:
     - { name: is_current, type: boolean, nullable: false, description: "The session running this query." }
 variants:
   - engine: mysql
-    since: "5.7"
+    since: "5.6"
     file: mysql.sql
     notes:
       - "information_schema.PROCESSLIST (deprecated since 8.0.22 in favour of performance_schema.processlist, still available). Without PROCESS privilege only own sessions are listed."
       - "Background threads (event_scheduler, replication) are included. client_address is host:port."
       - "blocked_by is not available here (sys.innodb_lock_waits / performance_schema.data_lock_waits)."
   - engine: mariadb
-    since: "10.6"
+    since: "10.3"
     file: mysql.sql
     notes: ["Same query as MySQL; MariaDB lists internal threads as user 'system user'."]
   - engine: postgresql
-    since: "12"
+    since: "11"
     file: postgresql.sql
     notes:
       - "Client backends of all databases (pg_stat_activity). query is the last statement while idle. Other users' queries need pg_read_all_stats."
@@ -41,4 +41,5 @@ not_applicable:
   sqlite: "Embedded library: no server sessions."
 
 gaps:
+  - "Sphinx: SHOW THREADS lists working threads (columns differ between 2.2 and 3.x); not mapped yet."
   - "Manticore: SHOW THREADS lists working threads (ConnID = CONNECTION_ID(), Info = statement), not idle sessions; not mapped yet."

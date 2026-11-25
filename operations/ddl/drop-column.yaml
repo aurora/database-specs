@@ -46,3 +46,9 @@ implementations:
       transactional: false
       caveats: ["Works for attributes and full-text fields; the id column cannot be dropped."]
       sources: [{ evidence: tested }]
+  sphinx:
+    - status: supported
+      template: "ALTER TABLE {{table}} DROP COLUMN {{column}}"
+      transactional: false
+      caveats: ["Attributes only."]
+      sources: [{ evidence: tested }]

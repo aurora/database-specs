@@ -16,6 +16,15 @@ rules:
   - match: ["sphinxql:like_filter: *"]
     status: covered
     specs: ["query:introspection.list-tables"]
+  - match: ["sphinxql:ident_*", "sphinxql:names_transaction_collate: *", "sphinxql:reserved_tokens_without_option: *",
+            "sphinxql:ident_or_string_or_num_or_null*", "sphinxql_second:ident: *", "sphinxql_second:ident_all: *",
+            "ddl:tableident: *"]
+    status: covered
+    specs: ["keywords:keyword-list"]
+    reason: "Keywords the grammar also accepts as identifiers; listed in keywords/manticore/ (non-reserved)."
+  - match: ["sphinxql:expr_ident: *"]
+    status: covered
+    specs: ["syntax:query.fulltext-select"]
   - match: ["sphinxquery:*"]
     status: covered
     specs: ["syntax:fulltext.manticore-query"]
@@ -46,7 +55,7 @@ rules:
     specs: ["lexical:manticore"]
   - match: ["sphinxql:select1: *", "sphinxql:select: *", "sphinxql:opt_outer_*", "sphinxql:hint_item: *",
             "sphinxql:knn_item: *", "sphinxql:hybrid_match_item: *", "sphinxql:opt_distinct_item: *",
-            "sphinxql:consthash: *", "sphinxql:facet_alias: *", "sphinxexpr:for_loop: *", "sphinxexpr:maparg: *", "sphinxexpr:arg: *",
+            "sphinxql:consthash: *", "sphinxql:facet_alias: *", "sphinxql:identcol: *", "sphinxql_second:identcol: *", "sphinxexpr:for_loop: *", "sphinxexpr:maparg: *", "sphinxexpr:arg: *",
             "docs-page:Searching/Options: *", "buddy:Knn", "buddy:Fuzzy",
             "sphinxql:select_expr: *", "sphinxql:group_concat_order_item: *", "sphinxql:opt_group_concat_separator: *",
             "sphinxql:order_clause: *", "sphinxql:function: *", "sphinxql:json_aggr: *", "sphinxql:option_clause_item: *",
@@ -67,7 +76,8 @@ rules:
     status: covered
     specs: ["operation:dml.insert-row", "capability:dml.upsert"]
   - match: ["docs:SQL commands / Data management: Bulk import", "docs:SQL commands / Node management: PURGE BULK_IMPORT",
-            "sphinxql:insert_val: *", "sphinxql:vec_array: *", "sphinxql:vec_group_list: *", "buddy:Insert", "buddy:ReplaceSelect"]
+            "sphinxql:insert_val: *", "sphinxql:vec_array: *", "sphinxql:vec_group_list: *", "buddy:Insert", "buddy:ReplaceSelect",
+            "buddy:DistributedInsert"]
     status: planned
     roadmap: dml.insert
   - match: ["sphinxql:update: *", "sphinxql:update_item: *", "buddy:Update", "docs:SQL commands / Data management: UPDATE"]
@@ -84,7 +94,7 @@ rules:
     status: covered
     specs: ["operation:ddl.drop-table"]
   - match: ["ddl:alter: <alter_table_name> ADD COLUMN *", "ddl:alter: <alter_table_name> DROP COLUMN *",
-            "ddl:alter: <alter_table_name> <modify_column> <columnident> <alter_col_type> *", "ddl:alter_table_name: *",
+            "ddl:alter: <alter_table_name> MODIFY COLUMN * <alter_col_type> *", "ddl:alter_table_name: *",
             "buddy:AlterColumn", "buddy:AlterRenameTable", "buddy:ModifyTable", "docs:SQL commands / Schema management: ALTER TABLE",
             "docs:SQL commands / Schema management: ALTER TABLE RENAME"]
     status: covered
@@ -113,7 +123,7 @@ rules:
     specs: ["query:introspection.list-tables"]
   - match: ["buddy:Show", "buddy:Select", "buddy:Alias", "sphinxql_extra:show_fields: *", "sphinxql_extra:fields_or_columns: *",
             "sphinxql_extra:create_database: *", "sphinxql_extra:lock_tables: *", "sphinxql_extra:unlock_tables: *",
-            "sphinxql_extra:list_locked: *", "sphinxql_extra:read_or_write: *"]
+            "sphinxql_extra:read_or_write: *"]
     status: covered
     specs: ["engine:manticore"]
   - match: ["sphinxql_extra:savepoint_sp: *"]
@@ -199,7 +209,7 @@ rules:
   # --- deliberately out of scope ---------------------------------------------------------------------------------------
   - match: ["ddl:alter: <alter_cluster_ident> *", "ddl:create_cluster: *", "ddl:join_cluster: *",
             "sphinxql_second:delete_cluster: *", "sphinxql_second:exit_cluster: *", "sphinxql_second:set_global_stmt: SET CLUSTER *",
-            "docs:SQL commands / Replication: *", "sphinxql:show_what: AGENT *", "buddy:CreateCluster"]
+            "docs:SQL commands / Replication: *", "sphinxql:show_what: AGENT *", "buddy:CreateCluster", "ddl:alter_cluster_ident: *"]
     status: out-of-scope
     reason: "Replication clusters and distributed agents are server administration, not something a database client edits."
   - match: ["sphinxql:show_what: PLUGINS"]
@@ -217,7 +227,7 @@ rules:
             "sphinxql_second:set_global_stmt: SET <index_or_table> *", "sphinxql_second:option_item: *", "sphinxql:show_what: LOCKS",
             "buddy:Backup", "buddy:Flush", "buddy:Optimize",
             "ddl:import_table: *", "docs:SQL commands / Backup: *", "docs:SQL commands / Flushing misc things: *",
-            "docs:SQL commands / Table optimization: *", "docs:SQL commands / Importing to a real-time table: *",
+            "docs:SQL commands / Table optimization: *", "docs:SQL commands / Real-time table optimization: *", "docs:SQL commands / Importing to a real-time table: *",
             "docs:SQL commands / Plain table rotate: *", "docs:SQL commands / Node management: PURGE",
             "docs:SQL commands / Schema management: SHOW LOCKS"]
     status: out-of-scope

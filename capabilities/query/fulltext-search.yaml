@@ -41,6 +41,12 @@ support:
         - "Exactly one MATCH() per SELECT, only at the top level of WHERE combined by AND - not inside OR or NOT ('too many MATCH() clauses' / syntax error)."
         - "Full-text fields are not stored as filterable values: comparing a TEXT field with = is an error; use MATCH('@field \"exact phrase\"') or a string attribute."
       sources: [{ evidence: observed, notes: "manticore 32.1.3" }]
+  sphinx:
+    - status: supported
+      notes:
+        - "MATCH('query') in WHERE, same query language as Manticore (fulltext.manticore-query), WEIGHT() for relevance."
+        - "One MATCH() per statement. 2.2: only AND-combined attribute filters after MATCH (OR even in parentheses is a syntax error); 3.x allows OR inside parentheses. Neither allows MATCH ... AND x OR y."
+      sources: [{ evidence: observed, notes: "Sphinx 2.2.11, 3.9.1" }]
 probes:
   - engines: [mysql, mariadb]
     setup:
@@ -66,3 +72,12 @@ probes:
     statements: ["SELECT id, WEIGHT() FROM probe_ft WHERE MATCH('search')"]
     check: "SELECT COUNT(*) FROM probe_ft WHERE MATCH('search')"
     cleanup: ["DROP TABLE IF EXISTS probe_ft"]
+  - engines: [sphinx]
+    setup:
+      - "TRUNCATE RTINDEX t_ft"
+      - "INSERT INTO t_ft (id, title, body, cat, price) VALUES (1, 'hello search world', 'x', 1, 1), (2, 'other words', 'y', 1, 1)"
+    statements:
+      - "SELECT id, WEIGHT() FROM t_ft WHERE MATCH('search')"
+    check: "SELECT COUNT(*) FROM t_ft WHERE MATCH('search')"
+    cleanup:
+      - "TRUNCATE RTINDEX t_ft"

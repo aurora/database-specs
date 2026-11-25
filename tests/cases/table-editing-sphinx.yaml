@@ -1,0 +1,59 @@
+# yaml-language-server: $schema=../../schemas/test.schema.json
+id: table-editing-sphinx
+description: Table editor operations on Sphinx against the fixture index t_ed (title field, n uint, s string).
+engines: [sphinx]
+
+setup:
+  sphinx: ["TRUNCATE RTINDEX t_ed"]
+cleanup:
+  sphinx: ["TRUNCATE RTINDEX t_ed"]
+
+steps:
+  - operation: dml.insert-row
+    params: { table: t_ed, columns: "id, title, n, s", values: "1, 'red apple', 3, 'x'" }
+  - operation: dml.insert-row
+    params: { table: t_ed, columns: "id, title, n, s", values: "2, 'pear', 4, 'y'" }
+  - operation: dml.update-row
+    params: { table: t_ed, assignments: n = 9, key_predicate: id = 1 }
+  - operation: query.browse-table
+    params: { table: t_ed, order_by: id ASC, limit: 10, offset: 0 }
+    expect:
+      row_count: 2
+      rows:
+        - match: { id: 1 }
+          values: { n: 9, s: x }
+  - operation: dml.update-row
+    engines: { sphinx: { since: "3" } }
+    params: { table: t_ed, assignments: "s = 'z'", key_predicate: id = 1 }
+  - sql: { sphinx: "SELECT s FROM t_ed WHERE id = 1" }
+    engines: { sphinx: { since: "3" } }
+    expect:
+      rows:
+        - { match: {}, values: { s: z } }
+  - operation: dml.delete-row
+    params: { table: t_ed, key_predicate: id = 2 }
+  - operation: query.browse-table
+    params: { table: t_ed, order_by: id ASC, limit: 10, offset: 0 }
+    expect: { row_count: 1 }
+
+  - operation: ddl.add-column
+    params: { table: t_ed, column: k, column_definition: INTEGER }
+  - query: introspection.list-columns
+    params: { schema: "{{schema}}", table: t_ed }
+    expect:
+      rows:
+        - { match: { column_name: k }, values: { data_type: uint } }
+  - operation: ddl.drop-column
+    params: { table: t_ed, column: k }
+  - query: introspection.list-columns
+    params: { schema: "{{schema}}", table: t_ed }
+    expect:
+      rows:
+        - { match: { column_name: k }, count: 0 }
+
+  - operation: ddl.truncate-table
+    params: { table: t_ed }
+  - sql: { sphinx: "SELECT COUNT(*) AS c FROM t_ed" }
+    expect:
+      rows:
+        - { match: {}, values: { c: 0 } }

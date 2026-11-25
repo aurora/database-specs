@@ -25,6 +25,8 @@ support:
       notes: ["MATERIALIZED / NOT MATERIALIZED hints since 3.35."]
   manticore:
     - status: unsupported
+  sphinx:
+    - status: unsupported
 probes:
   - engines: [mysql, mariadb, postgresql, sqlserver, sqlite]
     statements: ["WITH x AS (SELECT 1 AS n) SELECT n FROM x"]
@@ -34,3 +36,6 @@ probes:
     statements:
       - "WITH x AS (SELECT id FROM probe_mt) SELECT id FROM x"
     cleanup: ["DROP TABLE IF EXISTS probe_mt"]
+  - engines: [sphinx]
+    statements:
+      - "WITH x AS (SELECT id FROM probe_rt) SELECT id FROM x"

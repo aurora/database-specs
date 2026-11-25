@@ -1150,18 +1150,6 @@ items:
 - id: 'ddl:alter: <alter_cluster_ident> UPDATE USER <quoted_string>'
   kind: grammar
   parser: ddl
-- id: 'ddl:alter: <alter_table_name> <modify_column> <columnident> API_KEY = <quoted_string>'
-  kind: grammar
-  parser: ddl
-- id: 'ddl:alter: <alter_table_name> <modify_column> <columnident> API_TIMEOUT = <quoted_string>'
-  kind: grammar
-  parser: ddl
-- id: 'ddl:alter: <alter_table_name> <modify_column> <columnident> API_URL = <quoted_string>'
-  kind: grammar
-  parser: ddl
-- id: 'ddl:alter: <alter_table_name> <modify_column> <columnident> MAX_INPUT_TOKENS = <quoted_string>'
-  kind: grammar
-  parser: ddl
 - id: 'ddl:alter: <alter_table_name> ADD COLUMN <columnident> <alter_col_type> <item_option_list>'
   kind: grammar
   parser: ddl
@@ -1177,6 +1165,24 @@ items:
 - id: 'ddl:alter: <alter_table_name> KILLLIST_TARGET = <quoted_string>'
   kind: grammar
   parser: ddl
+- id: 'ddl:alter: <alter_table_name> MODIFY COLUMN <columnident> <alter_col_type> <item_option_list>'
+  kind: grammar
+  parser: ddl
+- id: 'ddl:alter: <alter_table_name> MODIFY COLUMN <columnident> <tableident>'
+  kind: grammar
+  parser: ddl
+- id: 'ddl:alter: <alter_table_name> MODIFY COLUMN <columnident> API_KEY = <quoted_string>'
+  kind: grammar
+  parser: ddl
+- id: 'ddl:alter: <alter_table_name> MODIFY COLUMN <columnident> API_TIMEOUT = <quoted_string>'
+  kind: grammar
+  parser: ddl
+- id: 'ddl:alter: <alter_table_name> MODIFY COLUMN <columnident> API_URL = <quoted_string>'
+  kind: grammar
+  parser: ddl
+- id: 'ddl:alter: <alter_table_name> MODIFY COLUMN <columnident> MAX_INPUT_TOKENS = <quoted_string>'
+  kind: grammar
+  parser: ddl
 - id: 'ddl:alter: <alter_table_name> REBUILD EMBEDDINGS <columnident>'
   kind: grammar
   parser: ddl
@@ -1190,6 +1196,9 @@ items:
   kind: grammar
   parser: ddl
 - id: 'ddl:alter: ALTER RTINDEX <tablename> RECONFIGURE'
+  kind: grammar
+  parser: ddl
+- id: 'ddl:alter_cluster_ident: ALTER CLUSTER <ident>'
   kind: grammar
   parser: ddl
 - id: 'ddl:alter_table_name: ALTER TABLE <tablename>'
@@ -1472,6 +1481,9 @@ items:
   kind: grammar
   parser: sphinxexpr
 - id: 'sphinxexpr:expr: <expr> > <expr>'
+  kind: grammar
+  parser: sphinxexpr
+- id: 'sphinxexpr:expr: <expr> | <expr>'
   kind: grammar
   parser: sphinxexpr
 - id: 'sphinxexpr:expr: <json_field> <is> <not> <null>'
@@ -1771,6 +1783,9 @@ items:
 - id: 'sphinxql:expr: <expr> OR <expr>'
   kind: grammar
   parser: sphinxql
+- id: 'sphinxql:expr: <expr> | <expr>'
+  kind: grammar
+  parser: sphinxql
 - id: 'sphinxql:expr: <ident> <subkey> ( )'
   kind: grammar
   parser: sphinxql
@@ -1784,6 +1799,33 @@ items:
   kind: grammar
   parser: sphinxql
 - id: 'sphinxql:expr: { <consthash> }'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:expr_ident: <ident> ( )'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:expr_ident: <ident> <subkey> ( )'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:expr_ident: BIGINT ( <json_expr> )'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:expr_ident: COUNT ( * )'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:expr_ident: DOUBLE ( <json_expr> )'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:expr_ident: FACET ( )'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:expr_ident: GROUPBY ( )'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:expr_ident: INTEGER ( <json_expr> )'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:expr_ident: WEIGHT ( )'
   kind: grammar
   parser: sphinxql
 - id: 'sphinxql:facet_alias: <facet_alias> : <ident>'
@@ -2027,6 +2069,30 @@ items:
 - id: 'sphinxql:hybrid_match_item: HYBRID_MATCH ( <quoted_string> , { <named_const_list> } )'
   kind: grammar
   parser: sphinxql
+- id: 'sphinxql:ident_for_set_stmt: OPTION'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:ident_or_string_or_num_or_null: NULL'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:ident_or_string_or_num_or_nulls: <ident_or_string_or_num_or_nulls> - <ident_or_string_or_num_or_null>'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:ident_without_option: EXCLUDE'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:ident_without_option: FILTERS'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:ident_without_option: MODE'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:ident_without_option: ZEROES'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:identcol: <identcol> : <ident>'
+  kind: grammar
+  parser: sphinxql
 - id: 'sphinxql:index_or_table: INDEX'
   kind: grammar
   parser: sphinxql
@@ -2125,6 +2191,15 @@ items:
   kind: grammar
   parser: sphinxql
 - id: 'sphinxql:named_const: <identcol> = <quoted_string>'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:names_transaction_collate: COLLATE'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:names_transaction_collate: NAMES'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:names_transaction_collate: TRANSACTION'
   kind: grammar
   parser: sphinxql
 - id: 'sphinxql:on_clause: <on_clause> AND <on_clause>'
@@ -2242,6 +2317,9 @@ items:
   kind: grammar
   parser: sphinxql
 - id: 'sphinxql:order_item: <expr_ident> DESC'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:reserved_tokens_without_option: ALL'
   kind: grammar
   parser: sphinxql
 - id: 'sphinxql:revoke_stmt: REVOKE <ident> ON <grant_target> FROM <quoted_string>'
@@ -2640,6 +2718,15 @@ items:
 - id: 'sphinxql_debug:from: FROM'
   kind: grammar
   parser: sphinxql_debug
+- id: 'sphinxql_debug:ident: OFF'
+  kind: grammar
+  parser: sphinxql_debug
+- id: 'sphinxql_debug:ident: ON'
+  kind: grammar
+  parser: sphinxql_debug
+- id: 'sphinxql_debug:ident: OPTION'
+  kind: grammar
+  parser: sphinxql_debug
 - id: 'sphinxql_debug:into: INTO'
   kind: grammar
   parser: sphinxql_debug
@@ -2733,6 +2820,9 @@ items:
 - id: 'sphinxql_extra:global_or_session: SESSION'
   kind: grammar
   parser: sphinxql_extra
+- id: 'sphinxql_extra:ident_value: <param_ident> = <anysetvalue>'
+  kind: grammar
+  parser: sphinxql_extra
 - id: 'sphinxql_extra:like_filter: LIKE <quoted_string>'
   kind: grammar
   parser: sphinxql_extra
@@ -2758,6 +2848,12 @@ items:
   kind: grammar
   parser: sphinxql_extra
 - id: 'sphinxql_extra:show_triggers: SHOW TRIGGERS <like_filter>'
+  kind: grammar
+  parser: sphinxql_extra
+- id: 'sphinxql_extra:table_db_ident: <ident> . <ident>'
+  kind: grammar
+  parser: sphinxql_extra
+- id: 'sphinxql_extra:table_ident: <ident> : <table_db_ident>'
   kind: grammar
   parser: sphinxql_extra
 - id: 'sphinxql_extra:unlock_tables: UNLOCK TABLES'
@@ -2848,6 +2944,15 @@ items:
   kind: grammar
   parser: sphinxql_second
 - id: 'sphinxql_second:global_or_session: SESSION'
+  kind: grammar
+  parser: sphinxql_second
+- id: 'sphinxql_second:ident: OPTION'
+  kind: grammar
+  parser: sphinxql_second
+- id: 'sphinxql_second:ident_all: TRANSACTION'
+  kind: grammar
+  parser: sphinxql_second
+- id: 'sphinxql_second:identcol: <identcol> : <ident>'
   kind: grammar
   parser: sphinxql_second
 - id: 'sphinxql_second:index_or_table: INDEX'
@@ -3003,6 +3108,9 @@ items:
 - id: 'sphinxquery:orlist: <orlist> <maybe> <tok_limiter> <atom>'
   kind: grammar
   parser: sphinxquery
+- id: 'sphinxquery:orlist: <orlist> | <tok_limiter> <atom>'
+  kind: grammar
+  parser: sphinxquery
 - id: 'sphinxquery:orlistf: <tok_limiter> ! <orlist>'
   kind: grammar
   parser: sphinxquery
@@ -3019,6 +3127,9 @@ items:
   kind: grammar
   parser: sphinxquery
 - id: 'sphinxquery:phrase_group_atom: ( <phrase_group_expr> )'
+  kind: grammar
+  parser: sphinxquery
+- id: 'sphinxquery:phrase_group_expr: <phrase_group_expr> | <phrase_group_sequence>'
   kind: grammar
   parser: sphinxquery
 - id: 'sphinxquery:phrasetoken: ( )'
@@ -4578,6 +4689,9 @@ items:
 - id: 'docs:Spelldump: locale-name'
   kind: docs
   url: https://manual.manticoresearch.com/Miscellaneous_tools.md#spelldump
+- id: 'docs-page:Functions/Arrays_and_conditions_functions: Arrays and conditions functions'
+  kind: docs
+  url: https://manual.manticoresearch.com/Functions/Arrays_and_conditions_functions
 - id: 'docs-page:Functions/Arrays_and_conditions_functions: ALL()'
   kind: docs
   url: https://manual.manticoresearch.com/Functions/Arrays_and_conditions_functions
@@ -4611,6 +4725,9 @@ items:
 - id: 'docs-page:Functions/Arrays_and_conditions_functions: REMAP()'
   kind: docs
   url: https://manual.manticoresearch.com/Functions/Arrays_and_conditions_functions
+- id: 'docs-page:Functions/Date_and_time_functions: Date and time functions'
+  kind: docs
+  url: https://manual.manticoresearch.com/Functions/Date_and_time_functions
 - id: 'docs-page:Functions/Date_and_time_functions: NOW()'
   kind: docs
   url: https://manual.manticoresearch.com/Functions/Date_and_time_functions
@@ -4689,6 +4806,9 @@ items:
 - id: 'docs-page:Functions/Date_and_time_functions: DATE_RANGE()'
   kind: docs
   url: https://manual.manticoresearch.com/Functions/Date_and_time_functions
+- id: 'docs-page:Functions/Geo_spatial_functions: Geo spatial functions'
+  kind: docs
+  url: https://manual.manticoresearch.com/Functions/Geo_spatial_functions
 - id: 'docs-page:Functions/Geo_spatial_functions: GEODIST()'
   kind: docs
   url: https://manual.manticoresearch.com/Functions/Geo_spatial_functions
@@ -4698,6 +4818,9 @@ items:
 - id: 'docs-page:Functions/Geo_spatial_functions: POLY2D()'
   kind: docs
   url: https://manual.manticoresearch.com/Functions/Geo_spatial_functions
+- id: 'docs-page:Functions/Mathematical_functions: Mathematical functions'
+  kind: docs
+  url: https://manual.manticoresearch.com/Functions/Mathematical_functions
 - id: 'docs-page:Functions/Mathematical_functions: ABS()'
   kind: docs
   url: https://manual.manticoresearch.com/Functions/Mathematical_functions
@@ -4761,6 +4884,9 @@ items:
 - id: 'docs-page:Functions/Mathematical_functions: SQRT()'
   kind: docs
   url: https://manual.manticoresearch.com/Functions/Mathematical_functions
+- id: 'docs-page:Functions/Other_functions: Other functions'
+  kind: docs
+  url: https://manual.manticoresearch.com/Functions/Other_functions
 - id: 'docs-page:Functions/Other_functions: CONNECTION_ID()'
   kind: docs
   url: https://manual.manticoresearch.com/Functions/Other_functions
@@ -4776,6 +4902,9 @@ items:
 - id: 'docs-page:Functions/Other_functions: UUID_SHORT()'
   kind: docs
   url: https://manual.manticoresearch.com/Functions/Other_functions
+- id: 'docs-page:Functions/Searching_and_ranking_functions: Searching and ranking functions'
+  kind: docs
+  url: https://manual.manticoresearch.com/Functions/Searching_and_ranking_functions
 - id: 'docs-page:Functions/Searching_and_ranking_functions: BM25A()'
   kind: docs
   url: https://manual.manticoresearch.com/Functions/Searching_and_ranking_functions
@@ -4806,6 +4935,9 @@ items:
 - id: 'docs-page:Functions/Searching_and_ranking_functions: QUERY()'
   kind: docs
   url: https://manual.manticoresearch.com/Functions/Searching_and_ranking_functions
+- id: 'docs-page:Functions/String_functions: String functions'
+  kind: docs
+  url: https://manual.manticoresearch.com/Functions/String_functions
 - id: 'docs-page:Functions/String_functions: CONCAT()'
   kind: docs
   url: https://manual.manticoresearch.com/Functions/String_functions
@@ -4824,6 +4956,9 @@ items:
 - id: 'docs-page:Functions/String_functions: UPPER() and LOWER()'
   kind: docs
   url: https://manual.manticoresearch.com/Functions/String_functions
+- id: 'docs-page:Functions/Type_casting_functions: Type Casting Functions'
+  kind: docs
+  url: https://manual.manticoresearch.com/Functions/Type_casting_functions
 - id: 'docs-page:Functions/Type_casting_functions: BIGINT()'
   kind: docs
   url: https://manual.manticoresearch.com/Functions/Type_casting_functions
@@ -4845,6 +4980,15 @@ items:
 - id: 'docs-page:Functions/Type_casting_functions: SINT()'
   kind: docs
   url: https://manual.manticoresearch.com/Functions/Type_casting_functions
+- id: 'docs-page:Node_info_and_management/KILL: KILL'
+  kind: docs
+  url: https://manual.manticoresearch.com/Node_info_and_management/KILL
+- id: 'docs-page:Node_info_and_management/SHOW_QUERIES: SHOW QUERIES'
+  kind: docs
+  url: https://manual.manticoresearch.com/Node_info_and_management/SHOW_QUERIES
+- id: 'docs-page:Searching/Conversational_search: Conversational search'
+  kind: docs
+  url: https://manual.manticoresearch.com/Searching/Conversational_search
 - id: 'docs-page:Searching/Conversational_search: Before you start'
   kind: docs
   url: https://manual.manticoresearch.com/Searching/Conversational_search
@@ -4881,6 +5025,9 @@ items:
 - id: 'docs-page:Searching/Conversational_search: Managing chat models'
   kind: docs
   url: https://manual.manticoresearch.com/Searching/Conversational_search
+- id: 'docs-page:Searching/Faceted_search: Faceted search'
+  kind: docs
+  url: https://manual.manticoresearch.com/Searching/Faceted_search
 - id: 'docs-page:Searching/Faceted_search: Aggregations'
   kind: docs
   url: https://manual.manticoresearch.com/Searching/Faceted_search
@@ -4929,6 +5076,9 @@ items:
 - id: 'docs-page:Searching/Faceted_search: Performance'
   kind: docs
   url: https://manual.manticoresearch.com/Searching/Faceted_search
+- id: 'docs-page:Searching/Highlighting: Highlighting'
+  kind: docs
+  url: https://manual.manticoresearch.com/Searching/Highlighting
 - id: 'docs-page:Searching/Highlighting: Highlighting options'
   kind: docs
   url: https://manual.manticoresearch.com/Searching/Highlighting
@@ -5043,6 +5193,9 @@ items:
 - id: 'docs-page:Searching/Highlighting: load_files_scattered'
   kind: docs
   url: https://manual.manticoresearch.com/Searching/Highlighting
+- id: 'docs-page:Searching/Options: Search options'
+  kind: docs
+  url: https://manual.manticoresearch.com/Searching/Options
 - id: 'docs-page:Searching/Options: OPTION'
   kind: docs
   url: https://manual.manticoresearch.com/Searching/Options

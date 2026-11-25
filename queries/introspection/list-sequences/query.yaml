@@ -43,6 +43,7 @@ variants:
       - "Without MINVALUE the minimum is the smallest value of the data type (-2^63 for bigint), unlike PostgreSQL (1)."
 
 not_applicable:
+  sphinx: "No sequences."
   mysql: "No sequences, only AUTO_INCREMENT (capability schema.sequences)."
   sqlite: "No sequences (capability schema.sequences)."
   manticore: "No sequences (capability schema.sequences)."

@@ -22,3 +22,7 @@ support:
     - status: unsupported
       notes: ["No stored routines; CREATE FUNCTION ... SONAME loads user-defined functions from a plugin library (C)."]
       sources: [{ evidence: observed, notes: "CREATE FUNCTION f RETURNS INT SONAME 'x.so' tries dlopen()" }]
+  sphinx:
+    - status: unsupported
+      notes: ["No stored routines; CREATE FUNCTION ... SONAME loads UDFs from a plugin library."]
+      sources: [{ evidence: observed, notes: "Sphinx 2.2.11, 3.9.1" }]

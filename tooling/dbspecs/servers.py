@@ -49,6 +49,11 @@ ENGINE_SETUP = {
         "env": {},
         "schema": "Manticore",  # no databases: DATABASE() always returns 'Manticore'
     },
+    "sphinx": {
+        "port": 9306,
+        "env": {},
+        "schema": "default",  # no databases at all; query contracts echo this as schema_name
+    },
     # embedded: no container port; a worker process (tooling/dbspecs/sqlite_worker.py) runs
     # locally or inside a python:*-slim image and uses the SQLite linked into that Python
     "sqlite": {"embedded": True, "schema": "main"},
@@ -189,7 +194,7 @@ class Server:
         if self.engine in ("mysql", "mariadb"):  # mysql wire protocol
             return pymysql.connect(host=self.host, port=self.port, user="root", password=PASSWORD,
                                    database=DATABASE, autocommit=True, connect_timeout=3)
-        if self.engine == "manticore":  # mysql wire protocol, no authentication, no databases
+        if self.engine in ("manticore", "sphinx"):  # mysql wire protocol, no authentication, no databases
             return pymysql.connect(host=self.host, port=self.port, user="root", autocommit=True,
                                    connect_timeout=3)
         if self.engine == "sqlserver":
@@ -212,6 +217,10 @@ class Server:
                 self.version = re.match(r"\d+\.\d+\.\d+", cur.fetchone()[0]).group(0)
                 cur.execute(f"IF DB_ID('{DATABASE}') IS NULL CREATE DATABASE [{DATABASE}]")
             return self.version
+        if self.engine == "sphinx":  # 2.x has no VERSION(): the handshake carries the version
+            with self.connect() as conn:
+                self.version = re.match(r"\d+\.\d+\.\d+", conn.server_version).group(0)
+            return self.version
         with self.connect() as conn, conn.cursor() as cur:
             if self.engine in ("mysql", "mariadb", "manticore"):
                 cur.execute("SELECT VERSION()")
@@ -223,6 +232,15 @@ class Server:
         return self.version
 
 
+def build_image(target: dict) -> str:
+    """Targets with `build: <dir>` (no official image): build the Dockerfile there; cached by the CLI."""
+    from .specs import ROOT
+    tag = f"dbspecs-{target['id']}:local"
+    subprocess.run([container_cli(), "build", "-q", "-t", tag, str(ROOT / target["build"])],
+                   check=True, capture_output=True, text=True)
+    return tag
+
+
 @contextmanager
 def running(target: dict, timeout: float = 180):
     setup = ENGINE_SETUP[target["engine"]]
@@ -231,10 +249,11 @@ def running(target: dict, timeout: float = 180):
             yield server
         return
     cli = container_cli()
+    image = target.get("image") or build_image(target)
     args = [cli, "run", "-d", "--rm", "-p", f"127.0.0.1::{setup['port']}"]
     for k, v in setup["env"].items():
         args += ["-e", f"{k}={v}"]
-    args.append(target["image"])
+    args.append(image)
     cid = subprocess.run(args, check=True, capture_output=True, text=True).stdout.strip()
     try:
         out = subprocess.run([cli, "port", cid, f"{setup['port']}/tcp"], check=True,

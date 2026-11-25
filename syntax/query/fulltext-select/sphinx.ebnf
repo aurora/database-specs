@@ -1,0 +1,85 @@
+/* Sphinx 2.2 / 3.x - SELECT with full-text search, grouping and facets (curated subset).
+   Derived from the Manticore grammar (shared heritage); differences are marked.
+   Built-ins: identifier, string_literal, integer, number.
+   The MATCH() argument is its own language: syntax fulltext.manticore-query.
+   Not covered: sub-selects, table functions, 3.x index hints and vector search. */
+
+select ::= 'SELECT' select_item ( ',' select_item )*
+           'FROM' identifier ( ',' identifier )*
+           where_clause?
+           group_clause?
+           order_clause?
+           limit_clause?
+           option_clause?
+           facet_clause*
+         | 'SELECT' select_item ( ',' select_item )* limit_clause?
+
+select_item ::= '*' | value_expr ( 'AS'? identifier )?
+
+/* One MATCH() per statement, in the top-level AND chain only. Unlike Manticore, nothing after
+   MATCH may contain a top-level OR; 2.2 also rejects OR inside parentheses there, 3.x allows it. */
+where_clause ::= 'WHERE' ( condition_term 'AND' )? match_item ( 'AND' match_factor )*
+               | 'WHERE' condition
+
+match_item ::= match_call | '(' match_call ')'
+
+match_call ::= 'MATCH' '(' string_literal ')'
+
+match_factor ::= 'NOT'? ( predicate | /* @since 3 */ ( '(' condition ')' ) )
+
+/* 2.2 has no OR at all (not even without MATCH) */
+condition ::= condition_term ( /* @since 3 */ ( 'OR' condition_term ) )*
+condition_term ::= condition_factor ( 'AND' condition_factor )*
+condition_factor ::= 'NOT'? ( '(' condition ')' | predicate )
+
+predicate ::= value_expr ( comparison_operator value_expr
+                         | 'NOT'? 'IN' '(' literal ( ',' literal )* ')'
+                         | 'NOT'? 'IN' '@' identifier
+                         | 'NOT'? ( 'ANY' | 'ALL' ) '(' string_literal ( ',' string_literal )* ')'
+                         | 'NOT'? 'BETWEEN' literal 'AND' literal
+                         | 'IS' 'NOT'? 'NULL' )
+            | function_call
+
+comparison_operator ::= '=' | '!=' | '<>' | '<' | '<=' | '>' | '>='
+
+value_expr ::= function_call | column_ref | literal | sysvar | mva_aggr
+
+/* ANY(mva) = 2, ALL(mva) > 1 */
+mva_aggr ::= ( 'ANY' | 'ALL' ) '(' column_ref ')'
+
+/* json.path.keys and json['key'] / json[0] */
+column_ref ::= identifier ( '.' identifier | '[' ( string_literal | integer ) ']' )*
+
+sysvar ::= '@' '@' identifier ( '.' identifier )*
+
+/* WEIGHT(), COUNT(*), ANY(mva), HIGHLIGHT(), GROUPBY(), ... */
+function_call ::= identifier '(' ( '*' | value_expr ( ',' value_expr )* )? ')'
+
+literal ::= string_literal | '-'? number
+
+/* GROUP n BY: up to n rows per group; WITHIN GROUP ORDER BY picks which rows.
+   HAVING takes a single predicate (no AND / OR). */
+group_clause ::= 'GROUP' integer? 'BY' identifier ( ',' identifier )*
+                 ( 'WITHIN' 'GROUP' 'ORDER' 'BY' order_item ( ',' order_item )* )?
+                 ( 'HAVING' predicate )?
+
+order_clause ::= 'ORDER' 'BY' order_item ( ',' order_item )*
+
+/* the direction is mandatory ('no sort order defined' otherwise) */
+order_item ::= value_expr ( 'ASC' | 'DESC' )
+
+/* only LIMIT offset, count - no OFFSET keyword */
+limit_clause ::= 'LIMIT' integer ( ',' integer )?
+
+option_clause ::= 'OPTION' option ( ',' option )*
+/* field_weights = (title = 10, body = 1), ranker = expr('sum(lcs) * 1000 + bm25'), max_matches = 2000 */
+option ::= identifier '=' ( '(' named_value ( ',' named_value )* ')' | identifier ( '(' string_literal ')' )? | literal )
+named_value ::= identifier '=' literal
+
+/* each FACET returns an extra result set: the facet values with count(*) */
+facet_clause ::= 'FACET' facet_item ( ',' facet_item )*
+                 ( 'BY' facet_item ( ',' facet_item )* )?
+                 order_clause?
+                 limit_clause?
+
+facet_item ::= value_expr ( 'AS' identifier )?

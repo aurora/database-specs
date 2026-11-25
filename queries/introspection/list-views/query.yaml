@@ -30,7 +30,7 @@ variants:
       - "Views have no comments."
     sources: [{ evidence: tested }]
   - engine: mariadb
-    since: "10.6"
+    since: "10.5"
     file: mysql.sql
     notes: ["Same as MySQL; MariaDB drops the outer parentheses of the WHERE condition."]
     sources: [{ evidence: tested }]
@@ -56,5 +56,9 @@ variants:
       - "Reads main.sqlite_master (other schemas: no rows). definition is cut from the original text after the first ' AS '."
       - "Views are read-only unless INSTEAD OF triggers exist: is_updatable false."
 
+not_applicable:
+  sphinx: "No views."
+
 gaps:
+  - "MariaDB 10.3 / 10.4: not verified (the test fixture uses syntax those versions lack); the variant may work."
   - "Manticore: no SQL views (CREATE VIEW is a syntax error), but materialized views of the Kafka integration (Buddy): SHOW MATERIALIZED VIEWS (name) / SHOW SOURCES; not mapped yet."

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import fnmatch
 import json
 from pathlib import Path
 
@@ -81,8 +82,10 @@ def validate(specs: Specs) -> list[str]:
                 for f in m.get("flags", []):
                     if f not in flags:
                         errors.append(f"{rel}: {prof['id']} type_mapping {m['type']}: unknown flag {f}")
-            for col, t in prof.get("type_probe", {}).get("columns", {}).items():
-                if t not in mapped:
+            for col, spec in prof.get("type_probe", {}).get("columns", {}).items():
+                for t in spec.split("|"):
+                    if t in mapped:
+                        continue
                     errors.append(f"{rel}: {prof['id']} type_probe column {col}: type {t} has no type_mapping")
         if eng["lexical"] not in specs.docs["lexical"]:
             errors.append(f"{rel}: unknown lexical spec '{eng['lexical']}'")
@@ -198,6 +201,9 @@ def validate(specs: Specs) -> list[str]:
         for eid in q.get("not_applicable", {}):
             check_engine(specs.path("query", doc_id).relative_to(specs.root), eid)
     for doc_id, syn in specs.docs["syntax"].items():
+        for eid, g in syn["grammars"].items():
+            if g.get("lexical") and g["lexical"] not in specs.docs["lexical"]:
+                errors.append(f"{specs.path('syntax', doc_id).relative_to(specs.root)}: unknown lexical '{g['lexical']}'")
         for eid in syn.get("not_applicable", {}):
             check_engine(specs.path("syntax", doc_id).relative_to(specs.root), eid)
             if eid in syn["grammars"]:
@@ -209,6 +215,7 @@ def validate(specs: Specs) -> list[str]:
     keyword_files = stored_files()
     scopes = {d["engine"]: d for d in specs.docs["scope"].values()}
     roadmap_ids = {i["id"] for i in load_yaml(specs.root / "roadmap.yaml").get("items", [])}
+    used_patterns: dict[str, set[tuple[int, int]]] = {}
     for doc in specs.docs["inventory"].values():
         engine = doc["engine"]
         rel = f"inventory/{engine}/{doc['version']}.yaml"
@@ -222,10 +229,17 @@ def validate(specs: Specs) -> list[str]:
         if missing:
             errors.append(f"scope/{engine}.yaml: {len(missing)} item(s) of {rel} unclassified, e.g. "
                           + "; ".join(missing[:5]))
-        used = {id(r) for r in result.values() if r is not None}
-        for n, rule in enumerate(scope["rules"]):
-            if id(rule) not in used:
-                errors.append(f"scope/{engine}.yaml: rule {n} ({rule['match'][0]}) matches no item of {rel}")
+        used = used_patterns.setdefault(engine, set())
+        for item in doc["items"]:
+            for n, rule in enumerate(scope["rules"]):
+                for k, pat in enumerate(rule["match"]):
+                    if fnmatch.fnmatchcase(item["id"], pat):
+                        used.add((n, k))
+    for engine, used in used_patterns.items():  # a pattern must match an item of at least one inventory
+        for n, rule in enumerate(scopes[engine]["rules"]):
+            for k, pat in enumerate(rule["match"]):
+                if (n, k) not in used:
+                    errors.append(f"scope/{engine}.yaml: rule {n} pattern {pat!r} matches no inventory item")
     for engine, scope in scopes.items():
         for n, rule in enumerate(scope["rules"]):
             for ref in rule.get("specs", []):

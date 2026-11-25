@@ -42,3 +42,6 @@ implementations:
     - status: unsupported
       caveats: ["No CREATE INDEX: full-text fields are indexed by the table, attribute indexes are managed by the engine (introspection.list-indexes)."]
       sources: [{ evidence: observed, notes: "CREATE INDEX is a syntax error (32.1.3)" }]
+  sphinx:
+    - status: unsupported
+      sources: [{ evidence: observed, notes: "Sphinx 2.2.11, 3.9.1" }]

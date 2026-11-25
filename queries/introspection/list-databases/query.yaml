@@ -14,7 +14,7 @@ result:
     - { name: comment, type: string, nullable: true }
 variants:
   - engine: postgresql
-    since: "12"
+    since: "11"
     file: postgresql.sql
     notes:
       - "One connection per database: listing works from any database, but opening another one needs a new connection."
@@ -27,6 +27,7 @@ variants:
       - "Switch with USE <db> (session.use-schema is about schemas). size_bytes from sys.master_files (data + log)."
       - "No database-level comments (extended properties live inside each database)."
 not_applicable:
+  sphinx: "No databases."
   mysql: "Databases are schemas - see introspection.list-schemas."
   mariadb: "Databases are schemas - see introspection.list-schemas."
   sqlite: "One database file per connection; attached databases are schemas (introspection.list-schemas)."

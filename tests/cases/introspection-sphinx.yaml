@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=../../schemas/test.schema.json
+id: introspection-sphinx
+description: Object tree on Sphinx - SHOW TABLES / DESCRIBE of the fixture indexes (tests/images/sphinx-*/sphinx.conf).
+engines: [sphinx]
+
+steps:
+  - query: introspection.list-tables
+    params: { schema: "{{schema}}" }
+    expect:
+      rows:
+        - match: { table_name: probe_rt }
+          values: { table_type: table, storage_engine: rt }
+        - match: { table_name: t_ed }
+          values: { table_type: table }
+  - query: introspection.list-columns
+    params: { schema: "{{schema}}", table: probe_rt }
+    expect:
+      rows:
+        - match: { column_name: id }
+          values: { ordinal_position: 1, data_type: bigint, is_auto_increment: false }
+        - match: { column_name: title }
+          values: { data_type: field }
+        - match: { column_name: n }
+          values: { data_type: uint }
+        - match: { column_name: j }
+          values: { data_type: json, is_nullable: true }
+        - { match: { column_name: m }, engine: sphinx, until: "3", values: { data_type: mva } }
+        - { match: { column_name: m }, engine: sphinx, since: "3", values: { data_type: uint_set, properties: "" } }
+        - { match: { column_name: title }, engine: sphinx, since: "3", values: { properties: indexed } }
+        - { match: { column_name: ts }, engine: sphinx, until: "3", values: { data_type: timestamp } }

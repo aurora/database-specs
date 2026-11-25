@@ -24,6 +24,16 @@ grammars:
       - "JSON attributes: meta.a.b, meta['a'], meta.k[0] in the select list and filters. String attributes: brand ANY ('a', 'b'). No LIKE in WHERE."
       - "FACET items are expressions (INTERVAL(price, 200, 400) AS r); BY, ALL / EXCLUDE FILTERS, ZEROES, MODE, DISTINCT, ORDER BY FACET() / COUNT(*) and LIMIT per facet."
       - "Not covered: KNN / HYBRID_MATCH, sub-selects, table functions, SELECT ... FROM t.@table (crashes 32.1.3, see engine notes)."
+      - "Version boundaries from the grammar diffs (dbspecs inventory-diff) and tests: JOIN with table-qualified columns, FACET ... FILTERS / MODE since 27.1 (absent in 25.0.0; 26.x has no image and is untested), FACET ... ZEROES since 28.4, GROUP_CONCAT(... SEPARATOR / ORDER BY) since 28.6. 25.0 parses JOIN but rejects qualified columns ('unknown column')."
+    sources: [{ evidence: tested }]
+  sphinx:
+    file: sphinx.ebnf
+    start: select
+    since: "2.2"
+    notes:
+      - "Same heritage as Manticore (MATCH(), GROUP n BY, WITHIN GROUP ORDER BY, FACET, OPTION), but stricter: one MATCH() only, no OR after it at top level, no JOIN, only LIMIT offset, count."
+      - "2.2 has no OR in WHERE at all (not even without MATCH or in parentheses); 3.x allows OR, except at the top level after MATCH."
+      - "Full-text fields are not attributes: they cannot be selected (2.2), filtered or sorted."
     sources: [{ evidence: tested }]
   mysql:
     file: mysql.ebnf
@@ -41,6 +51,11 @@ grammars:
     sources: [{ evidence: tested }]
 
 setup:
+  sphinx:
+    - "TRUNCATE RTINDEX t_ft"
+    - "INSERT INTO t_ft (id, title, body, cat, price) VALUES (1, 'red apple pie', 'sweet dessert', 1, 3)"
+    - "TRUNCATE RTINDEX probe_rt"
+    - "INSERT INTO probe_rt (id, title, body, n, j) VALUES (1, 'x', 'y', 1, '{\"a\":{\"b\":1}}')"
   manticore:
     - "CREATE TABLE t_fts (title TEXT, body TEXT, cat INT, price FLOAT, tags MULTI, brand STRING, meta JSON)"
     - "INSERT INTO t_fts (id, title, body, cat, price, tags, brand, meta) VALUES (1, 'red apple pie', 'sweet dessert', 1, 3.5, (1,2), 'acme', '{\"a\":{\"b\":1},\"k\":[5,6]}')"
@@ -51,6 +66,7 @@ setup:
   mariadb:
     - "CREATE TABLE t_fts (id INT PRIMARY KEY, title VARCHAR(200), body TEXT, cat INT, price FLOAT, FULLTEXT (title, body), FULLTEXT (title)) ENGINE=InnoDB"
 cleanup:
+  sphinx: ["TRUNCATE RTINDEX t_ft", "TRUNCATE RTINDEX probe_rt"]
   manticore: ["DROP TABLE IF EXISTS t_fts", "DROP TABLE IF EXISTS t_cat"]
   mysql: ["DROP TABLE IF EXISTS t_fts"]
   mariadb: ["DROP TABLE IF EXISTS t_fts"]
@@ -92,10 +108,16 @@ examples:
     notes: ["'too many MATCH() clauses': several MATCH items only with a JOIN, one per table."]
   - sql: "SELECT t_fts.id FROM t_fts INNER JOIN t_cat ON t_fts.cat = t_cat.cid WHERE MATCH('apple', t_fts) AND MATCH('fruit', t_cat)"
     expect: valid
-    engines: { manticore: {} }
+    engines: { manticore: { since: "27.1" } }
+  - sql: "SELECT t_fts.id FROM t_fts INNER JOIN t_cat ON t_fts.cat = t_cat.cid WHERE MATCH('apple', t_fts) AND MATCH('fruit', t_cat)"
+    expect: invalid
+    engines: { manticore: { until: "26" } }
   - sql: "SELECT t_fts.id, t_cat.name FROM t_fts LEFT JOIN t_cat ON t_fts.cat = t_cat.cid WHERE MATCH('apple')"
     expect: valid
-    engines: { manticore: {} }
+    engines: { manticore: { since: "27.1" } }
+  - sql: "SELECT t_fts.id, t_cat.name FROM t_fts LEFT JOIN t_cat ON t_fts.cat = t_cat.cid WHERE MATCH('apple')"
+    expect: invalid
+    engines: { manticore: { until: "26" } }
   - sql: "SELECT id FROM t_fts WHERE (MATCH('apple')) AND cat = 1"
     expect: valid
     engines: { manticore: {} }
@@ -155,7 +177,10 @@ examples:
     engines: { manticore: {} }
   - sql: "SELECT id FROM t_fts WHERE cat = 1 FACET brand ALL FILTERS"
     expect: valid
-    engines: { manticore: {} }
+    engines: { manticore: { since: "27.1" } }
+  - sql: "SELECT id FROM t_fts WHERE cat = 1 FACET brand ALL FILTERS"
+    expect: invalid
+    engines: { manticore: { until: "26" } }
   - sql: "SELECT id FROM t_fts WHERE meta.a.b = 1"
     expect: valid
     engines: { manticore: {} }
@@ -177,7 +202,10 @@ examples:
     notes: ["The SQL parser has table.* (select_item), but 32.1.3 rejects it: 'unknown column' without a JOIN, an expression parse error with one."]
   - sql: "SELECT t_fts.*, t_cat.name FROM t_fts INNER JOIN t_cat ON t_fts.cat = t_cat.cid"
     expect: semantic-error
-    engines: { manticore: {} }
+    engines: { manticore: { since: "27.1" } }
+  - sql: "SELECT id FROM t_fts FACET brand ZEROES"
+    expect: valid
+    engines: { manticore: { since: "28.4" } }
   - sql: "SELECT @@version_comment"
     expect: valid
     engines: { manticore: {} }
@@ -185,6 +213,70 @@ examples:
     expect: invalid
     engines: { manticore: {} }
     notes: ["No LIKE in WHERE (LIKE only filters SHOW / DESCRIBE output); use MATCH() or REGEX() on string attributes."]
+  # --- Sphinx
+  - sql: "SELECT id, WEIGHT() AS w FROM t_ft WHERE MATCH('apple') ORDER BY w DESC LIMIT 10"
+    expect: valid
+    engines: { sphinx: {} }
+  - sql: "SELECT id FROM t_ft WHERE MATCH('@title apple') AND cat = 1 AND price BETWEEN 1 AND 5"
+    expect: valid
+    engines: { sphinx: {} }
+  - sql: "SELECT id FROM t_ft WHERE cat IN (1, 2) AND MATCH('apple')"
+    expect: valid
+    engines: { sphinx: {} }
+  - sql: "SELECT id FROM t_ft WHERE MATCH('apple') AND (cat = 1 OR price > 2)"
+    expect: valid
+    engines: { sphinx: { since: "3" } }
+  - sql: "SELECT id FROM t_ft WHERE MATCH('apple') AND (cat = 1 OR price > 2)"
+    expect: invalid
+    engines: { sphinx: { until: "3" } }
+  - sql: "SELECT id FROM t_ft WHERE cat = 1 OR price > 2"
+    expect: valid
+    engines: { sphinx: { since: "3" } }
+  - sql: "SELECT id FROM t_ft WHERE cat = 1 OR price > 2"
+    expect: invalid
+    engines: { sphinx: { until: "3" } }
+  - sql: "SELECT id FROM t_ft WHERE MATCH('apple') AND cat = 1 OR price > 2"
+    expect: invalid
+    engines: { sphinx: {} }
+  - sql: "SELECT id FROM t_ft WHERE MATCH('apple') OR cat = 2"
+    expect: invalid
+    engines: { sphinx: {} }
+  - sql: "SELECT id FROM t_ft WHERE MATCH('apple') AND MATCH('pie')"
+    expect: invalid
+    engines: { sphinx: {} }
+  - sql: "SELECT id FROM t_ft WHERE (MATCH('apple'))"
+    expect: valid
+    engines: { sphinx: {} }
+  - sql: "SELECT id, cat, price FROM t_ft GROUP 2 BY cat WITHIN GROUP ORDER BY price DESC ORDER BY cat ASC"
+    expect: valid
+    engines: { sphinx: {} }
+  - sql: "SELECT cat, COUNT(*) AS c FROM t_ft GROUP BY cat HAVING c > 0 ORDER BY c DESC"
+    expect: valid
+    engines: { sphinx: {} }
+  - sql: "SELECT id FROM t_ft FACET cat FACET price ORDER BY COUNT(*) DESC"
+    expect: valid
+    engines: { sphinx: {} }
+  - sql: "SELECT id FROM t_ft LIMIT 0, 10"
+    expect: valid
+    engines: { sphinx: {} }
+  - sql: "SELECT id FROM t_ft LIMIT 10 OFFSET 0"
+    expect: invalid
+    engines: { sphinx: {} }
+  - sql: "SELECT id FROM probe_rt WHERE j.a.b = 1"
+    expect: valid
+    engines: { sphinx: {} }
+  - sql: "SELECT id FROM t_ft WHERE MATCH('apple') ORDER BY id"
+    expect: invalid
+    engines: { sphinx: {} }
+  - sql: "SELECT t_ft.id FROM t_ft INNER JOIN probe_rt ON t_ft.cat = probe_rt.n"
+    expect: invalid
+    engines: { sphinx: {} }
+  - sql: "SELECT id FROM t_ft WHERE title = 'red'"
+    expect: semantic-error
+    engines: { sphinx: {} }
+  - sql: "SELECT 1"
+    expect: valid
+    engines: { sphinx: {} }
   # --- MySQL / MariaDB
   - sql: "SELECT id, MATCH(title, body) AGAINST ('apple') AS score FROM t_fts WHERE MATCH(title, body) AGAINST ('apple') ORDER BY score DESC LIMIT 10"
     expect: valid

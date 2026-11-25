@@ -32,7 +32,7 @@ variants:
     notes: ["Default actions as in list-foreign-keys (5.7: restrict, 8.x: no-action)."]
     sources: [{ evidence: tested }]
   - engine: mariadb
-    since: "10.6"
+    since: "10.5"
     file: mysql.sql
     sources: [{ evidence: tested }]
   - { engine: postgresql, since: "12", until: "18", file: postgresql.sql, sources: [{ evidence: tested }] }
@@ -47,4 +47,8 @@ variants:
       - "There is no reverse lookup: every table of main.sqlite_master is scanned with pragma_foreign_key_list. Constraint names are synthetic (fk_<table>_<id>) as in list-foreign-keys."
 
 not_applicable:
+  sphinx: "No foreign keys."
   manticore: "No foreign keys (no constraints at all)."
+
+gaps:
+  - "MariaDB 10.3 / 10.4: not verified (the test fixture uses syntax those versions lack); the variant may work."

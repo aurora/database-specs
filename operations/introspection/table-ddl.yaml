@@ -221,3 +221,11 @@ implementations:
         - "Includes the table settings (min_infix_len, morphology, ...) and normalized defaults (e.g. index_exact_words added by morphology); type names differ from DESCRIBE (integer vs uint, multi vs mva)."
         - "Distributed tables: CREATE TABLE t type='distributed' local='a' agent='host:port:t' - the referenced tables must exist."
       sources: [{ evidence: tested }]
+  sphinx:
+    - since: "3"
+      status: supported
+      template: "SHOW CREATE TABLE {{table}}"
+      requires: [table]
+      result_column: 2
+      caveats: ["The id column comes first and is required by CREATE TABLE. 2.2 has no SHOW CREATE TABLE (indexes are config sections)."]
+      sources: [{ evidence: tested }]

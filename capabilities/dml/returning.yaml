@@ -29,6 +29,8 @@ support:
         - "INSERT, UPDATE, DELETE (also UPSERT). Not usable inside triggers or as a subquery/CTE; the order of returned rows is not guaranteed."
   manticore:
     - status: unsupported
+  sphinx:
+    - status: unsupported
 probes:
   - engines: [mysql, mariadb, postgresql, sqlite]
     setup: ["CREATE TEMPORARY TABLE probe_returning (id INT)"]
@@ -44,3 +46,10 @@ probes:
     statements:
       - "INSERT INTO probe_mt (id, v) VALUES (1, 1) RETURNING id"
     cleanup: ["DROP TABLE IF EXISTS probe_mt"]
+  - engines: [sphinx]
+    setup:
+      - "TRUNCATE RTINDEX t_ed"
+    statements:
+      - "INSERT INTO t_ed (id, n) VALUES (1, 1) RETURNING id"
+    cleanup:
+      - "TRUNCATE RTINDEX t_ed"

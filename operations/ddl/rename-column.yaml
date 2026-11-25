@@ -62,3 +62,6 @@ implementations:
     - status: unsupported
       caveats: ["No RENAME COLUMN (syntax error): recreate the table and re-insert the documents."]
       sources: [{ evidence: observed, notes: "manticore 32.1.3" }]
+  sphinx:
+    - status: unsupported
+      sources: [{ evidence: observed, notes: "Sphinx 2.2.11, 3.9.1" }]

@@ -1,0 +1,142 @@
+# yaml-language-server: $schema=../schemas/scope.schema.json
+# Classifies inventory/sphinx/*.yaml: 2.2.11 = grammar at the release commit + DocBook manual
+# sections; 3.9.1 = headings of the manual shipped with the binaries (no sources published).
+# Keywords listed in keywords/sphinx/ are covered automatically. First matching rule wins.
+engine: sphinx
+
+rules:
+  # --- keywords the grammar also accepts as identifiers --------------------------------------------------
+  - match: ["sphinxql:ident: *", "sphinxql:column_ident: *"]
+    status: covered
+    specs: ["keywords:keyword-list"]
+    reason: "Listed in keywords/sphinx/."
+
+  # --- full-text search -----------------------------------------------------------------------------------
+  - match: ["sphinxquery:*", "docs-page:extended-syntax: *", "docs-page:boolean-syntax: *", "docs-page:matching-modes: *",
+            "docs-page:sphinx3: *operator*"]
+    status: covered
+    specs: ["syntax:fulltext.manticore-query", "lexical:sphinx"]
+  - match: ["sphinxql:where_clause: *", "sphinxql:where_expr: *", "sphinxql:where_item: *", "sphinxql:filter_item: *",
+            "sphinxql:expr: *", "sphinxql:expr_ident: *", "sphinxql:streq: *", "sphinxql:subkey: *", "sphinxql:const_*",
+            "sphinxql:select_from: *", "sphinxql:select_item: *", "sphinxql:opt_alias: *", "sphinxql:opt_as: *",
+            "sphinxql:opt_group_clause: *", "sphinxql:group_order_clause: *", "sphinxql:opt_having_clause: *",
+            "sphinxql:order_clause: *", "sphinxql:order_item: *", "sphinxql:limit_clause: *", "sphinxql:option_clause: *",
+            "sphinxql:option_item: *", "sphinxql:named_const: *", "sphinxql:facet_stmt: *", "sphinxql:facet_by: *",
+            "sphinxql:select_dual: *", "sphinxql:like_filter: *", "sphinxexpr:expr: *", "sphinxexpr:streq: *",
+            "sphinxexpr:subkey: *", "sphinxexpr:attr: *", "sphinxexpr:json_expr: *", "sphinxexpr:iterator: *",
+            "sphinxexpr:constlist: *", "sphinxexpr:stringlist: *", "sphinxselect:*",
+            "docs-page:sphinxql-select: *", "docs-page:sphinx3: SELECT *", "docs-page:sphinx3: Faceted searches with SELECT",
+            "docs-page:clustering: *", "docs-page:sorting-modes: *", "docs-page:sphinxql-multi-queries: *"]
+    status: covered
+    specs: ["syntax:query.fulltext-select", "capability:query.fulltext-search", "capability:query.top-n-per-group",
+            "capability:query.multi-result-select"]
+  - match: ["sphinxql:select1: *", "sphinxql:select: *", "sphinxql:opt_outer_*", "sphinxql:tablefunc_arg: *",
+            "sphinxql:select_expr: *", "sphinxql:function: *", "sphinxql:consthash: *", "sphinxql:hash_key: *",
+            "sphinxql:select_sysvar: *", "sphinxexpr:for_loop: *", "sphinxexpr:maparg: *", "sphinxexpr:arg: *",
+            "docs-page:sphinxql-select-sysvar: *", "docs-page:sphinxql-show-warnings: *", "docs-page:weighting: *",
+            "docs-page:ranking-*", "docs-page:sphinx3: Nested SELECTs*", "docs-page:sphinx3: *table function*",
+            "docs-page:sphinx3: JSON syntax extensions", "docs-page:sphinx3: Index hints clause",
+            "docs-page:sphinx3: *ranking factor*", "docs-page:sphinx3: Accessing ranking factors"]
+    status: planned
+    roadmap: dml.select
+  - match: ["sphinxexpr:function: *", "docs-page:expressions: *", "docs-page:sphinx3: `*()` function", "docs-page:sphinx3: *functions*",
+            "docs-page:sphinx3: Expression types", "docs-page:sphinx3: Bitwise operators"]
+    status: planned
+    roadmap: lexical.functions
+
+  # --- data and schema editing -------------------------------------------------------------------------------
+  - match: ["sphinxql:insert_into: *", "sphinxql:insert_or_replace: *", "sphinxql:insert_row: *", "sphinxql:insert_val: *",
+            "sphinxql:opt_column_list: *", "sphinxql:opt_insert_options: *", "sphinxql:insert_option: *",
+            "docs-page:sphinxql-insert: *", "docs-page:sphinxql-replace: *", "docs-page:sphinx3: INSERT*", "docs-page:sphinx3: REPLACE*"]
+    status: covered
+    specs: ["operation:dml.insert-row", "capability:dml.upsert"]
+  - match: ["sphinxql:update: *", "sphinxql:update_item: *", "docs-page:sphinxql-update: *", "docs-page:sphinx3: UPDATE syntax",
+            "docs-page:sphinx3: BULK UPDATE syntax", "docs-page:sphinx3: `UPDATE` options"]
+    status: covered
+    specs: ["operation:dml.update-row"]
+  - match: ["sphinxql:delete_from: *", "docs-page:sphinxql-delete: *"]
+    status: covered
+    specs: ["operation:dml.delete-row"]
+  - match: ["sphinxql:truncate: *", "docs-page:sphinxql-truncate-rtindex: *", "docs-page:sphinx3: TRUNCATE*"]
+    status: covered
+    specs: ["operation:ddl.truncate-table"]
+  - match: ["sphinxql:alter: ALTER TABLE *", "sphinxql:alter_col_type: *", "docs-page:sphinxql-attach: *", "docs-page:sphinx3: ALTER syntax",
+            "docs-page:sphinx3: ALTER COLUMN syntax"]
+    status: covered
+    specs: ["operation:ddl.add-column", "operation:ddl.drop-column"]
+  - match: ["docs-page:sphinx3: Schemas: CREATE TABLE", "docs-page:sphinx3: CREATE TABLE syntax", "docs-page:sphinx3: DROP TABLE syntax",
+            "docs-page:sphinx3: CREATE and DROP index performance"]
+    status: covered
+    specs: ["operation:introspection.table-ddl", "operation:ddl.drop-table"]
+  - match: ["docs-page:sphinx3: Schemas*", "docs-page:sphinx3: `*` directive", "docs-page:conf-*", "docs-page:confgroup-*",
+            "docs-page:fields: *", "docs-page:attributes: *", "docs-page:mva: *", "docs-page:rt-*"]
+    status: planned
+    roadmap: ddl.create-table
+
+  # --- introspection, session, transactions ---------------------------------------------------------------
+  - match: ["sphinxql:show_tables: *", "docs-page:sphinxql-show-tables: *"]
+    status: covered
+    specs: ["query:introspection.list-tables"]
+  - match: ["sphinxql:describe_tok: *", "docs-page:sphinxql-describe: *", "docs-page:sphinx3: DESCRIBE syntax"]
+    status: covered
+    specs: ["query:introspection.list-columns"]
+  - match: ["sphinxql:show_what: PLAN", "sphinxql:show_what: PROFILE", "sphinxql:show_what: META *", "docs-page:sphinxql-show-plan: *",
+            "docs-page:sphinxql-show-profile: *", "docs-page:sphinxql-show-meta: *",
+            "docs-page:sphinx3: SHOW PROFILE syntax", "docs-page:sphinx3: SHOW META syntax", "docs-page:sphinx3: EXPLAIN*"]
+    status: covered
+    specs: ["operation:query.explain"]
+  - match: ["sphinxql:show_databases: *", "docs-page:sphinxql-show-databases: *"]
+    status: covered
+    specs: ["query:introspection.list-schemas"]
+  - match: ["sphinxql:show_stmt: *", "sphinxql:show_what: *", "sphinxql:show_variables*", "sphinxql:show_collation: *",
+            "sphinxql:show_character_set: *", "sphinxql:set_stmt: *", "sphinxql:set_value: *", "sphinxql:simple_set_value: *",
+            "sphinxql:boolean_value: *", "sphinxql:opt_scope: *", "sphinxql:set_global_stmt: SET GLOBAL *",
+            "docs-page:sphinxql-show-status: *", "docs-page:sphinxql-show-variables: *", "docs-page:sphinxql-set: *",
+            "docs-page:sphinxql-show-collation: *", "docs-page:sphinxql-show-character-set: *",
+            "docs-page:sphinxql-show-index-*", "docs-page:sphinx3: SHOW *",
+            "docs-page:sphinx3: *variable*", "docs-page:sphinx3: *variables*"]
+    status: planned
+    roadmap: introspection.server-variables
+  - match: ["sphinxql:transact_op: *", "sphinxql:start_transaction: *", "sphinxql:set_transaction: *", "sphinxql:isolation_level: *",
+            "docs-page:sphinxql-commit: *", "docs-page:sphinxql-begin: *", "docs-page:sphinxql-rollback: *",
+            "docs-page:sphinxql-set-transaction: *"]
+    status: open
+    reason: "No transaction-control spec (see Manticore); BEGIN / COMMIT / ROLLBACK on one RT index."
+  - match: ["docs-page:sphinxql-threads: *"]
+    status: open
+    reason: "session.list-processes: SHOW THREADS not mapped (columns differ between 2.2 and 3.x)."
+  - match: ["sphinxql:call_proc: *", "sphinxql:call_arg: *", "sphinxql:call_opt_name: *", "docs-page:sphinxql-call-*",
+            "docs-page:sphinx3: CALL*"]
+    status: planned
+    roadmap: dml.call
+  - match: ["docs-page:sphinxql-comment-syntax: *", "docs-page:sphinxql-reserved-keywords: *", "docs-page:sphinxql: *"]
+    status: covered
+    specs: ["lexical:sphinx", "engine:sphinx"]
+
+  # --- deliberately out of scope ---------------------------------------------------------------------------
+  - match: ["sphinxql:create_function: *", "sphinxql:drop_function: *", "sphinxql:create_plugin: *", "sphinxql:drop_plugin: *",
+            "sphinxql:udf_type: *", "docs-page:sphinxql-create-function: *", "docs-page:sphinxql-drop-function: *",
+            "docs-page:sphinxql-create-plugin: *", "docs-page:sphinxql-drop-plugin: *", "docs-page:sphinxql-show-plugins: *",
+            "docs-page:sphinx3: UDF*", "docs-page:sphinx3: *plugin*"]
+    status: out-of-scope
+    reason: "UDF and plugin libraries are server extensions."
+  - match: ["sphinxql:attach_index: *", "sphinxql:flush_*", "sphinxql:optimize_index: *", "sphinxql:alter: ALTER RTINDEX *",
+            "sphinxql:index_or_table: *", "sphinxql:opt_chunk: *", "sphinxql:set_global_stmt: SET INDEX *",
+            "docs-page:sphinxql-attach-index: *", "docs-page:sphinxql-flush-*", "docs-page:sphinxql-optimize-index: *",
+            "docs-page:sphinxql-show-agent-status: *", "docs-page:sphinxql-log-format: *", "docs-page:sphinxql-upgrading-magics: *",
+            "docs-page:sphinx3: ATTACH*", "docs-page:sphinx3: FLUSH*", "docs-page:sphinx3: ALTER OPTION syntax",
+            "docs-page:sphinx3: ALTER REMOTE syntax", "docs-page:sphinx3: *replica*", "docs-page:sphinx3: *Replica*",
+            "docs-page:sphinx3: *agent*", "docs-page:sphinx3: *Agent*", "docs-page:sphinx3: LOCK USER syntax"]
+    status: out-of-scope
+    reason: "Maintenance, replication and agents: administration a client passes through."
+  - match: ["docs-page:api-*", "docs-page:sphinxse-*", "docs-page:ref-*", "docs-page:compiling-*", "docs-page:installing-*",
+            "docs-page:sphinx-*", "docs-page:supported-*", "docs-page:required-*", "docs-page:quick-*", "docs-page:about: *",
+            "docs-page:features: *", "docs-page:getting: *", "docs-page:license: *", "docs-page:credits: *", "docs-page:history: *",
+            "docs-page:sources: *", "docs-page:data-*", "docs-page:sql: *", "docs-page:xmlpipe2: *", "docs-page:xsvpipe: *",
+            "docs-page:live-*", "docs-page:delta-*", "docs-page:index-*", "docs-page:indexes: *", "docs-page:adding-*",
+            "docs-page:charsets: *", "docs-page:builtin-*"]
+    status: out-of-scope
+    reason: "SphinxAPI, SphinxSE, command-line tools, installation, indexing from data sources and narrative chapters."
+  - match: ["docs-page:*"]
+    status: open
+    reason: "Manual section not reviewed individually yet (most of the Sphinx 3 manual is narrative; check for client-relevant statements)."

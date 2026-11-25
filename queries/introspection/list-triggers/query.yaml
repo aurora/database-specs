@@ -32,7 +32,7 @@ variants:
       - "No WHEN conditions, no statement-level triggers, cannot be disabled."
     sources: [{ evidence: tested }]
   - engine: mariadb
-    since: "10.6"
+    since: "10.5"
     file: mysql.sql
     notes: ["Same as MySQL."]
     sources: [{ evidence: tested }]
@@ -58,4 +58,8 @@ variants:
       - "Always row level (FOR EACH ROW is optional and implied); cannot be disabled."
 
 not_applicable:
+  sphinx: "No triggers."
   manticore: "No triggers."
+
+gaps:
+  - "MariaDB 10.3 / 10.4: not verified (the test fixture uses syntax those versions lack); the variant may work."

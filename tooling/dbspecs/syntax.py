@@ -33,7 +33,8 @@ def grammar_accepts(specs: Specs, syn_id: str, engine: str, version: str, sql: s
     entry = syn["grammars"][engine]
     g = load_grammar(specs, syn_id, engine).for_version(version)
     try:
-        tokens = tokenize(sql, lexical_for(specs, engine), entry.get("word_pattern"))
+        lexical = specs.get("lexical", entry["lexical"]) if entry.get("lexical") else lexical_for(specs, engine)
+        tokens = tokenize(sql, lexical, entry.get("word_pattern"))
     except ValueError:  # e.g. unterminated string: not a valid statement
         return False
     return matches(g, entry["start"], tokens)

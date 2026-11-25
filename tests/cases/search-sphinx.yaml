@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=../../schemas/test.schema.json
+id: search-sphinx
+description: Sphinx search behaviour a client relies on - grouping, MATCH precedence rules, REPLACE, explain.
+engines: [sphinx]
+
+setup:
+  sphinx:
+    - "TRUNCATE RTINDEX t_ft"
+    - "INSERT INTO t_ft (id, title, body, cat, price) VALUES (1, 'red apple', 'x', 1, 10), (2, 'green apple', 'x', 1, 30), (3, 'apple pie', 'x', 1, 20), (4, 'pear', 'x', 2, 5), (5, 'pear tart', 'x', 2, 50), (6, 'plum', 'x', 3, 7)"
+cleanup:
+  sphinx: ["TRUNCATE RTINDEX t_ft"]
+
+steps:
+  - sql: { sphinx: "SELECT id, cat, price FROM t_ft GROUP 2 BY cat WITHIN GROUP ORDER BY price DESC ORDER BY cat ASC" }
+    expect:
+      row_count: 5
+      rows:
+        - { match: { id: 2 }, values: { cat: 1, price: 30 } }
+        - { match: { id: 3 }, values: { cat: 1 } }
+        - { match: { id: 1 }, count: 0 }
+  - sql: { sphinx: "SELECT id FROM t_ft WHERE MATCH('apple -pie') AND cat = 1 ORDER BY id ASC" }
+    expect:
+      row_count: 2
+  - sql: { sphinx: "SELECT id FROM t_ft LIMIT 2, 2" }
+    expect: { row_count: 2 }
+  - sql: { sphinx: "REPLACE INTO t_ft (id, cat) VALUES (1, 9)" }
+  - sql: { sphinx: "SELECT cat, price FROM t_ft WHERE id = 1" }
+    expect:
+      rows:
+        - { match: {}, values: { cat: 9, price: 0 } }
+  - operation: query.explain
+    params: { sql: "SELECT id FROM t_ft WHERE MATCH('apple | pear')" }
+    expect:
+      rows:
+        - match: { Variable: transformed_tree }
+          matches: { Value: "^OR\\(" }

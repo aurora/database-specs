@@ -114,7 +114,7 @@
           "required": ["setup", "query", "columns"],
           "additionalProperties": false,
           "properties": {
-            "setup": { "type": "array", "items": { "type": "string" } },
+            "setup": { "$ref": "test.schema.json#/$defs/statements", "description": "Strings or {sql, since, until}." },
             "query": { "type": "string" },
             "columns": { "type": "object", "additionalProperties": { "type": "string" } },
             "cleanup": { "type": "array", "items": { "type": "string" } }

@@ -25,6 +25,10 @@
             "description": "For languages embedded in a string (e.g. the MATCH() argument): statement template that runs an example on the server; {{literal}} is the example quoted as a string literal of the engine.",
             "type": "string"
           },
+          "lexical": {
+            "description": "Lexical spec used to tokenize the examples, when it is not the engine's SQL one (embedded languages, e.g. fulltext-query).",
+            "$ref": "common.schema.json#/$defs/id"
+          },
           "word_pattern": {
             "description": "Regex for a bare word when tokenizing examples (default: SQL identifiers). Embedded languages use their own (e.g. Unicode words).",
             "type": "string"

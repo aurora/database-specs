@@ -41,3 +41,8 @@ implementations:
         - "Inserting an existing id fails (duplicate id); REPLACE INTO replaces the whole document (dml.upsert)."
         - "No RETURNING and no server-side placeholders: values must be inlined as escaped literals (client-side prepared statements)."
       sources: [{ evidence: tested }]
+  sphinx:
+    - status: supported
+      template: "INSERT INTO {{table}} ({{columns}}) VALUES ({{values}})"
+      caveats: ["The column list must contain id: there are no generated ids ('column list must contain an id column')."]
+      sources: [{ evidence: tested }]

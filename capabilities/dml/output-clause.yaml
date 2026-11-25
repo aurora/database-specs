@@ -23,6 +23,8 @@ support:
       notes: ["Use RETURNING; PostgreSQL 18 adds OLD/NEW in RETURNING."]
   manticore:
     - status: unsupported
+  sphinx:
+    - status: unsupported
 probes:
   - engines: [sqlserver]
     setup: ["CREATE TABLE #probe_output (id INT)"]
@@ -38,3 +40,10 @@ probes:
     statements:
       - "INSERT INTO probe_mt (id, v) OUTPUT inserted.id VALUES (1, 1)"
     cleanup: ["DROP TABLE IF EXISTS probe_mt"]
+  - engines: [sphinx]
+    setup:
+      - "TRUNCATE RTINDEX t_ed"
+    statements:
+      - "INSERT INTO t_ed (id, n) OUTPUT inserted.id VALUES (1, 1)"
+    cleanup:
+      - "TRUNCATE RTINDEX t_ed"

@@ -31,6 +31,15 @@ support:
     - status: unsupported
       notes: ["BEGIN / COMMIT / ROLLBACK only cover INSERT/REPLACE/DELETE on one real-time table; DDL takes effect immediately."]
       sources: [{ evidence: observed, notes: "manticore 32.1.3" }]
+  sphinx:
+    - until: "3"
+      status: unsupported
+      notes: ["No DDL that creates objects: indexes are declared in sphinx.conf; ALTER TABLE ADD / DROP COLUMN take effect immediately."]
+      sources: [{ evidence: observed, notes: "Sphinx 2.2.11, 3.9.1" }]
+    - since: "3"
+      status: unsupported
+      notes: ["CREATE TABLE (datadir mode) is not rolled back; BEGIN / COMMIT cover INSERT / REPLACE / DELETE on one RT index."]
+      sources: [{ evidence: observed, notes: "Sphinx 2.2.11, 3.9.1" }]
 probes:
   - name: rollback-create-table
     engines: [mysql, mariadb]
@@ -74,3 +83,15 @@ probes:
     statements:
       - "SELECT id FROM probe_tx_ddl"
     cleanup: ["DROP TABLE IF EXISTS probe_tx_ddl"]
+  - name: rollback-create-table
+    engines: [sphinx]
+    since: "3"
+    invert: true
+    setup:
+      - "BEGIN"
+      - "CREATE TABLE probe_tx_ddl (id bigint, title field indexed)"
+      - "ROLLBACK"
+    statements:
+      - "SELECT id FROM probe_tx_ddl"
+    cleanup:
+      - "DROP TABLE probe_tx_ddl"

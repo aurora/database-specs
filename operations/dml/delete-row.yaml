@@ -40,3 +40,8 @@ implementations:
       template: "DELETE FROM {{table}} WHERE {{key_predicate}}"
       caveats: ["Use id = ? as key_predicate (always unique); there is no DELETE ... LIMIT."]
       sources: [{ evidence: tested }]
+  sphinx:
+    - status: supported
+      template: "DELETE FROM {{table}} WHERE {{key_predicate}}"
+      caveats: ["Use id = ? (always unique)."]
+      sources: [{ evidence: tested }]

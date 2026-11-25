@@ -36,7 +36,7 @@ variants:
       - "check_expression as stored: backtick-quoted, in parentheses - (`qty` >= 0)."
     sources: [{ evidence: tested }]
   - engine: mariadb
-    since: "10.6"
+    since: "10.5"
     file: mariadb.sql
     notes:
       - "check_expression without outer parentheses: `qty` >= 0. Column-level CHECKs are named after the column."
@@ -69,4 +69,8 @@ variants:
       - "Constraint names are not reported: the primary key is named pk_<table>, unique constraints by their sqlite_autoindex_* index. index_name of a rowid-alias primary key is NULL."
 
 not_applicable:
+  sphinx: "No constraints besides the unique document id."
   manticore: "No constraints besides the unique document id."
+
+gaps:
+  - "MariaDB 10.3 / 10.4: not verified (the test fixture uses syntax those versions lack); the variant may work."

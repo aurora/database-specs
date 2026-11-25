@@ -18,6 +18,12 @@ identification:
     - "PG-compatible engines (CockroachDB, YugabyteDB, Redshift, ...) report a PG-like version; detect them via version() text."
 
 versions:
+  - series: "11"
+    released: 2018-10-18
+    eol: 2023-11-09
+  - series: "12"
+    released: 2019-10-03
+    eol: 2024-11-21
   - series: "13"
     released: 2020-09-24
     eol: 2025-11-13

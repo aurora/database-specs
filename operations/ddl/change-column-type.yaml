@@ -95,3 +95,7 @@ implementations:
       transactional: false
       caveats: ["Only int (uint) to bigint ('only alter from rowise int to bigint supported'); any other change means a new column or a new table plus re-inserting the documents."]
       sources: [{ evidence: tested }]
+  sphinx:
+    - status: unsupported
+      caveats: ["Drop and re-add the attribute (values are lost) or rebuild the index."]
+      sources: [{ evidence: observed, notes: "Sphinx 2.2.11, 3.9.1" }]

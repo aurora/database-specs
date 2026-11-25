@@ -21,7 +21,7 @@ variants:
     notes: ["A schema is a database. No owner and no comment."]
     sources: [{ evidence: tested }]
   - engine: mariadb
-    since: "10.6"
+    since: "10.5"
     file: mariadb.sql
     notes: ["CREATE DATABASE ... COMMENT (since 10.5) is returned as comment."]
     sources: [{ evidence: tested }]
@@ -57,3 +57,9 @@ variants:
     notes:
       - "There is one database, Manticore (DATABASE() returns it); information_schema is a small emulation for MySQL tools (only a few columns are real, others return the string 'null'). All tables live in Manticore."
     sources: [{ evidence: observed, notes: "manticore 32.1.3" }]
+
+not_applicable:
+  sphinx: "No databases or schemas (SHOW DATABASES is empty)."
+
+gaps:
+  - "MariaDB 10.3 / 10.4: not verified (the test fixture uses syntax those versions lack); the variant may work."

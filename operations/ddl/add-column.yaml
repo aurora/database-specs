@@ -55,3 +55,18 @@ implementations:
         - "New attributes read 0 / empty for existing documents. A new text field is only filled for documents inserted or replaced afterwards."
         - "Full-text fields are listed before attributes (DESCRIBE), whatever the order of ADD COLUMN."
       sources: [{ evidence: tested }]
+  sphinx:
+    - until: "3"
+      status: supported
+      template: "ALTER TABLE {{table}} ADD COLUMN {{column}} {{column_definition}}"
+      requires: [column_definition]
+      transactional: false
+      caveats: ["Attributes only, types INTEGER | BIGINT | FLOAT | BOOL | MULTI | MULTI64 | JSON | STRING (not 'uint'); full-text fields cannot be added."]
+      sources: [{ evidence: tested }]
+    - since: "3"
+      status: supported
+      template: "ALTER TABLE {{table}} ADD COLUMN {{column}} {{column_definition}}"
+      requires: [column_definition]
+      transactional: false
+      caveats: ["Attribute types as in DESCRIBE (uint, bigint, float, bool, string, json, uint_set, bigint_set) or the 2.x names (INTEGER ...)."]
+      sources: [{ evidence: tested }]

@@ -1,0 +1,51 @@
+/* Sphinx - full-text query language (the string argument of MATCH()), the base Manticore extended.
+   Not in Sphinx: NOTNEAR/n and REGEX(/pattern/) (Manticore additions).
+   Built-ins: identifier (a word that is not an operator keyword), string_literal (a "phrase"),
+   integer, number. Whitespace between tokens is not significant for this grammar, so it
+   accepts a few spellings the server reads differently (e.g. 'app *'). */
+
+/* @@relaxed at the start: unknown fields in @field limits are ignored instead of an error */
+fulltext_query ::= ( '@' '@' 'relaxed' )? alternatives
+
+alternatives ::= sequence ( '|' sequence )*
+
+/* implicit AND between elements; a field limit applies to everything after it */
+sequence ::= element+
+
+element ::= field_limit
+          | zone_limit
+          | operand ( binary_operator operand )*
+
+binary_operator ::= '<<'
+                  | 'MAYBE'
+                  | 'NEAR' '/' integer
+                  | 'SENTENCE'
+                  | 'PARAGRAPH'
+
+operand ::= ( '-' | '!' )? atom ( '^' number )?
+
+atom ::= term
+       | phrase
+       | '(' alternatives ')'
+
+/* ^word = at field start, word$ = at field end, =word = exact form; * ? % are wildcards
+   (they need min_infix_len / min_prefix_len on the table to match anything); a backslash
+   escapes an operator character as part of a word: r\&b, \(live\) */
+term ::= ( '^' | '=' )? term_piece+ '$'?
+
+term_piece ::= word | wildcard | escaped
+
+escaped ::= '\' ( '&' | '(' | ')' | '|' | '-' | '!' | '@' | '~' | '/' | '^' | '$' | '<' | '=' | '*' | '?' | '%' | '\' )
+
+wildcard ::= '*' | '?' | '%'
+
+word ::= identifier | integer
+
+/* "exact phrase", "proximity phrase"~n, "quorum of words"/n */
+phrase ::= string_literal ( '~' integer | '/' number )?
+
+field_limit ::= '@' ( fields | '!' fields | '*' ) ( '[' integer ']' )?
+
+fields ::= identifier | '(' identifier ( ',' identifier )* ')'
+
+zone_limit ::= ( 'ZONE' | 'ZONESPAN' ) ':' ( '(' identifier ( ',' identifier )* ')' | identifier )

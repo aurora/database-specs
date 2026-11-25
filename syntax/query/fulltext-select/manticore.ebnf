@@ -5,7 +5,7 @@
    tokenizer drops comments), sub-selects, table functions, KNN / HYBRID_MATCH. */
 
 select ::= 'SELECT' select_item ( ',' select_item )*
-           'FROM' table_name ( ',' table_name )* join_clause*
+           'FROM' table_name ( ',' table_name )* /* @since 27.1 */ join_clause*
            where_clause?
            group_clause?
            order_clause?
@@ -87,9 +87,9 @@ named_value ::= identifier '=' literal
 /* each FACET returns an extra result set: the facet values with count(*) */
 facet_clause ::= 'FACET' facet_item ( ',' facet_item )*
                  ( 'BY' facet_item ( ',' facet_item )* )?
-                 ( 'ALL' 'FILTERS' | 'EXCLUDE'? 'FILTERS' identifier ( ',' identifier )* )?
-                 'ZEROES'?
-                 ( 'MODE' identifier )?
+                 /* @since 27.1 */ ( 'ALL' 'FILTERS' | 'EXCLUDE'? 'FILTERS' identifier ( ',' identifier )* )?
+                 /* @since 28.4 */ 'ZEROES'?
+                 /* @since 27.1 */ ( 'MODE' identifier )?
                  ( 'DISTINCT' identifier? )?
                  order_clause?
                  limit_clause?

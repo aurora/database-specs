@@ -32,6 +32,8 @@ support:
   manticore:
     - status: unsupported
       notes: ["Grouping is GROUP BY / GROUP n BY / WITHIN GROUP ORDER BY and FACET; no OVER()."]
+  sphinx:
+    - status: unsupported
 probes:
   - engines: [mysql, mariadb, postgresql, sqlserver, sqlite]
     statements: ["SELECT ROW_NUMBER() OVER (ORDER BY n) AS rn FROM (SELECT 1 AS n) t"]
@@ -41,3 +43,6 @@ probes:
     statements:
       - "SELECT id, ROW_NUMBER() OVER (ORDER BY id ASC) FROM probe_mt"
     cleanup: ["DROP TABLE IF EXISTS probe_mt"]
+  - engines: [sphinx]
+    statements:
+      - "SELECT id, ROW_NUMBER() OVER (ORDER BY id ASC) FROM probe_rt"

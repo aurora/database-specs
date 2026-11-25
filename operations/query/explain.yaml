@@ -61,3 +61,11 @@ implementations:
         - "Without executing: EXPLAIN QUERY <table> '<full-text query>' returns the same tree for a MATCH() argument only. SHOW META after a query gives totals and per-keyword statistics."
         - "format and analyze are ignored."
       sources: [{ evidence: tested }]
+  sphinx:
+    - status: supported
+      steps:
+        - "SET profiling = 1"
+        - "{{sql}}"
+        - "SHOW PLAN"
+      caveats: ["As in Manticore: the statement is executed; SHOW PLAN returns the transformed full-text tree (Variable = transformed_tree)."]
+      sources: [{ evidence: tested }]

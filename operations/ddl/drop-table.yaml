@@ -41,3 +41,14 @@ implementations:
       transactional: false
       caveats: ["DROP TABLE IF EXISTS is supported."]
       sources: [{ evidence: tested }]
+  sphinx:
+    - until: "3"
+      status: unsupported
+      caveats: ["Indexes are declared in sphinx.conf; remove them there and reload."]
+      sources: [{ evidence: observed, notes: "Sphinx 2.2.11, 3.9.1" }]
+    - since: "3"
+      status: supported
+      template: "DROP TABLE {{table}}"
+      transactional: false
+      caveats: ["Only in datadir mode, for indexes created by CREATE TABLE."]
+      sources: [{ evidence: tested }]

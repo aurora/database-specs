@@ -18,7 +18,7 @@ result:
     - { name: comment, type: string, nullable: true }
 variants:
   - engine: postgresql
-    since: "12"
+    since: "11"
     file: postgresql.sql
     notes:
       - "Array types, multiranges and the implicit row types of tables are left out. kind base = types created by extensions or CREATE TYPE (input/output functions)."
@@ -29,6 +29,7 @@ variants:
       - "Alias types (CREATE TYPE ... FROM) and table types; CLR types are kind base. No enum / domain / composite types."
       - "Table type attributes use TYPE_NAME only (no lengths): [b] nvarchar."
 not_applicable:
+  sphinx: "No user-defined types."
   mysql: "No user-defined types (ENUM / SET are column types)."
   mariadb: "No user-defined types (ENUM / SET are column types)."
   sqlite: "No user-defined types."

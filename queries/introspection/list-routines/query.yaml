@@ -36,7 +36,7 @@ variants:
       - "definition is the body only (BEGIN ... END or a single statement); NULL for routines the user did not create without SHOW_ROUTINE / global SELECT privilege."
     sources: [{ evidence: tested }]
   - engine: mariadb
-    since: "10.6"
+    since: "10.5"
     file: mysql.sql
     notes: ["Oracle-mode PACKAGE / PACKAGE BODY objects are not included."]
     sources: [{ evidence: tested }]
@@ -65,5 +65,9 @@ variants:
       - "is_deterministic from OBJECTPROPERTY IsDeterministic (only true for schema-bound functions); security_type definer when EXECUTE AS is set."
 
 not_applicable:
+  sphinx: "No stored routines (UDF plugins only)."
   sqlite: "No stored routines (capability schema.stored-routines)."
   manticore: "No stored routines (capability schema.stored-routines); UDF plugins are listed by SHOW PLUGINS."
+
+gaps:
+  - "MariaDB 10.3 / 10.4: not verified (the test fixture uses syntax those versions lack); the variant may work."

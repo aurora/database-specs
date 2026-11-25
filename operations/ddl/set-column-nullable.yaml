@@ -41,3 +41,6 @@ implementations:
     - status: unsupported
       caveats: ["No NULL / NOT NULL in column definitions (attributes are never NULL except json)."]
       sources: [{ evidence: observed, notes: "CREATE TABLE ... NOT NULL is a syntax error (32.1.3)" }]
+  sphinx:
+    - status: unsupported
+      sources: [{ evidence: observed, notes: "Sphinx 2.2.11, 3.9.1" }]

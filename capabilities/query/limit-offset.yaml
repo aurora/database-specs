@@ -25,6 +25,12 @@ support:
         - "offset + count may not exceed max_matches (default 1000): 'offset out of bounds' error. Deeper pages need OPTION max_matches = n (costs memory) or keyset paging (WHERE id > last ORDER BY id ASC)."
         - "ORDER BY needs an explicit ASC or DESC ('no sort order defined' otherwise). SHOW META after the SELECT gives total_found."
       sources: [{ evidence: observed, notes: "manticore 32.1.3" }]
+  sphinx:
+    - status: unsupported
+      notes:
+        - "Only LIMIT offset, count (MySQL style); LIMIT n OFFSET m is a syntax error in 2.2 and 3.x."
+        - "As in Manticore: without LIMIT only 20 rows, offset + count limited by max_matches (default 1000), ORDER BY needs ASC / DESC."
+      sources: [{ evidence: observed, notes: "Sphinx 2.2.11, 3.9.1" }]
 probes:
   - engines: [mysql, mariadb, postgresql, sqlserver, sqlite]
     statements: ["SELECT n FROM (SELECT 1 AS n) t ORDER BY n LIMIT 1 OFFSET 0"]
@@ -34,3 +40,6 @@ probes:
     statements:
       - "SELECT id FROM probe_mt ORDER BY id ASC LIMIT 1 OFFSET 0"
     cleanup: ["DROP TABLE IF EXISTS probe_mt"]
+  - engines: [sphinx]
+    statements:
+      - "SELECT id FROM probe_rt ORDER BY id ASC LIMIT 1 OFFSET 0"

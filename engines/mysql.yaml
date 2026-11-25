@@ -34,9 +34,11 @@ protocols:
       - { type: "TIMESTAMP", code: 7, flags: [BINARY] }
       - { type: "YEAR", code: 13, flags: [UNSIGNED, ZEROFILL], notes: ["Text protocol: four digits."] }
       - { type: "GEOMETRY", code: 255, flags: [BINARY, BLOB], binary: true, notes: ["WKB with a 4-byte SRID prefix."] }
-      - { type: "JSON", code: 245, flags: [BINARY, BLOB], binary: true, notes: ["Own type code since 5.7.8; charsetnr 63 although the value is UTF-8 text."] }
+      - { type: "JSON", code: 245, since: "5.7.8", flags: [BINARY, BLOB], binary: true, notes: ["Own type code since 5.7.8; charsetnr 63 although the value is UTF-8 text."] }
     type_probe:
-      setup: ["CREATE TABLE t_wire (a_tinyint TINYINT, a_bool BOOL, a_smallint SMALLINT, a_mediumint MEDIUMINT, a_int INT, a_uint INT UNSIGNED, a_bigint BIGINT, a_decimal DECIMAL(10,2), a_float FLOAT, a_double DOUBLE, a_bit BIT(3), a_char CHAR(3), a_varchar VARCHAR(10), a_binary BINARY(3), a_varbinary VARBINARY(10), a_text TEXT, a_blob BLOB, a_mediumtext MEDIUMTEXT, a_longblob LONGBLOB, a_enum ENUM('x','y'), a_set SET('x','y'), a_date DATE, a_time TIME, a_datetime DATETIME, a_timestamp TIMESTAMP NULL, a_year YEAR, a_json JSON, a_geometry GEOMETRY)"]
+      setup:
+        - { sql: "CREATE TABLE t_wire (a_tinyint TINYINT, a_bool BOOL, a_smallint SMALLINT, a_mediumint MEDIUMINT, a_int INT, a_uint INT UNSIGNED, a_bigint BIGINT, a_decimal DECIMAL(10,2), a_float FLOAT, a_double DOUBLE, a_bit BIT(3), a_char CHAR(3), a_varchar VARCHAR(10), a_binary BINARY(3), a_varbinary VARBINARY(10), a_text TEXT, a_blob BLOB, a_mediumtext MEDIUMTEXT, a_longblob LONGBLOB, a_enum ENUM('x','y'), a_set SET('x','y'), a_date DATE, a_time TIME, a_datetime DATETIME, a_timestamp TIMESTAMP NULL, a_year YEAR, a_json JSON, a_geometry GEOMETRY)", since: "5.7.8" }
+        - { sql: "CREATE TABLE t_wire (a_tinyint TINYINT, a_bool BOOL, a_smallint SMALLINT, a_mediumint MEDIUMINT, a_int INT, a_uint INT UNSIGNED, a_bigint BIGINT, a_decimal DECIMAL(10,2), a_float FLOAT, a_double DOUBLE, a_bit BIT(3), a_char CHAR(3), a_varchar VARCHAR(10), a_binary BINARY(3), a_varbinary VARBINARY(10), a_text TEXT, a_blob BLOB, a_mediumtext MEDIUMTEXT, a_longblob LONGBLOB, a_enum ENUM('x','y'), a_set SET('x','y'), a_date DATE, a_time TIME, a_datetime DATETIME, a_timestamp TIMESTAMP NULL, a_year YEAR, a_geometry GEOMETRY)", until: "5.7.8" }
       query: "SELECT * FROM t_wire"
       columns: {a_tinyint: "TINYINT", a_bool: "BOOL", a_smallint: "SMALLINT", a_mediumint: "MEDIUMINT", a_int: "INT", a_uint: "INT UNSIGNED", a_bigint: "BIGINT", a_decimal: "DECIMAL", a_float: "FLOAT", a_double: "DOUBLE", a_bit: "BIT", a_char: "CHAR", a_varchar: "VARCHAR", a_binary: "BINARY", a_varbinary: "VARBINARY", a_text: "TEXT", a_blob: "BLOB", a_mediumtext: "MEDIUMTEXT", a_longblob: "LONGBLOB", a_enum: "ENUM", a_set: "SET", a_date: "DATE", a_time: "TIME", a_datetime: "DATETIME", a_timestamp: "TIMESTAMP", a_year: "YEAR", a_json: "JSON", a_geometry: "GEOMETRY"}
       cleanup: ["DROP TABLE IF EXISTS t_wire"]
@@ -52,6 +54,10 @@ identification:
     - "Forks/derivatives (Percona Server, TiDB, ...) need their own detection rules in their engine file."
 
 versions:
+  - series: "5.6"
+    kind: stable
+    released: 2013-02-05
+    eol: 2021-02-28
   - series: "5.7"
     kind: stable
     released: 2015-10-21

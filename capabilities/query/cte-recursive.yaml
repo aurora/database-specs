@@ -31,6 +31,8 @@ support:
   manticore:
     - status: unsupported
       notes: ["No WITH at all (see query.cte)."]
+  sphinx:
+    - status: unsupported
 probes:
   - engines: [mysql, mariadb, postgresql, sqlite]
     statements: ["WITH RECURSIVE r (n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM r WHERE n < 3) SELECT n FROM r"]
@@ -43,3 +45,6 @@ probes:
     statements:
       - "WITH RECURSIVE x AS (SELECT id FROM probe_mt) SELECT id FROM x"
     cleanup: ["DROP TABLE IF EXISTS probe_mt"]
+  - engines: [sphinx]
+    statements:
+      - "WITH RECURSIVE x AS (SELECT id FROM probe_rt) SELECT id FROM x"

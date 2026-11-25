@@ -32,7 +32,7 @@ result:
 
 variants:
   - engine: mysql
-    since: "5.7"
+    since: "5.6"
     file: mysql.sql
     notes:
       - "Since 8.0 TABLE_ROWS / DATA_LENGTH / INDEX_LENGTH come from cached statistics (information_schema_stats_expiry, default 24h) and can be NULL or stale for new tables; ANALYZE TABLE refreshes them."
@@ -96,3 +96,22 @@ variants:
       - "storage_engine is the Manticore table type: rt (real-time), local (plain, built by the indexer tool), percolate (stored queries), distributed (agents / local tables, no own data)."
       - "Sizes and document counts are in SHOW TABLE <name> STATUS (indexed_documents, ram_bytes, disk_bytes) - one statement per table."
     sources: [{ evidence: observed, notes: "manticore 32.1.3" }]
+  - engine: sphinx
+    file: sphinx.sql
+    transform:
+      schema_name: { param: schema }
+      table_name: { column: Index }
+      table_type:
+        column: Type
+        map: { rt: table, local: table, plain: table, percolate: percolate-table, pq: percolate-table, distributed: distributed-table }
+      partition_of: { const: null }
+      storage_engine: { column: Type }
+      row_estimate: { const: null }
+      data_bytes: { const: null }
+      index_bytes: { const: null }
+      collation: { const: null }
+      comment: { const: null }
+    notes:
+      - "SHOW TABLES returns (Index, Type) - Manticore renamed the first column to Table. No schemas: schema_name echoes the parameter."
+      - "2.2: all indexes come from sphinx.conf; 3.x in datadir mode also CREATE TABLE ones."
+    sources: [{ evidence: observed, notes: "Sphinx 2.2.11, 3.9.1" }]

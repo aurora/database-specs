@@ -22,10 +22,16 @@ support:
   manticore:
     - status: unsupported
       notes: ["Without an explicit id, INSERT generates a unique document id; there is no sequence object."]
+  sphinx:
+    - status: unsupported
+      notes: ["No sequences and no generated ids: INSERT must give the id."]
 probes:
   - engines: [mysql, mariadb, postgresql, sqlserver, sqlite]
     statements: ["CREATE SEQUENCE probe_seq START WITH 1 INCREMENT BY 1"]
     cleanup: ["DROP SEQUENCE IF EXISTS probe_seq"]
   - engines: [manticore]
+    statements:
+      - "CREATE SEQUENCE probe_seq START WITH 1 INCREMENT BY 1"
+  - engines: [sphinx]
     statements:
       - "CREATE SEQUENCE probe_seq START WITH 1 INCREMENT BY 1"

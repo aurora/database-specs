@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -60,13 +61,11 @@ def cmd_test(args) -> int:
     if errors:
         print("\n".join(errors))
         return 1
-    targets = load_yaml(ROOT / "tests" / "targets.yaml")["targets"]
-    if args.target:
-        targets = [t for t in targets if t["id"] in args.target or t["engine"] in args.target]
+    targets = select_targets(args.target, args.extended)
     report = Report()
     VERIFICATION_DIR.mkdir(parents=True, exist_ok=True)
     for target in targets:
-        print(f"== {target['id']} ({target.get('image', 'local Python')})", flush=True)
+        print(f"== {target['id']} ({target.get('image') or target.get('build') or 'local Python'})", flush=True)
         n_before = len(report.results)
         version = ""
         try:
@@ -102,13 +101,26 @@ def cmd_test(args) -> int:
     return 1 if failed else 0
 
 
+def select_targets(wanted: list[str] | None, extended: bool) -> list[dict]:
+    """Targets by id or engine. tier: extended targets (older versions, range boundaries) only run
+    with --extended or when named by id."""
+    targets = load_yaml(ROOT / "tests" / "targets.yaml")["targets"]
+    out = []
+    for t in targets:
+        core = t.get("tier", "core") == "core"
+        if wanted:
+            if t["id"] in wanted or (t["engine"] in wanted and (core or extended)):
+                out.append(t)
+        elif core or extended:
+            out.append(t)
+    return out
+
+
 def cmd_keywords(args) -> int:
     from .keywords import generate, write
 
     specs = Specs.load()
-    targets = load_yaml(ROOT / "tests" / "targets.yaml")["targets"]
-    if args.target:
-        targets = [t for t in targets if t["id"] in args.target or t["engine"] in args.target]
+    targets = select_targets(args.target, args.extended)
     deferred = []
     for rnd in (1, 2):  # probe-only engines run last: their candidates come from the complete lists
         for target in (targets if rnd == 1 else deferred):
@@ -129,9 +141,21 @@ def cmd_inventory(args) -> int:
 
     from . import inventory as inv
 
-    targets = load_yaml(ROOT / "tests" / "targets.yaml")["targets"]
-    targets = [t for t in targets if t["id"] in args.target or t["engine"] in args.target]
+    targets = select_targets(args.target, args.extended)
     for target in targets:
+        if target["engine"] == "sphinx":
+            from .servers import build_image, container_cli
+            with running(target) as server, server.connect() as conn:
+                handshake = conn.server_version
+            doc_md = None
+            if not server.version.startswith("2."):
+                image = target.get("image") or build_image(target)
+                doc_md = subprocess.run([container_cli(), "run", "--rm", image, "cat", "/opt/sphinx/doc/sphinx3.md"],
+                                        check=True, capture_output=True, text=True).stdout
+            doc = inv.generate_sphinx(server.version, handshake, doc_md)
+            path = inv.write(doc)
+            print(f"{target['id']:16} {server.version:10} {len(doc['items'])} items -> {path.relative_to(ROOT)}", flush=True)
+            continue
         if target["engine"] != "manticore":
             print(f"{target['id']}: no inventory generator for {target['engine']} yet", file=sys.stderr)
             continue
@@ -157,6 +181,25 @@ def cmd_inventory(args) -> int:
         for it in doc["items"]:
             kinds[it["kind"]] = kinds.get(it["kind"], 0) + 1
         print(f"{target['id']:16} {server.version:10} {kinds} -> {path.relative_to(ROOT)}", flush=True)
+    return 0
+
+
+def cmd_inventory_diff(args) -> int:
+    from . import inventory as inv
+
+    docs = inv.stored().get(args.engine, {})
+    missing = [v for v in (args.old, args.new) if v not in docs]
+    if missing:
+        print(f"no inventory for {args.engine} {', '.join(missing)} (have {', '.join(docs) or '-'})", file=sys.stderr)
+        return 1
+    old = {i["id"] for i in docs[args.old]["items"]}
+    new = {i["id"] for i in docs[args.new]["items"]}
+    kinds = None if args.all else ("keyword", "grammar", "plugin")
+    by_id = {i["id"]: i for d in (docs[args.old], docs[args.new]) for i in d["items"]}
+    for sign, ids in (("+", sorted(new - old)), ("-", sorted(old - new))):
+        for i in ids:
+            if kinds is None or by_id[i]["kind"] in kinds:
+                print(f"{sign} {i}")
     return 0
 
 
@@ -219,14 +262,23 @@ def main(argv=None) -> int:
     p.set_defaults(func=cmd_build)
     p = sub.add_parser("test", help="run probes and test cases against containers")
     p.add_argument("--target", action="append", help="target id or engine (repeatable)")
+    p.add_argument("--extended", action="store_true", help="include tier: extended targets (older versions)")
     p.set_defaults(func=cmd_test)
     sub.add_parser("coverage", help="write COVERAGE.md and dist/coverage.html (matrix spec x engine + roadmap)").set_defaults(func=cmd_coverage)
     p = sub.add_parser("keywords", help="generate keywords/<engine>/<version>.yaml from the test targets")
     p.add_argument("--target", action="append", help="target id or engine (repeatable)")
+    p.add_argument("--extended", action="store_true", help="include tier: extended targets")
     p.set_defaults(func=cmd_keywords)
     p = sub.add_parser("inventory", help="generate inventory/<engine>/<version>.yaml from the engine's sources")
     p.add_argument("--target", action="append", required=True, help="target id or engine (repeatable)")
+    p.add_argument("--extended", action="store_true", help="include tier: extended targets")
     p.set_defaults(func=cmd_inventory)
+    p = sub.add_parser("inventory-diff", help="items added (+) / removed (-) between two inventory versions")
+    p.add_argument("engine")
+    p.add_argument("old")
+    p.add_argument("new")
+    p.add_argument("--all", action="store_true", help="also docs items (default: keywords, grammar, plugins)")
+    p.set_defaults(func=cmd_inventory_diff)
     p = sub.add_parser("show", help="resolve specs for an engine/version (for people and agents)",
                        epilog=SHOW_HELP, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("kind", help="list, profile, capability, query, operation, syntax, engine, lexical, protocol")

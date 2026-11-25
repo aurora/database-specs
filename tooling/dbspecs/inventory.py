@@ -100,7 +100,16 @@ def parse_bison(text: str) -> dict[str, list[list[str]]]:
     rules: dict[str, list[list[str]]] = {}
     for m in re.finditer(r"([A-Za-z_][A-Za-z0-9_]*)\s*:(.*?)(?:;\s*(?=[A-Za-z_][A-Za-z0-9_]*\s*:|$))", body + "\n", re.S):
         name, rhs = m.group(1), m.group(2)
-        alts = [re.findall(r"'[^']'|'\\.'|[A-Za-z_][A-Za-z0-9_]*", alt) for alt in rhs.split("|")]
+        # tokenize first, then split on bare '|' (a quoted '|' is the bitwise / full-text OR token)
+        tokens = re.findall(r"'[^']'|'\\.'|[A-Za-z_][A-Za-z0-9_]*|\|", rhs)
+        alts, cur = [], []
+        for t in tokens:
+            if t == "|":
+                alts.append(cur)
+                cur = []
+            else:
+                cur.append(t)
+        alts.append(cur)
         rules.setdefault(name, []).extend(alts)
     return rules
 
@@ -108,8 +117,12 @@ def parse_bison(text: str) -> dict[str, list[list[str]]]:
 def parse_flex_keywords(text: str) -> dict[str, str]:
     """TOK_X -> keyword text, from lexer lines like  "SELECT"  { ... return TOK_SELECT; }"""
     out = {}
-    for m in re.finditer(r'^"([A-Za-z_][A-Za-z0-9_]*)"\s*\{[^\n]*?return\s+(TOK_[A-Z0-9_]+)', text, re.M):
-        out.setdefault(m.group(2), m.group(1).upper())
+    # "SELECT" { ... return TOK_SELECT; }  and multi-word tokens like  "MODIFY"[ \t\n\r]+"COLUMN"
+    word = r'"[A-Za-z_][A-Za-z0-9_]*"'
+    for m in re.finditer(rf'^({word}(?:(?:\[[^\]]*\]\+|\{{SPACE\}}\+){word})*)\s*\{{[^\n]*?return\s+(TOK_[A-Z0-9_]+)',
+                         text, re.M):
+        words = re.findall(r'"([A-Za-z_][A-Za-z0-9_]*)"', m.group(1))
+        out.setdefault(m.group(2), " ".join(w.upper() for w in words))
     return out
 
 
@@ -133,7 +146,15 @@ def _render(tokens: list[str], keywords: dict[str, str]) -> tuple[str, list[str]
     return " ".join(words), kws
 
 
-_KEYWORD_LIST_RULE = re.compile(r"ident|reserved_tokens|names_transaction")
+def _is_keyword_list(alts: list[list[str]], keywords: dict[str, str]) -> bool:
+    """Rules like 'these keywords may also be identifiers': every alternative is one keyword token,
+    at least one is a plain identifier token or the list is long (reserved_tokens ...)."""
+    singles = [a for a in alts if len(a) == 1 and a[0] in keywords]
+    others = [a for a in alts if not (len(a) == 1 and a[0] in keywords)]
+    if not singles or not all(len(a) == 1 and not a[0].startswith("'") for a in others):
+        return False
+    # an identifier alternative (TOK_IDENT, another ident rule) next to keywords, or a very long list
+    return (bool(others) and len(singles) >= 6) or len(singles) >= 30
 
 
 def grammar_items(parser: str, grammar: str, lexer: str | None) -> list[dict]:
@@ -142,11 +163,12 @@ def grammar_items(parser: str, grammar: str, lexer: str | None) -> list[dict]:
     items = []
     seen = set()
     for tok, kw in sorted(keywords.items(), key=lambda kv: kv[1]):
-        if kw not in seen:
-            seen.add(kw)
-            items.append({"id": f"kw:{kw}", "kind": "keyword", "parser": parser})
+        for word in kw.split():  # multi-word tokens (MODIFY COLUMN) are made of keywords
+            if word not in seen:
+                seen.add(word)
+                items.append({"id": f"kw:{word}", "kind": "keyword", "parser": parser})
     for rule, alts in rules.items():
-        if _KEYWORD_LIST_RULE.search(rule):  # "these keywords may also be identifiers" lists
+        if _is_keyword_list(alts, keywords):  # "these keywords may also be identifiers" lists
             continue
         for alt in alts:
             form, kws = _render(alt, keywords)
@@ -209,7 +231,7 @@ def page_items(markdown: str, page: str, base_url: str) -> list[dict]:
     for line in markdown.splitlines():
         if line.startswith("```"):
             in_code = not in_code
-        m = None if in_code else re.match(r"^(#{2,4})\s+(.+?)\s*$", line)
+        m = None if in_code else re.match(r"^(#{1,4})\s+(.+?)\s*$", line)
         if m:
             title = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", m.group(2)).strip()
             rel = page.removeprefix("manual/english/").removesuffix(".md")
@@ -268,6 +290,61 @@ def generate_manticore(version: str, short_commit: str, buddy_commit: str | None
         ],
         "items": list(unique.values()),
     }
+
+
+SPHINX_REPO = "sphinxsearch/sphinx"
+SPHINX2_PARSERS = {
+    "sphinxql": ("src/sphinxql.y", "src/sphinxql.l"),
+    "sphinxexpr": ("src/sphinxexpr.y", None),
+    "sphinxquery": ("src/sphinxquery.y", None),
+    "sphinxselect": ("src/sphinxselect.y", None),
+}
+
+
+def docbook_items(xml: str, base_url: str) -> list[dict]:
+    """Section titles of a DocBook manual (Sphinx 2.x doc/sphinx.xml)."""
+    items = []
+    for m in re.finditer(r'<sect(\d)\s+id="([^"]+)"[^>]*>\s*<title>(.*?)</title>', xml, re.S):
+        title = re.sub(r"<[^>]+>", "", m.group(3)).strip()
+        items.append({"id": f"docs-page:{m.group(2)}: {' '.join(title.split())}", "kind": "docs",
+                      "url": f"{base_url}#{m.group(2)}"})
+    return items
+
+
+def generate_sphinx(version: str, handshake: str, doc_markdown: str | None) -> dict:
+    """2.x: grammar at the release commit (open source) + DocBook manual; 3.x: no sources are
+    published, only the manual shipped in the binary archive (headings)."""
+    items: list[dict] = []
+    sources: list[dict] = []
+    notes = []
+    m = re.search(r"\(([0-9a-f]{7,})\)|commit ([0-9a-f]{7,})", handshake)
+    short = (m.group(1) or m.group(2)) if m else None
+    if version.startswith("2.") and short:
+        commit = resolve_commit(SPHINX_REPO, short)
+        keyword_parsers: dict[str, list[str]] = {}
+        for parser, (gfile, lfile) in SPHINX2_PARSERS.items():
+            g = fetch(SPHINX_REPO, commit, gfile)
+            lx = fetch(SPHINX_REPO, commit, lfile) if lfile else None
+            for it in grammar_items(parser, g, lx):
+                if it["kind"] == "keyword":
+                    keyword_parsers.setdefault(it["id"], []).append(parser)
+                else:
+                    items.append(it)
+        items = [{"id": k, "kind": "keyword", "parsers": v} for k, v in sorted(keyword_parsers.items())] \
+            + sorted(items, key=lambda i: i["id"])
+        items += docbook_items(fetch(SPHINX_REPO, commit, "doc/sphinx.xml"), "https://sphinxsearch.com/docs/sphinx2.html")
+        sources = [{"kind": "grammar", "repository": SPHINX_REPO, "commit": commit,
+                    "files": [f for pair in SPHINX2_PARSERS.values() for f in pair if f]},
+                   {"kind": "docs-index", "repository": SPHINX_REPO, "commit": commit, "files": ["doc/sphinx.xml"]}]
+    elif doc_markdown is not None:
+        items = page_items(doc_markdown, "sphinx3", "https://sphinxsearch.com/docs/")
+        sources = [{"kind": "docs-index", "files": ["doc/sphinx3.md (vendor binary archive)"]}]
+        notes.append("Sphinx 3 publishes no parser sources: only the manual's headings are inventoried, so keywords and grammar forms are missing - check them against the server.")
+    unique = {}
+    for it in items:
+        unique.setdefault(it["id"], it)
+    return {"engine": "sphinx", "version": version, "generated_at": dt.date.today().isoformat(),
+            "sources": sources, "notes": notes, "items": list(unique.values())}
 
 
 def write(doc: dict) -> Path:

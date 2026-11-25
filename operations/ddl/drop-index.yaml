@@ -43,3 +43,6 @@ implementations:
     - status: unsupported
       caveats: ["No user-defined indexes (ddl.create-index)."]
       sources: [{ evidence: observed }]
+  sphinx:
+    - status: unsupported
+      sources: [{ evidence: observed, notes: "Sphinx 2.2.11, 3.9.1" }]

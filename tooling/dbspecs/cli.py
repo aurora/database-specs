@@ -165,7 +165,18 @@ def cmd_inventory(args) -> int:
                 topics = cur.fetchall()
                 cur.execute(inv.PRIVILEGES_SQL)
                 privileges = cur.fetchall()
-            doc = inv.generate_mysql(version, cats, topics, privileges, engine=target["engine"])
+                plugins = []
+                if target["engine"] == "mariadb":
+                    cur.execute(inv.PLUGINS_SQL)
+                    plugins = list(cur.fetchall())
+                    for name, decl in inv.MARIADB_BUILTIN_TYPES:  # resolved by name, neither keyword nor plugin
+                        try:
+                            cur.execute(f"CREATE TEMPORARY TABLE dbspecs_type_probe (c {decl})")
+                            cur.execute("DROP TEMPORARY TABLE dbspecs_type_probe")
+                            plugins.append((name, "DATA TYPE"))
+                        except Exception:  # noqa: BLE001 - type not in this version
+                            pass
+            doc = inv.generate_mysql(version, cats, topics, privileges, engine=target["engine"], plugins=plugins)
             path = inv.write(doc)
             print(f"{target['id']:16} {version:10} {len(doc['items'])} items -> {path.relative_to(ROOT)}", flush=True)
             continue

@@ -24,7 +24,11 @@ implementations:
     - status: supported
       template: "ALTER TABLE {{table}} ADD CONSTRAINT {{constraint}} FOREIGN KEY ({{columns}}) REFERENCES {{referenced_table}} ({{referenced_columns}}){{#on_delete}} ON DELETE {{on_delete}}{{/on_delete}}{{#on_update}} ON UPDATE {{on_update}}{{/on_update}}"
       transactional: false
-      caveats: ["As MySQL."]
+      caveats:
+        - "InnoDB only; column types must match. An index on the columns is created automatically if missing."
+        - "Unlike MySQL before 9.x, a column-level REFERENCES in CREATE / ALTER TABLE creates a real foreign key (<table>_ibfk_<n>; observed 11.4.13, not checked on 10.3 / 10.4)."
+        - "MATCH FULL / PARTIAL / SIMPLE is parsed and dropped (REFERENTIAL_CONSTRAINTS.MATCH_OPTION = NONE; observed 11.4.13)."
+        - "MariaDB extension: ADD CONSTRAINT c FOREIGN KEY IF NOT EXISTS (col) ... does nothing when it exists."
       sources: [{ evidence: tested }]
   postgresql:
     - status: supported

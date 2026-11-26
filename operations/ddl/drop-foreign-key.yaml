@@ -15,7 +15,7 @@ implementations:
     - status: supported
       template: "ALTER TABLE {{table}} DROP FOREIGN KEY {{constraint}}"
       transactional: false
-      caveats: ["As MySQL; the auto-created index stays."]
+      caveats: ["As MySQL; the auto-created index stays. MariaDB also takes DROP FOREIGN KEY IF EXISTS fk."]
       sources: [{ evidence: tested }]
   postgresql:
     - status: supported

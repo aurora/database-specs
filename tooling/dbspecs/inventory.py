@@ -95,6 +95,8 @@ def parse_bison(text: str) -> dict[str, list[list[str]]]:
     """rule -> alternatives (token lists). Only the rules section between the first two %%."""
     parts = text.split("\n%%")
     body = parts[1] if len(parts) > 1 else text
+    # alternatives that only exist to raise a parse error (MariaDB: LIMIT ROWS EXAMINED in DELETE)
+    body = re.sub(r"\|[^|;{}]*\{\s*thd->parse_error\(\);\s*MYSQL_YYABORT;\s*\}", " ", body)
     body = _strip_actions(_strip_c(body))
     body = re.sub(r"%prec\s+\S+|%empty", " ", body)
     rules: dict[str, list[list[str]]] = {}
@@ -208,6 +210,8 @@ def identifier_values(grammar: str) -> dict[str, list[str]]:
     for k, m in enumerate(heads):
         chunk = body[m.end():heads[k + 1].start() if k + 1 < len(heads) else len(body)]
         names = re.findall(r'is_identifier\(\s*\$\d+\s*,\s*"([A-Za-z_][A-Za-z0-9_]*)"', chunk)
+        # MariaDB: lex_string_eq(&$3, STRING_WITH_LEN("JSON"))
+        names += re.findall(r'lex_string_eq\(\s*&\$\d+\s*,\s*STRING_WITH_LEN\(\s*"([A-Za-z_][A-Za-z0-9_]*)"', chunk)
         if names:
             out.setdefault(m.group(1), [])
             out[m.group(1)] += [n for n in dict.fromkeys(names) if n not in out[m.group(1)]]
@@ -429,8 +433,15 @@ MARIADB_REPO = "MariaDB/server"
 MARIADB_FUNC_TABLES = [("sql/item_create.cc", "func_array"), ("sql/item_geofunc.cc", "func_array_geom")]
 
 
+PLUGINS_SQL = ("SELECT PLUGIN_NAME, PLUGIN_TYPE FROM information_schema.PLUGINS "
+               "WHERE PLUGIN_TYPE IN ('FUNCTION', 'DATA TYPE') AND PLUGIN_STATUS = 'ACTIVE'")
+MARIADB_HINTS = "sql/opt_hints_parser.h"
+# data types resolved by name that are neither grammar keywords nor plugins (probed on the server)
+MARIADB_BUILTIN_TYPES = [("vector", "VECTOR(3)")]
+
+
 def generate_mysql(version: str, help_categories: list[tuple], help_topics: list[tuple],
-                   privileges: list[tuple] = (), engine: str = "mysql") -> dict:
+                   privileges: list[tuple] = (), engine: str = "mysql", plugins: list[tuple] = ()) -> dict:
     maria = engine == "mariadb"
     repo = MARIADB_REPO if maria else MYSQL_REPO
     commit = resolve_commit(repo, f"{engine}-{version}")
@@ -439,6 +450,15 @@ def generate_mysql(version: str, help_categories: list[tuple], help_topics: list
     word_group = {}
     for text, group in lex.values():  # a word listed both ways counts as a keyword
         word_group[text] = None if text in word_group and word_group[text] is None else group
+    hint_source = None
+    if maria:  # 12.x: hand-written hint parser, its keywords are TokenID::keyword_<NAME>
+        try:
+            hints = fetch(repo, commit, MARIADB_HINTS)
+            hint_source = MARIADB_HINTS
+            for name in sorted(set(re.findall(r"keyword_([A-Z][A-Z0-9_]*)", hints))):
+                word_group.setdefault(name, "hint")
+        except Exception:  # noqa: BLE001 - before 12.0
+            pass
     items, parsers = [], []
     for parser, gfile in ({"sql": "sql/sql_yacc.yy"} if maria else MYSQL_PARSERS).items():
         try:
@@ -454,11 +474,14 @@ def generate_mysql(version: str, help_categories: list[tuple], help_topics: list
     func_tables = MARIADB_FUNC_TABLES if maria else [(MYSQL_FUNC_TABLE, "func_array")]
     funcs = [f for file, table in func_tables
              for f in function_items(fetch(repo, commit, file), base, table=table, source_file=file)]
+    # MariaDB data type plugins (INET4, INET6, UUID, ...) and the functions they register (INET6_ATON, UUID, ...)
+    funcs += [{"id": f"func:{name.upper()}", "kind": "function"} for name, ptype in plugins if ptype == "FUNCTION"]
+    types = [{"id": f"type:{name.upper()}", "kind": "type"} for name, ptype in plugins if ptype == "DATA TYPE"]
     docs = help_items(help_categories, help_topics)
     # static privileges are grammar keywords, dynamic ones (8.0+: BACKUP_ADMIN, ...) are only names
     privs = [{"id": f"priv:{row[0].upper().replace(' ', '_')}", "kind": "privilege"} for row in privileges]
     unique = {}
-    for it in kw_items + sorted(items, key=lambda i: i["id"]) + funcs + privs + docs:
+    for it in kw_items + sorted(items, key=lambda i: i["id"]) + funcs + types + privs + docs:
         unique.setdefault(it["id"], it)
     notes = [
         "Keywords: every name in sql/lex.h; group function = function-like word (COUNT, CAST, ...), group hint = word of the optimizer-hint parser only. information_schema.KEYWORDS (MySQL 8.0+) lists neither, so keyword lists leave them out.",
@@ -468,7 +491,11 @@ def generate_mysql(version: str, help_categories: list[tuple], help_topics: list
     ]
     if maria:
         notes += ["sql_yacc.yy is the default-mode branch of %ifdef MARIADB (sql_mode=ORACLE has its own generated grammar, 10.3 / 10.4 a separate sql_yacc_ora.yy) - Oracle mode is not inventoried.",
-                  "Optimizer hints (12.x) are parsed by a hand-written parser (sql/opt_hints_parser.cc), not inventoried."]
+                  "Optimizer hints (12.x) have a hand-written parser: their names come from sql/opt_hints_parser.h (keywords with group hint).",
+                  "Data type plugins (INET4, INET6, UUID, ...) and the functions plugins register (INET6_ATON, UUID, UUID_v7, ...) are read from information_schema.PLUGINS of the running server (type: and func: items); they are not in sql/item_create.cc.",
+                  "ALGORITHM / LOCK values of ALTER TABLE / CREATE INDEX are resolved in C++ (DEFAULT, COPY, INPLACE, NOCOPY, INSTANT; NONE, SHARED, EXCLUSIVE) and have no items; the create-index grammar lists them.",
+                  "sql_mode=ORACLE switches to a different grammar (PL/SQL forms, Oracle function overrides): highlighting and autocomplete for such sessions are not covered.",
+                  "The HELP tables of 10.11.19 are a newer Knowledge Base export (category tree Contents / ...) that describes features 10.11 does not have (VECTOR, UUID_v7, ...): its help: items are no evidence for 10.11."]
     else:
         notes[3] += " The source tree has the HELP data only from 8.0 on (5.x: a placeholder file), and dev.mysql.com refuses automated requests."
     return {
@@ -477,8 +504,9 @@ def generate_mysql(version: str, help_categories: list[tuple], help_topics: list
         "generated_at": dt.date.today().isoformat(),
         "sources": [
             {"kind": "grammar", "repository": repo, "commit": commit,
-             "files": parsers + [MYSQL_KEYWORDS] + [f for f, _t in func_tables]},
-            {"kind": "server", "files": ["mysql.help_category", "mysql.help_topic", "SHOW PRIVILEGES"]},
+             "files": parsers + [MYSQL_KEYWORDS] + [f for f, _t in func_tables] + ([hint_source] if hint_source else [])},
+            {"kind": "server", "files": ["mysql.help_category", "mysql.help_topic", "SHOW PRIVILEGES"]
+             + (["information_schema.PLUGINS"] if maria else [])},
         ],
         "notes": notes,
         "items": list(unique.values()),

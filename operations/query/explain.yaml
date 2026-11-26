@@ -24,6 +24,7 @@ implementations:
       caveats:
         - "format: JSON (10.1+) or omitted for the traditional table. ANALYZE <statement> (10.1+) executes it and adds r_rows / r_filtered (r_total_time_ms with JSON)."
         - "The result column is named EXPLAIN, for ANALYZE it is named ANALYZE."
+        - "FORMAT=TRADITIONAL selects the table explicitly; EXPLAIN EXTENDED (adds filtered) and EXPLAIN PARTITIONS (adds partitions) still work (observed 11.4.13). SHOW EXPLAIN / SHOW ANALYZE [FORMAT=JSON] FOR <connection id> (EXPLAIN FOR CONNECTION since 10.9) show another session's running statement - not described here."
       sources: [{ evidence: tested }]
   postgresql:
     - status: supported

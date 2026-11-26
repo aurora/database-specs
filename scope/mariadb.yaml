@@ -110,6 +110,82 @@ rules:
     status: covered
     specs: ["lexical:mariadb"]
 
+  # --- corrections from the MariaDB audit ------------------------------------------------------------
+  - match: ["sql:column_default_non_parenthesized_expr: { <ident> <expr> }"]
+    status: covered
+    specs: ["lexical:mariadb"]
+    reason: "ODBC escape syntax {d '...'} / {ts '...'} / {fn ...} (make_odbc_literal), described in the lexical notes."
+  - match: ["sql:opt_lock_wait_timeout_new: *"]
+    status: planned
+    roadmap: dml.select
+    reason: "Lock clause of SELECT ... FOR UPDATE / LOCK IN SHARE MODE: WAIT n, NOWAIT, SKIP LOCKED."
+  - match: ["sql:show_param: CREATE TABLE *"]
+    status: covered
+    specs: ["operation:introspection.table-ddl"]
+  - match: ["sql:show_param: CREATE VIEW *"]
+    status: covered
+    specs: ["operation:introspection.view-ddl"]
+  - match: ["sql:show_param: CREATE FUNCTION *", "sql:show_param: CREATE PROCEDURE *"]
+    status: covered
+    specs: ["operation:introspection.routine-ddl"]
+  - match: ["sql:show_param: CREATE TRIGGER *"]
+    status: covered
+    specs: ["operation:introspection.trigger-ddl"]
+  - match: ["sql:show_param: *REPLICA*", "sql:show_param: *SLAVE*", "sql:show_param: BINLOG *", "sql:show_param: RELAYLOG *",
+            "sql:show_param: MASTER STATUS", "sql:show_param: BINARY LOG STATUS", "sql:show_param: <master_or_binary> LOGS",
+            "sql:show_param: CREATE SERVER *"]
+    status: out-of-scope
+    reason: "Replication / binary log status and server definitions: server administration."
+  - match: ["sql:opt_select_expressions: RETURNING *", "help:Data Manipulation: *RETURNING"]
+    status: covered
+    specs: ["capability:dml.returning"]
+  - match: ["help:Geographic Features: Geometry Types", "help:Geographic Features: Geometry Hierarchy",
+            "help:Geographic Features: SPATIAL INDEX", "help:Geographic Features: GIS *", "help:Geographic Features: WKT Definition",
+            "help:Geographic Features: MBR Definition", "help:Geographic Features: Well-Known Binary (WKB) Format"]
+    status: planned
+    roadmap: ddl.create-table
+    reason: "Spatial data types and indexes."
+  - match: ["help:Geographic Features*"]
+    status: planned
+    roadmap: lexical.functions
+    reason: "Spatial functions (ST_*, MBR*, *FromText, ...)."
+  - match: ["help:Data Types: SET NAMES", "help:Data Types: SET CHARACTER SET", "help:Data Types: Setting Character Sets and Collations"]
+    status: planned
+    roadmap: connection-parameters
+  - match: ["help:Data Types: Time Zones", "help:Data Types: Server Locale", "help:Data Types: Setting the Language for Error Messages",
+            "help:Data Types: Locales Plugin"]
+    status: planned
+    roadmap: introspection.server-variables
+  - match: ["help:Plugins: Authentication*", "help:Plugins: Pluggable Authentication Overview", "help:Plugins: *PAM*",
+            "help:Plugins: *Password*", "help:Plugins: password_reuse_check_interval Variable"]
+    status: planned
+    roadmap: admin.user-management
+    reason: "Authentication plugin and password-check names used in CREATE USER ... IDENTIFIED VIA / password policies."
+  - match: ["help:Functions / JSON Functions: *"]
+    status: planned
+    roadmap: query.json
+  - match: ["help:Contents: VEC_*"]
+    status: planned
+    roadmap: lexical.functions
+  - match: ["kw:BKA", "kw:BNL", "kw:DERIVED_CONDITION_PUSHDOWN", "kw:DUPSWEEDOUT", "kw:FIRSTMATCH", "kw:GROUP_INDEX", "kw:INDEX_MERGE",
+            "kw:INTOEXISTS", "kw:JOIN_FIXED_ORDER", "kw:JOIN_INDEX", "kw:JOIN_ORDER", "kw:JOIN_PREFIX", "kw:JOIN_SUFFIX", "kw:LOOSESCAN",
+            "kw:MATERIALIZATION", "kw:MAX_EXECUTION_TIME", "kw:MRR", "kw:NO_*", "kw:ORDER_INDEX", "kw:QB_NAME", "kw:ROWID_FILTER",
+            "kw:SEMIJOIN", "kw:SPLIT_MATERIALIZED", "kw:SUBQUERY"]
+    status: planned
+    roadmap: query.optimizer-hints
+    reason: "Hint names of the 12.x hint parser (sql/opt_hints_parser.h, group hint), inside /*+ ... */."
+  - match: ["type:VECTOR"]
+    status: open
+    reason: "VECTOR(n) column type (11.7+, probed with CREATE TEMPORARY TABLE): no spec for vector search yet."
+  - match: ["type:INET4", "type:INET6", "type:UUID", "type:XMLTYPE"]
+    status: planned
+    roadmap: ddl.create-table
+    reason: "Data types provided by type plugins (information_schema.PLUGINS), resolved by name - not keywords."
+  - match: ["type:ASSOCIATIVE_ARRAY", "type:SYS_REFCURSOR"]
+    status: planned
+    roadmap: ddl.create-routine
+    reason: "Types of stored-program variables (Oracle-style associative arrays, SYS_REFCURSOR) provided by plugins."
+
   # --- MariaDB-specific forms (default-mode grammar) --------------------------------------------------
   - match: ["sql:opt_returning: *"]
     status: covered
@@ -130,7 +206,7 @@ rules:
   - match: ["sql:create: <create_or_replace> <opt_unique> INDEX *", "sql:create: <create_or_replace> INDEX *",
             "sql:create: <create_or_replace> UNIQUE INDEX *", "sql:create: <create_or_replace> <fulltext> INDEX *",
             "sql:create: <create_or_replace> <spatial> INDEX *", "sql:opt_key_algorithm_clause: *", "sql:opt_USING_key_algorithm: *",
-            "sql:opt_lock_wait_timeout*", "sql:ignorability: *", "sql:create: <create_or_replace> <spatial_or_vector> INDEX *",
+            "sql:opt_lock_wait_timeout: *", "sql:ignorability: *", "sql:create: <create_or_replace> <spatial_or_vector> INDEX *",
             "sql:spatial_or_vector: *"]
     status: covered
     specs: ["syntax:ddl.create-index"]
@@ -138,16 +214,19 @@ rules:
             "help:Contents: Optimizing Hybrid Search*"]
     status: open
     reason: "Vector search (11.7+): CREATE INDEX ... VECTOR is in syntax ddl.create-index, but VECTOR columns and the VEC_* distance functions have no spec yet."
-  - match: ["sql:explain_for_connection: *", "sql:opt_format_json: *"]
+  - match: ["sql:explain_for_connection: *", "sql:show_param: <describe_command> *", "sql:show_param: ANALYZE *"]
     status: open
-    reason: "query.explain generates EXPLAIN / ANALYZE [FORMAT=JSON] <statement>; SHOW EXPLAIN / EXPLAIN FOR CONNECTION n is not described."
+    reason: "SHOW EXPLAIN / SHOW ANALYZE / EXPLAIN FOR CONNECTION <id> (another session's running statement): query.explain names them in a caveat only."
+  - match: ["sql:opt_format_json: *"]
+    status: covered
+    specs: ["operation:query.explain"]
   - match: ["sql:kill_type: *", "sql:kill_expr: *"]
     status: covered
     specs: ["operation:session.cancel-query"]
   - match: ["sql:system_time_expr: *", "sql:history_point: *", "sql:opt_history_unit: *", "sql:opt_versioning_*",
             "sql:versioning_option: *", "sql:with_or_without_system: *", "sql:period_for_system_time: *",
             "sql:period_for_application_time: *", "sql:for_portion_of_time_clause: *", "sql:opt_without_overlaps: *",
-            "sql:opt_vers_auto_part: *", "sql:opt_delete_system_time: *", "sql:opt_delete_gtid_domain: *",
+            "sql:opt_vers_auto_part: *", "sql:opt_delete_system_time: *",
             "help:Temporal Tables: *", "help:Contents: System-Versioned Tables", "help:Contents: Application-Time Periods",
             "help:Contents: Bitemporal Tables", "help:Contents: Temporal Tables"]
     status: open
@@ -215,7 +294,7 @@ rules:
     status: planned
     roadmap: ddl.create-table
   - match: ["sql:numeric_dyncol_type: *", "sql:temporal_dyncol_type: *", "sql:string_dyncol_type: *", "sql:opt_dyncol_type: *",
-            "sql:column_default_non_parenthesized_expr: { *", "help:Data Definition: Dynamic Columns*", "help:Contents: Dynamic Column*",
+            "help:Data Definition: Dynamic Columns*", "help:Contents: Dynamic Column*",
             "help:Contents: COLUMN_*"]
     status: open
     reason: "Dynamic columns (COLUMN_CREATE / COLUMN_GET ... on BLOBs): MariaDB-specific, no spec."
@@ -264,7 +343,17 @@ rules:
   - match: ["help:Transactions: *"]
     status: planned
     roadmap: transactions.control
-  - match: ["sql:backup*", "sql:shutdown*", "sql:keyword_verb_clause: *", "sql:optional_flush_tables_arguments: *", "sql:for_channel: *",
+  - match: ["sql:keyword_verb_clause: *"]
+    status: covered
+    specs: ["lexical:mariadb"]
+    reason: "Statement verbs the grammar also accepts as labels (keyword class); the keywords are in the keyword lists."
+  - match: ["sql:opt_delete_gtid_domain: *", "sql:reset_option: MASTER *", "sql:reset_option: REPLICA *", "sql:reset_option: SLAVE *"]
+    status: out-of-scope
+    reason: "Binary log / replication administration (FLUSH BINARY LOGS DELETE_DOMAIN_ID, RESET MASTER / REPLICA)."
+  - match: ["sql:reset_option: QUERY CACHE"]
+    status: out-of-scope
+    reason: "RESET QUERY CACHE: server cache administration."
+  - match: ["sql:backup*", "sql:shutdown*", "sql:optional_flush_tables_arguments: *", "sql:for_channel: *",
             "sql:opt_connection: *", "help:Administration: BACKUP *", "help:Administration: Storage Snapshots*",
             "help:Contents: BACKUP TABLE (removed)", "help:Contents: RESTORE TABLE (removed)", "help:Contents: HANDLER*",
             "help:Contents: HandlerSocket*", "help:Contents: DO", "help:Administration: INSTALL *", "help:Administration: UNINSTALL *",
@@ -311,8 +400,7 @@ rules:
             "sql:row_types: *", "sql:merge_insert_types: *", "sql:charset: *", "sql:charset_name*", "sql:collation_name*",
             "sql:old_or_new_charset_name*", "sql:opt_collate*", "sql:part_*", "sql:partition*", "sql:opt_part*", "sql:sub_part*",
             "sql:opt_sub_part*", "sql:opt_num_parts: *", "sql:opt_num_subparts: *", "sql:opt_linear: *", "sql:opt_key_algo: *",
-            "sql:part_func_max: *", "sql:opt_duplicate: *", "help:Geographic Features*", "help:Data Definition: CREATE TABLE",
-            "help:Data Types: *"]
+            "sql:part_func_max: *", "sql:opt_duplicate: *", "help:Data Definition: CREATE TABLE", "help:Data Types: *"]
     status: planned
     roadmap: ddl.create-table
   - match: ["sql:drop: DROP DATABASE *", "sql:alter: ALTER DATABASE *", "sql:opt_default: *", "help:Data Definition: *DATABASE"]

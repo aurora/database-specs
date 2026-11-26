@@ -9,7 +9,8 @@ support:
               "UPDATE / DELETE take LIMIT row_count only (with ORDER BY): LIMIT ... OFFSET there is a syntax error (observed 8.4.13, 9.7.4)."]
   mariadb:
     - status: supported
-      notes: ["Also LIMIT m, n (offset first). LIMIT ROWS EXAMINED n is MariaDB-specific."]
+      notes: ["Also LIMIT m, n (offset first). LIMIT ROWS EXAMINED n is MariaDB-specific (SELECT only; in DELETE a syntax error).",
+              "UPDATE / DELETE take LIMIT row_count only (with ORDER BY): LIMIT ... OFFSET there is a syntax error (observed 11.4.13)."]
   sqlserver:
     - status: unsupported
       notes: ["Use OFFSET ... FETCH (query.fetch-first) or SELECT TOP (n)."]

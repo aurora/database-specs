@@ -5,7 +5,7 @@
 create_index ::= 'CREATE' ( 'OR' 'REPLACE' )?
                  ( 'UNIQUE' | 'FULLTEXT' | 'SPATIAL' | /* @since 11.7 */ 'VECTOR' )? 'INDEX'
                  ( 'IF' 'NOT' 'EXISTS' )? identifier index_type?
-                 'ON' table_name '(' key_part ( ',' key_part )* ')'
+                 'ON' table_name '(' key_part ( ',' key_part )* /* @since 10.5 */ period_overlaps? ')'
                  wait_option?
                  index_option* ( algorithm_option | lock_option )*
 
@@ -13,7 +13,11 @@ table_name ::= identifier ( '.' identifier )?
 
 key_part ::= identifier ( '(' integer ')' )? ( 'ASC' | 'DESC' )?
 
-index_type ::= 'USING' ( 'BTREE' | 'HASH' | 'RTREE' )
+/* TYPE is an old synonym of USING, before ON and among the options */
+index_type ::= ( 'USING' | 'TYPE' ) ( 'BTREE' | 'HASH' | 'RTREE' )
+
+/* UNIQUE (a, p WITHOUT OVERLAPS): application-time period p must not overlap per a */
+period_overlaps ::= ',' identifier 'WITHOUT' 'OVERLAPS'
 
 wait_option ::= 'WAIT' integer | 'NOWAIT'
 
@@ -22,8 +26,14 @@ index_option ::= 'KEY_BLOCK_SIZE' '='? integer
                | 'WITH' 'PARSER' identifier
                | 'COMMENT' string_literal
                | /* @since 10.6 */ ( 'NOT'? 'IGNORED' )
-               | /* @since 11.7 */ ( ( 'M' | 'DISTANCE' ) '=' ( integer | identifier ) )
+               | /* @since 10.5 */ 'VISIBLE'
+               | engine_option
 
+/* engine-defined index options (VECTOR: M = 6, DISTANCE = cosine; InnoDB / CONNECT / Mroonga ones);
+   an option the table's engine does not know is error 1911 */
+engine_option ::= identifier '=' ( integer | identifier | string_literal | 'DEFAULT' )
+
+/* the values are names resolved by the server; INSTANT is rejected for index builds (1846), NOCOPY works */
 algorithm_option ::= 'ALGORITHM' '='? ( 'DEFAULT' | 'INPLACE' | 'COPY' | 'NOCOPY' | 'INSTANT' )
 
 lock_option ::= 'LOCK' '='? ( 'DEFAULT' | 'NONE' | 'SHARED' | 'EXCLUSIVE' )

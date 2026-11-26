@@ -59,7 +59,7 @@ comments:
   - kind: block
     open: "/*+"
     close: "*/"
-    notes: ["MySQL optimizer hint syntax is NOT recognized; treated as a plain comment (MariaDB 12 introduces its own hints - verify)."]
+    notes: ["Before 12.0 a plain comment. 12.x parses /*+ ... */ directly after SELECT / INSERT / UPDATE / DELETE as optimizer hints (BKA, NO_ICP, JOIN_ORDER, MAX_EXECUTION_TIME, QB_NAME, ...: sql/opt_hints_parser.h; from the 12.3.3 grammar, not checked on a server)."]
 
 parameters:
   - { pattern: '\?', kind: positional, layer: server }
@@ -86,6 +86,8 @@ statements:
     - "No '->' / '->>' JSON operators (MySQL only); use JSON_EXTRACT / JSON_UNQUOTE."
     - "'||' is OR unless sql_mode PIPES_AS_CONCAT (implied by ORACLE / ANSI) is set."
     - "Compound statements (BEGIN NOT ATOMIC ... END, IF ... END IF) can be sent directly, so a splitter must track block nesting even without DELIMITER."
+    - "ODBC escape syntax in expressions: {d 'YYYY-MM-DD'}, {t 'hh:mm:ss'}, {ts '...'} and {fn FUNC(...)} (observed 11.4.13). A tokenizer must not treat { } as block delimiters."
+    - "sql_mode=ORACLE switches to a different grammar (PL/SQL blocks, packages, Oracle function overrides such as TRIM_ORACLE); highlighting and autocomplete for such sessions are not covered by these specs."
 
 keywords:
   query: lexical.keywords

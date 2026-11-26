@@ -241,7 +241,7 @@ def inventory_summary(specs: Specs) -> list[dict]:
             g = groups.setdefault(id(rule), {"rule": rule, "status": status, "items": []})
             g["items"].append(item_id)
         out.append({"engine": doc["engine"], "version": doc["version"], "counts": counts,
-                    "kinds": {k: sum(1 for i in doc["items"] if i["kind"] == k) for k in ("keyword", "grammar", "function", "privilege", "docs")},
+                    "kinds": {k: sum(1 for i in doc["items"] if i["kind"] == k) for k in ("keyword", "grammar", "function", "type", "privilege", "docs")},
                     "groups": list(groups.values())})
     return out
 
@@ -315,12 +315,12 @@ def _inventory_markdown(inventories: list[dict]) -> list[str]:
     lines = ["", "## Inventory", "",
              "Everything the engine has, from its own parser grammar and the manual's reference index "
              "(`inventory/`), classified in `scope/<engine>.yaml`.", "",
-             "| engine | version | items (keywords / grammar / functions / privileges / docs) | "
+             "| engine | version | items (keywords / grammar / functions + types / privileges / docs) | "
              + " | ".join(f"{sym} {st}" for st, sym in INVENTORY_STATUS) + " |",
              "|---|---|---|" + "---|" * len(INVENTORY_STATUS)]
     for inv in inventories:
         k = inv["kinds"]
-        lines.append(f"| {inv['engine']} | {inv['version']} | {sum(k.values())} ({k["keyword"]} / {k["grammar"]} / {k["function"]} / {k["privilege"]} / {k["docs"]}) | "
+        lines.append(f"| {inv['engine']} | {inv['version']} | {sum(k.values())} ({k["keyword"]} / {k["grammar"]} / {k["function"] + k["type"]} / {k["privilege"]} / {k["docs"]}) | "
                      + " | ".join(str(inv["counts"].get(st, "")) for st, _ in INVENTORY_STATUS) + " |")
     for inv in inventories:
         lines += ["", f"### {inv['engine']} {inv['version']}: open and planned", "",

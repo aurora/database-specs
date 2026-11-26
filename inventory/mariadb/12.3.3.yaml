@@ -11,11 +11,13 @@ sources:
   - sql/lex.h
   - sql/item_create.cc
   - sql/item_geofunc.cc
+  - sql/opt_hints_parser.h
 - kind: server
   files:
   - mysql.help_category
   - mysql.help_topic
   - SHOW PRIVILEGES
+  - information_schema.PLUGINS
 notes:
 - 'Keywords: every name in sql/lex.h; group function = function-like word (COUNT, CAST, ...), group hint = word of the optimizer-hint
   parser only. information_schema.KEYWORDS (MySQL 8.0+) lists neither, so keyword lists leave them out.'
@@ -29,7 +31,15 @@ notes:
   / MBR Functions, 9.x vector functions under Window Functions): classify by topic name.'
 - sql_yacc.yy is the default-mode branch of %ifdef MARIADB (sql_mode=ORACLE has its own generated grammar, 10.3 / 10.4 a separate
   sql_yacc_ora.yy) - Oracle mode is not inventoried.
-- Optimizer hints (12.x) are parsed by a hand-written parser (sql/opt_hints_parser.cc), not inventoried.
+- 'Optimizer hints (12.x) have a hand-written parser: their names come from sql/opt_hints_parser.h (keywords with group hint).'
+- 'Data type plugins (INET4, INET6, UUID, ...) and the functions plugins register (INET6_ATON, UUID, UUID_v7, ...) are read
+  from information_schema.PLUGINS of the running server (type: and func: items); they are not in sql/item_create.cc.'
+- ALGORITHM / LOCK values of ALTER TABLE / CREATE INDEX are resolved in C++ (DEFAULT, COPY, INPLACE, NOCOPY, INSTANT; NONE,
+  SHARED, EXCLUSIVE) and have no items; the create-index grammar lists them.
+- 'sql_mode=ORACLE switches to a different grammar (PL/SQL forms, Oracle function overrides): highlighting and autocomplete
+  for such sessions are not covered.'
+- 'The HELP tables of 10.11.19 are a newer Knowledge Base export (category tree Contents / ...) that describes features 10.11
+  does not have (VECTOR, UUID_v7, ...): its help: items are no evidence for 10.11.'
 items:
 - id: kw:&&
   kind: keyword
@@ -129,10 +139,16 @@ items:
 - id: kw:BIT_XOR
   kind: keyword
   group: function
+- id: kw:BKA
+  kind: keyword
+  group: hint
 - id: kw:BLOB
   kind: keyword
 - id: kw:BLOCK
   kind: keyword
+- id: kw:BNL
+  kind: keyword
+  group: hint
 - id: kw:BODY
   kind: keyword
 - id: kw:BOOL
@@ -337,6 +353,9 @@ items:
 - id: kw:DENSE_RANK
   kind: keyword
   group: function
+- id: kw:DERIVED_CONDITION_PUSHDOWN
+  kind: keyword
+  group: hint
 - id: kw:DESC
   kind: keyword
 - id: kw:DESCRIBE
@@ -373,6 +392,9 @@ items:
   kind: keyword
 - id: kw:DUPLICATE
   kind: keyword
+- id: kw:DUPSWEEDOUT
+  kind: keyword
+  group: hint
 - id: kw:DYNAMIC
   kind: keyword
 - id: kw:EACH
@@ -456,6 +478,9 @@ items:
   kind: keyword
 - id: kw:FIRST
   kind: keyword
+- id: kw:FIRSTMATCH
+  kind: keyword
+  group: hint
 - id: kw:FIRST_VALUE
   kind: keyword
   group: function
@@ -508,6 +533,9 @@ items:
 - id: kw:GROUP_CONCAT
   kind: keyword
   group: function
+- id: kw:GROUP_INDEX
+  kind: keyword
+  group: hint
 - id: kw:HANDLER
   kind: keyword
 - id: kw:HARD
@@ -558,6 +586,9 @@ items:
   kind: keyword
 - id: kw:INDEXES
   kind: keyword
+- id: kw:INDEX_MERGE
+  kind: keyword
+  group: hint
 - id: kw:INFILE
   kind: keyword
 - id: kw:INNER
@@ -586,6 +617,9 @@ items:
   kind: keyword
 - id: kw:INTO
   kind: keyword
+- id: kw:INTOEXISTS
+  kind: keyword
+  group: hint
 - id: kw:INVISIBLE
   kind: keyword
 - id: kw:INVOKER
@@ -608,6 +642,21 @@ items:
   kind: keyword
 - id: kw:JOIN
   kind: keyword
+- id: kw:JOIN_FIXED_ORDER
+  kind: keyword
+  group: hint
+- id: kw:JOIN_INDEX
+  kind: keyword
+  group: hint
+- id: kw:JOIN_ORDER
+  kind: keyword
+  group: hint
+- id: kw:JOIN_PREFIX
+  kind: keyword
+  group: hint
+- id: kw:JOIN_SUFFIX
+  kind: keyword
+  group: hint
 - id: kw:JSON
   kind: keyword
 - id: kw:JSON_ARRAYAGG
@@ -686,6 +735,9 @@ items:
   kind: keyword
 - id: kw:LOOP
   kind: keyword
+- id: kw:LOOSESCAN
+  kind: keyword
+  group: hint
 - id: kw:LOW_PRIORITY
   kind: keyword
 - id: kw:MASTER
@@ -738,6 +790,9 @@ items:
   kind: keyword
 - id: kw:MATCH
   kind: keyword
+- id: kw:MATERIALIZATION
+  kind: keyword
+  group: hint
 - id: kw:MAX
   kind: keyword
   group: function
@@ -745,6 +800,9 @@ items:
   kind: keyword
 - id: kw:MAX_CONNECTIONS_PER_HOUR
   kind: keyword
+- id: kw:MAX_EXECUTION_TIME
+  kind: keyword
+  group: hint
 - id: kw:MAX_QUERIES_PER_HOUR
   kind: keyword
 - id: kw:MAX_ROWS
@@ -804,6 +862,9 @@ items:
   kind: keyword
 - id: kw:MONTH
   kind: keyword
+- id: kw:MRR
+  kind: keyword
+  group: hint
 - id: kw:MUTEX
   kind: keyword
 - id: kw:MYSQL
@@ -850,6 +911,51 @@ items:
   kind: keyword
 - id: kw:NOWAIT
   kind: keyword
+- id: kw:NO_BKA
+  kind: keyword
+  group: hint
+- id: kw:NO_BNL
+  kind: keyword
+  group: hint
+- id: kw:NO_DERIVED_CONDITION_PUSHDOWN
+  kind: keyword
+  group: hint
+- id: kw:NO_GROUP_INDEX
+  kind: keyword
+  group: hint
+- id: kw:NO_ICP
+  kind: keyword
+  group: hint
+- id: kw:NO_INDEX
+  kind: keyword
+  group: hint
+- id: kw:NO_INDEX_MERGE
+  kind: keyword
+  group: hint
+- id: kw:NO_JOIN_INDEX
+  kind: keyword
+  group: hint
+- id: kw:NO_MERGE
+  kind: keyword
+  group: hint
+- id: kw:NO_MRR
+  kind: keyword
+  group: hint
+- id: kw:NO_ORDER_INDEX
+  kind: keyword
+  group: hint
+- id: kw:NO_RANGE_OPTIMIZATION
+  kind: keyword
+  group: hint
+- id: kw:NO_ROWID_FILTER
+  kind: keyword
+  group: hint
+- id: kw:NO_SEMIJOIN
+  kind: keyword
+  group: hint
+- id: kw:NO_SPLIT_MATERIALIZED
+  kind: keyword
+  group: hint
 - id: kw:NO_WRITE_TO_BINLOG
   kind: keyword
 - id: kw:NTH_VALUE
@@ -896,6 +1002,9 @@ items:
   kind: keyword
 - id: kw:ORDER
   kind: keyword
+- id: kw:ORDER_INDEX
+  kind: keyword
+  group: hint
 - id: kw:ORDINALITY
   kind: keyword
 - id: kw:OTHERS
@@ -992,6 +1101,9 @@ items:
   kind: keyword
 - id: kw:PURGE
   kind: keyword
+- id: kw:QB_NAME
+  kind: keyword
+  group: hint
 - id: kw:QUARTER
   kind: keyword
 - id: kw:QUERY
@@ -1109,6 +1221,9 @@ items:
   kind: keyword
 - id: kw:ROWCOUNT
   kind: keyword
+- id: kw:ROWID_FILTER
+  kind: keyword
+  group: hint
 - id: kw:ROWNUM
   kind: keyword
 - id: kw:ROWS
@@ -1139,6 +1254,9 @@ items:
   kind: keyword
 - id: kw:SELECT
   kind: keyword
+- id: kw:SEMIJOIN
+  kind: keyword
+  group: hint
 - id: kw:SENSITIVE
   kind: keyword
 - id: kw:SEPARATOR
@@ -1190,6 +1308,9 @@ items:
   kind: keyword
 - id: kw:SPECIFIC
   kind: keyword
+- id: kw:SPLIT_MATERIALIZED
+  kind: keyword
+  group: hint
 - id: kw:SQL
   kind: keyword
 - id: kw:SQLEXCEPTION
@@ -1270,6 +1391,9 @@ items:
   kind: keyword
 - id: kw:SUBPARTITIONS
   kind: keyword
+- id: kw:SUBQUERY
+  kind: keyword
+  group: hint
 - id: kw:SUM
   kind: keyword
   group: function
@@ -2400,12 +2524,6 @@ items:
   kind: grammar
   parser: sql
 - id: 'sql:delete_limit_clause: LIMIT <limit_option>'
-  kind: grammar
-  parser: sql
-- id: 'sql:delete_limit_clause: LIMIT <limit_option> ROWS EXAMINED'
-  kind: grammar
-  parser: sql
-- id: 'sql:delete_limit_clause: LIMIT ROWS EXAMINED'
   kind: grammar
   parser: sql
 - id: 'sql:delete_option: CASCADE'
@@ -4178,7 +4296,19 @@ items:
 - id: 'sql:opt_format_json: FORMAT = <ident_or_text>'
   kind: grammar
   parser: sql
+- id: 'sql:opt_format_json: JSON (name)'
+  kind: grammar
+  parser: sql
+- id: 'sql:opt_format_json: TRADITIONAL (name)'
+  kind: grammar
+  parser: sql
 - id: 'sql:opt_format_xid: FORMAT = <ident_or_text>'
+  kind: grammar
+  parser: sql
+- id: 'sql:opt_format_xid: RAW (name)'
+  kind: grammar
+  parser: sql
+- id: 'sql:opt_format_xid: SQL (name)'
   kind: grammar
   parser: sql
 - id: 'sql:opt_full: FULL'
@@ -7627,6 +7757,44 @@ items:
 - id: func:Y
   kind: function
   url: https://github.com/MariaDB/server/blob/83e909fc2a0dbc394b4b683fb3fa2d7dcf26cc5e/sql/item_geofunc.cc
+- id: func:INET_ATON
+  kind: function
+- id: func:INET_NTOA
+  kind: function
+- id: func:INET6_ATON
+  kind: function
+- id: func:INET6_NTOA
+  kind: function
+- id: func:IS_IPV4
+  kind: function
+- id: func:IS_IPV6
+  kind: function
+- id: func:IS_IPV4_COMPAT
+  kind: function
+- id: func:IS_IPV4_MAPPED
+  kind: function
+- id: func:UUID
+  kind: function
+- id: func:SYS_GUID
+  kind: function
+- id: func:UUID_V4
+  kind: function
+- id: func:UUID_V7
+  kind: function
+- id: type:ASSOCIATIVE_ARRAY
+  kind: type
+- id: type:SYS_REFCURSOR
+  kind: type
+- id: type:INET4
+  kind: type
+- id: type:INET6
+  kind: type
+- id: type:UUID
+  kind: type
+- id: type:XMLTYPE
+  kind: type
+- id: type:VECTOR
+  kind: type
 - id: priv:ALTER
   kind: privilege
 - id: priv:ALTER_ROUTINE

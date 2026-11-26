@@ -17,7 +17,9 @@ implementations:
     - status: supported
       template: "DROP TABLE {{table}}"
       transactional: false
-      caveats: ["As MySQL."]
+      caveats:
+        - "As MySQL: fails while other tables reference it by foreign key; views on it become invalid."
+        - "The statement also has DROP TEMPORARY TABLE, IF EXISTS, several tables at once and WAIT n / NOWAIT; CASCADE / RESTRICT are parsed and do nothing (the cascade parameter has no effect)."
       sources: [{ evidence: tested }]
   postgresql:
     - status: supported

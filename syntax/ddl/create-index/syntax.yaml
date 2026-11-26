@@ -23,7 +23,7 @@ grammars:
       - "No functional key parts; index a (virtual) generated column instead."
       - "IGNORED / NOT IGNORED (10.6+) is MariaDB's counterpart to MySQL's INVISIBLE / VISIBLE."
       - "ASC/DESC is parsed always; descending indexes are real since 10.8."
-      - "VECTOR indexes (11.7+) need a NOT NULL VECTOR(n) column; not covered by examples yet."
+      - "VECTOR indexes (11.7+) need a NOT NULL VECTOR(n) column; UNIQUE (a, p WITHOUT OVERLAPS) (10.5+) needs an application-time period p. Neither is covered by examples yet."
     sources: [{ evidence: tested }]
   postgresql:
     file: postgresql.ebnf
@@ -132,12 +132,15 @@ examples:
   # --- MySQL only -----------------------------------------------------------
   - sql: CREATE INDEX i_type TYPE BTREE ON t_idx (a)
     expect: valid
-    engines: { mysql: {} }
+    engines: { mysql: {}, mariadb: {} }
     notes: ["TYPE is an old synonym of USING."]
+  - sql: CREATE INDEX i_type2 ON t_idx (a) TYPE BTREE
+    expect: valid
+    engines: { mariadb: {} }
   - sql: CREATE INDEX i_inst ON t_idx (a) ALGORITHM = INSTANT
     expect: semantic-error
-    engines: { mysql: {} }
-    notes: ["Error 1845: INSTANT is an ALTER TABLE algorithm; index builds take INPLACE or COPY."]
+    engines: { mysql: {}, mariadb: {} }
+    notes: ["MySQL error 1845, MariaDB 1846: INSTANT is an ALTER TABLE algorithm; index builds take INPLACE or COPY."]
   - sql: CREATE INDEX i_expr ON t_idx ((a + d))
     expect: valid
     engines: { mysql: { since: "8.0.13" }, sqlite: {}, postgresql: {} }
@@ -156,6 +159,21 @@ examples:
     notes: ["MySQL needs ((lower(b)))."]
 
   # --- MariaDB only ---------------------------------------------------------
+  - sql: CREATE INDEX i_vis ON t_idx (a) VISIBLE
+    expect: valid
+    engines: { mariadb: { since: "10.5" } }
+    notes: ["Accepted for MySQL compatibility; MariaDB's own switch is IGNORED / NOT IGNORED."]
+  - sql: CREATE INDEX i_vis ON t_idx (a) VISIBLE
+    expect: invalid
+    engines: { mariadb: { until: "10.5" } }
+  - sql: CREATE INDEX i_eng ON t_idx (a) clustering = yes
+    expect: semantic-error
+    engines: { mariadb: {} }
+    notes: ["Engine-defined options parse for every engine; InnoDB does not know this one (error 1911)."]
+  - sql: CREATE INDEX i_nocopy ON t_idx (a) ALGORITHM = NOCOPY
+    expect: valid
+    engines: { mariadb: {} }
+    notes: ["NOCOPY (no table rebuild) works for index builds; INSTANT does not (1846)."]
   - sql: CREATE OR REPLACE INDEX i_a ON t_idx (a)
     expect: valid
     engines: { mariadb: {} }

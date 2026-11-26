@@ -14,11 +14,14 @@ support:
     - status: unsupported
       notes: ["Use LAST_INSERT_ID() / ROW_COUNT(); MariaDB has INSERT/DELETE ... RETURNING."]
   mariadb:
+    - until: "10.5"
+      status: partial
+      notes: ["DELETE ... RETURNING only (single-table DELETE, since 10.0.5); INSERT / REPLACE ... RETURNING is a syntax error before 10.5."]
     - since: "10.5"
       status: partial
       notes:
         - "INSERT ... RETURNING and REPLACE ... RETURNING since 10.5; DELETE ... RETURNING already since 10.0.5."
-        - "No UPDATE ... RETURNING (verify for 11.x/12.x)."
+        - "No UPDATE ... RETURNING: syntax error 1064 (observed 11.4.13); the 12.3.3 grammar uses RETURNING only in INSERT, REPLACE and single-table DELETE."
         - "RETURNING cannot reference subqueries on the target table and does not support aggregates."
   sqlite:
     - until: "3.35"
@@ -32,9 +35,19 @@ support:
   sphinx:
     - status: unsupported
 probes:
-  - engines: [mysql, mariadb, postgresql, sqlite]
+  - engines: [mysql, postgresql, sqlite]
     setup: ["CREATE TEMPORARY TABLE probe_returning (id INT)"]
     statements: ["INSERT INTO probe_returning (id) VALUES (1) RETURNING id"]
+    cleanup: ["DROP TABLE IF EXISTS probe_returning"]
+  - engines: [mariadb]
+    since: "10.5"
+    setup: ["CREATE TEMPORARY TABLE probe_returning (id INT)"]
+    statements: ["INSERT INTO probe_returning (id) VALUES (1) RETURNING id"]
+    cleanup: ["DROP TABLE IF EXISTS probe_returning"]
+  - engines: [mariadb]
+    until: "10.5"
+    setup: ["CREATE TEMPORARY TABLE probe_returning (id INT)", "INSERT INTO probe_returning (id) VALUES (1)"]
+    statements: ["DELETE FROM probe_returning WHERE id = 1 RETURNING id"]
     cleanup: ["DROP TABLE IF EXISTS probe_returning"]
   - engines: [sqlserver]
     setup: ["CREATE TABLE #probe_returning (id INT)"]

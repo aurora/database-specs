@@ -20,7 +20,9 @@ implementations:
     - status: supported
       template: "ALTER TABLE {{table}} RENAME TO {{new_name}}"
       transactional: false
-      caveats: ["As MySQL."]
+      caveats:
+        - "As MySQL: views referencing the old name break; an unqualified new name refers to the current database."
+        - "RENAME TABLE [IF EXISTS] a TO b, c TO d renames several tables atomically (IF EXISTS since 10.5); the template renames one."
       sources: [{ evidence: tested }]
   postgresql:
     - status: supported

@@ -18,7 +18,7 @@ implementations:
       template: "DROP INDEX {{index}} ON {{table}}"
       requires: [table]
       transactional: false
-      caveats: ["As MySQL."]
+      caveats: ["As MySQL. MariaDB also takes DROP INDEX IF EXISTS i ON t and WAIT n / NOWAIT."]
       sources: [{ evidence: tested }]
   postgresql:
     - status: supported

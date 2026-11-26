@@ -14,7 +14,7 @@ support:
   mariadb:
     - since: "10.2.0"
       status: supported
-      notes: ["GROUPS frame units are not supported (verify)."]
+      notes: ["No GROUPS frame units (not in the grammar: syntax error) and no IGNORE NULLS (syntax error); EXCLUDE ... is parsed but rejected with error 4022 (observed 11.4.13)."]
   sqlserver:
     - since: "9"
       until: "11"

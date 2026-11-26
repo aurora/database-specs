@@ -16,7 +16,7 @@ implementations:
     - status: supported
       template: "ALTER TABLE {{table}} DROP COLUMN {{column}}"
       transactional: false
-      caveats: ["As MySQL."]
+      caveats: ["As MySQL. MariaDB also takes DROP COLUMN IF EXISTS c."]
       sources: [{ evidence: tested }]
   postgresql:
     - status: supported

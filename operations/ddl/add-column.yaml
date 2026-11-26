@@ -21,7 +21,9 @@ implementations:
       template: "ALTER TABLE {{table}} ADD COLUMN {{column}} {{column_definition}}{{#after}} AFTER {{after}}{{/after}}"
       requires: [column_definition]
       transactional: false
-      caveats: ["Instant ADD COLUMN since 10.3 (any position since 10.4)."]
+      caveats:
+        - "Instant ADD COLUMN since 10.3 (any position since 10.4)."
+        - "The statement also takes ADD COLUMN IF NOT EXISTS, FIRST instead of AFTER and several columns at once: ADD (a INT, b INT); the template generates one column."
       sources: [{ evidence: tested }]
   postgresql:
     - status: supported

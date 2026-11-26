@@ -16,6 +16,7 @@ sources:
   - mysql.help_category
   - mysql.help_topic
   - SHOW PRIVILEGES
+  - information_schema.PLUGINS
 notes:
 - 'Keywords: every name in sql/lex.h; group function = function-like word (COUNT, CAST, ...), group hint = word of the optimizer-hint
   parser only. information_schema.KEYWORDS (MySQL 8.0+) lists neither, so keyword lists leave them out.'
@@ -29,7 +30,15 @@ notes:
   / MBR Functions, 9.x vector functions under Window Functions): classify by topic name.'
 - sql_yacc.yy is the default-mode branch of %ifdef MARIADB (sql_mode=ORACLE has its own generated grammar, 10.3 / 10.4 a separate
   sql_yacc_ora.yy) - Oracle mode is not inventoried.
-- Optimizer hints (12.x) are parsed by a hand-written parser (sql/opt_hints_parser.cc), not inventoried.
+- 'Optimizer hints (12.x) have a hand-written parser: their names come from sql/opt_hints_parser.h (keywords with group hint).'
+- 'Data type plugins (INET4, INET6, UUID, ...) and the functions plugins register (INET6_ATON, UUID, UUID_v7, ...) are read
+  from information_schema.PLUGINS of the running server (type: and func: items); they are not in sql/item_create.cc.'
+- ALGORITHM / LOCK values of ALTER TABLE / CREATE INDEX are resolved in C++ (DEFAULT, COPY, INPLACE, NOCOPY, INSTANT; NONE,
+  SHARED, EXCLUSIVE) and have no items; the create-index grammar lists them.
+- 'sql_mode=ORACLE switches to a different grammar (PL/SQL forms, Oracle function overrides): highlighting and autocomplete
+  for such sessions are not covered.'
+- 'The HELP tables of 10.11.19 are a newer Knowledge Base export (category tree Contents / ...) that describes features 10.11
+  does not have (VECTOR, UUID_v7, ...): its help: items are no evidence for 10.11.'
 items:
 - id: kw:&&
   kind: keyword
@@ -2312,12 +2321,6 @@ items:
 - id: 'sql:delete_limit_clause: LIMIT <limit_option>'
   kind: grammar
   parser: sql
-- id: 'sql:delete_limit_clause: LIMIT <limit_option> ROWS EXAMINED'
-  kind: grammar
-  parser: sql
-- id: 'sql:delete_limit_clause: LIMIT ROWS EXAMINED'
-  kind: grammar
-  parser: sql
 - id: 'sql:delete_option: CASCADE'
   kind: grammar
   parser: sql
@@ -3917,7 +3920,19 @@ items:
 - id: 'sql:opt_format_json: FORMAT = <ident_or_text>'
   kind: grammar
   parser: sql
+- id: 'sql:opt_format_json: JSON (name)'
+  kind: grammar
+  parser: sql
+- id: 'sql:opt_format_json: TRADITIONAL (name)'
+  kind: grammar
+  parser: sql
 - id: 'sql:opt_format_xid: FORMAT = <ident_or_text>'
+  kind: grammar
+  parser: sql
+- id: 'sql:opt_format_xid: RAW (name)'
+  kind: grammar
+  parser: sql
+- id: 'sql:opt_format_xid: SQL (name)'
   kind: grammar
   parser: sql
 - id: 'sql:opt_full: FULL'

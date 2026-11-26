@@ -80,6 +80,51 @@ items:
     kind: syntax
     title: INSERT incl. upsert clauses
     priority: medium
+  - id: dml.update
+    kind: syntax
+    title: UPDATE incl. multi-table forms, ORDER BY / LIMIT
+    priority: medium
+  - id: dml.delete
+    kind: syntax
+    title: DELETE incl. multi-table forms, ORDER BY / LIMIT
+    priority: medium
+  - id: dml.load-data
+    kind: syntax
+    title: Bulk import / export statements (LOAD DATA, SELECT ... INTO OUTFILE, COPY, BULK INSERT)
+    priority: low
+  - id: ddl.create-schema
+    kind: syntax
+    title: CREATE / ALTER / DROP DATABASE or SCHEMA with options (charset, collation, encryption)
+    priority: medium
+  - id: ddl.create-view
+    kind: syntax
+    title: CREATE / ALTER / DROP VIEW (algorithm, security, check option, materialized views)
+    priority: medium
+  - id: ddl.create-trigger
+    kind: syntax
+    title: CREATE / DROP TRIGGER
+    priority: low
+  - id: ddl.create-routine
+    kind: syntax
+    title: CREATE / ALTER / DROP FUNCTION and PROCEDURE incl. the stored-program language (compound statements, handlers, cursors)
+    priority: medium
+  - id: admin.user-management
+    kind: syntax
+    title: CREATE / ALTER / DROP USER and ROLE, GRANT / REVOKE, SET ROLE / PASSWORD
+    priority: medium
+  - id: syntax.show-statements
+    kind: syntax
+    title: SHOW statements (query-editor autocomplete; the object tree uses the introspection queries)
+    priority: low
+    engines: [mysql, mariadb, manticore, sphinx]
+  - id: query.optimizer-hints
+    kind: syntax
+    title: Optimizer hints (/*+ ... */ in MySQL, OPTION (...) in SQL Server) and index hints
+    priority: low
+  - id: transactions.control
+    kind: syntax
+    title: Transaction control (BEGIN / START TRANSACTION options, COMMIT / ROLLBACK [AND CHAIN], autocommit, LOCK TABLES)
+    priority: medium
   - id: dml.call
     kind: syntax
     title: CALL statements (Manticore SUGGEST / QSUGGEST / SNIPPETS / KEYWORDS / PQ / AUTOCOMPLETE, stored procedure calls)

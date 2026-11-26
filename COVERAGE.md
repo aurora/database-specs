@@ -10,8 +10,8 @@ Planned items come from [roadmap.yaml](roadmap.yaml).
 
 | | MySQL | MariaDB | PostgreSQL | Microsoft SQL Server | SQLite | Manticore Search | Sphinx Search |
 |---|---|---|---|---|---|---|---|
-| ✅ tested against real servers | 42 | 41 | 44 | 52 | 39 | 35 | 27 |
-| ◐ partly: some versions missing or unsupported | 12 | 14 | 11 | 1 | 2 |  | 3 |
+| ✅ tested against real servers | 43 | 41 | 44 | 52 | 39 | 35 | 27 |
+| ◐ partly: some versions missing or unsupported | 11 | 14 | 11 | 1 | 2 |  | 3 |
 | 📄 documented, no automated test | 3 | 3 | 3 | 4 | 4 | 1 | 1 |
 | ➖ not applicable: the engine has no such feature | 3 | 2 |  | 1 | 13 | 19 | 26 |
 | ⬜ missing | 1 | 1 | 3 | 3 | 3 | 6 | 4 |
@@ -105,22 +105,27 @@ Planned items come from [roadmap.yaml](roadmap.yaml).
 
 | id | title | MySQL | MariaDB | PostgreSQL | Microsoft SQL Server | SQLite | Manticore Search | Sphinx Search | notes |
 |---|---|---|---|---|---|---|---|---|---|
-| `keywords` | Keyword lists per version | ◐ | ✅ | ✅ | ◐ | ◐ | ✅ | ◐ | mysql: reserved words only: 5.7.44 (data: 5.7.44, 8.0.46, 8.4.13, 9.7.4); sqlserver: reserved words only: 14.0.3570, 15.0.4510, 16.0.4325, 17.0.5065 (data: 14.0.3570, 15.0.4510, 16.0.4325, 17.0.5065); sqlite: reserved words only: 3.53.1 (data: 3.27.2, 3.34.1, 3.40.1, 3.46.1, 3.53.1); sphinx: reserved words only: 3.9.1 (data: 2.2.11, 3.9.1) |
+| `keywords` | Keyword lists per version | ✅ | ✅ | ✅ | ◐ | ◐ | ✅ | ◐ | sqlserver: reserved words only: 14.0.3570, 15.0.4510, 16.0.4325, 17.0.5065 (data: 14.0.3570, 15.0.4510, 16.0.4325, 17.0.5065); sqlite: reserved words only: 3.53.1 (data: 3.27.2, 3.34.1, 3.40.1, 3.46.1, 3.53.1); sphinx: reserved words only: 3.9.1 (data: 2.2.11, 3.9.1) |
 
 ## Inventory
 
 Everything the engine has, from its own parser grammar and the manual's reference index (`inventory/`), classified in `scope/<engine>.yaml`.
 
-| engine | version | items (keywords / grammar / docs) | ✅ covered | 🗓 planned | ⬜ open | ➖ out-of-scope | ❓ unclassified |
+| engine | version | items (keywords / grammar / functions / docs) | ✅ covered | 🗓 planned | ⬜ open | ➖ out-of-scope | ❓ unclassified |
 |---|---|---|---|---|---|---|---|
-| manticore | 25.0.0 | 1638 (223 / 605 / 810) | 611 | 778 | 22 | 351 |  |
-| manticore | 27.1.5 | 1711 (241 / 639 / 831) | 634 | 784 | 56 | 364 |  |
-| manticore | 28.4.4 | 1729 (242 / 642 / 845) | 638 | 785 | 68 | 365 |  |
-| manticore | 28.6.6 | 1737 (243 / 648 / 846) | 639 | 792 | 68 | 365 |  |
-| manticore | 29.9.0 | 1782 (250 / 678 / 854) | 647 | 812 | 69 | 381 |  |
-| manticore | 32.1.3 | 1795 (251 / 681 / 863) | 649 | 818 | 70 | 385 |  |
-| sphinx | 2.2.11 | 856 (111 / 346 / 399) | 369 | 292 | 75 | 120 |  |
-| sphinx | 3.9.1 | 451 (0 / 0 / 451) | 40 | 223 | 166 | 22 |  |
+| manticore | 25.0.0 | 1734 (223 / 605 / 96 / 810) | 611 | 778 | 22 | 351 |  |
+| manticore | 27.1.5 | 1807 (241 / 639 / 96 / 831) | 634 | 784 | 56 | 364 |  |
+| manticore | 28.4.4 | 1825 (242 / 642 / 96 / 845) | 638 | 785 | 68 | 365 |  |
+| manticore | 28.6.6 | 1833 (243 / 648 / 96 / 846) | 639 | 792 | 68 | 365 |  |
+| manticore | 29.9.0 | 1878 (250 / 678 / 96 / 854) | 647 | 812 | 69 | 381 |  |
+| manticore | 32.1.3 | 1891 (251 / 681 / 96 / 863) | 649 | 818 | 70 | 385 |  |
+| mysql | 5.6.51 | 2645 (592 / 1180 / 272 / 601) | 663 | 1756 |  | 226 |  |
+| mysql | 5.7.44 | 2908 (642 / 1278 / 330 / 658) | 694 | 1956 |  | 258 |  |
+| mysql | 8.0.46 | 3443 (795 / 1598 / 347 / 703) | 905 | 2132 | 1 | 405 |  |
+| mysql | 8.4.13 | 3373 (778 / 1554 / 348 / 693) | 888 | 2145 | 3 | 337 |  |
+| mysql | 9.7.4 | 3486 (805 / 1629 / 354 / 698) | 918 | 2226 | 3 | 339 |  |
+| sphinx | 2.2.11 | 859 (111 / 349 / 0 / 399) | 370 | 294 | 75 | 120 |  |
+| sphinx | 3.9.1 | 451 (0 / 0 / 0 / 451) | 40 | 223 | 166 | 22 |  |
 
 ### manticore 25.0.0: open and planned
 
@@ -335,6 +340,162 @@ Everything the engine has, from its own parser grammar and the manual's referenc
 | planned | roadmap `transactions.savepoints` | 1 | `sphinxql_extra:savepoint_sp: SAVEPOINT <savepoint_ident>` |
 | planned | roadmap `session.use-schema` | 1 | `sphinxql_extra:use_database: USE <database_ident>` |
 
+### mysql 5.6.51: open and planned
+
+| status | what | items | examples |
+|---|---|---|---|
+| planned | roadmap `lexical.functions` | 768 | `sql:func_datetime_precision: ( )`; `sql:func_datetime_precision: ( <NUM> )`; `sql:function_call_conflict: ASCII ( <expr> )` |
+| planned | roadmap `ddl.create-table` | 251 | `sql:ascii: ASCII`; `sql:ascii: ASCII BINARY`; `sql:ascii: BINARY ASCII` |
+| planned | roadmap `dml.select` | 199 | `sql:all_or_any: ALL`; `sql:all_or_any: ANY`; `sql:and: &&` |
+| planned | roadmap `ddl.create-routine` | 122 | `sql:alter: ALTER FUNCTION <sp_name> <sp_a_chistics>`; `sql:alter: ALTER PROCEDURE <sp_name> <sp_a_chistics>`; `sql:condition_information_item: <simple_target_specification> = <condition_information_item_name>` |
+| planned | roadmap `admin.user-management` | 87 | `sql:alter: ALTER USER <clear_privileges> <alter_user_list>`; `sql:alter_user_list: <alter_user_list> , <user> PASSWORD EXPIRE`; `sql:alter_user_list: <user> PASSWORD EXPIRE` |
+| planned | roadmap `syntax.show-statements` | 84 | `sql:from_or_in: FROM`; `sql:from_or_in: IN`; `sql:opt_full: FULL` |
+| planned | roadmap `ddl.alter-table` | 28 | `sql:add_part_extra: ( <part_def_list> )`; `sql:add_part_extra: PARTITIONS <real_ulong_num>`; `sql:add_partition_rule: ADD PARTITION <opt_no_write_to_binlog> <add_part_extra>` |
+| planned | roadmap `dml.load-data` | 26 | `sql:data_or_xml: DATA`; `sql:data_or_xml: XML`; `sql:field_or_var: @ <ident_or_text>` |
+| planned | roadmap `transactions.control` | 25 | `sql:begin: BEGIN <opt_work>`; `sql:begin_or_start: BEGIN`; `sql:begin_or_start: START` |
+| planned | roadmap `introspection.server-variables` | 24 | `sql:internal_variable_name: <ident> . <ident>`; `sql:internal_variable_name: DEFAULT . <ident>`; `sql:opt_var_ident_type: GLOBAL .` |
+| planned | Function-like words (SYM_FN in sql/lex.h): keywords only directly before '('; not in information_schema.KEYWORDS. | 22 | `kw:ADDDATE`; `kw:BIT_AND`; `kw:BIT_OR` |
+| planned | roadmap `introspection.list-events` | 22 | `sql:alter: ALTER <definer_opt> EVENT <sp_name> <ev_alter_on_schedule_completion> <opt_ev_rename_to> <opt_ev_status> <opt_ev_comment> <opt_ev_sql_stmt>`; `sql:drop: DROP EVENT <if_exists> <sp_name>`; `sql:ev_alter_on_schedule_completion: ON SCHEDULE <ev_schedule_time>` |
+| planned | roadmap `ddl.create-view` | 21 | `sql:alter: ALTER <definer_opt> <view_tail>`; `sql:alter: ALTER <view_algorithm> <definer_opt> <view_tail>`; `sql:create: CREATE <view_or_trigger_or_sp_or_event>` |
+| planned | roadmap `dml.insert` | 19 | `sql:expr_or_default: DEFAULT`; `sql:insert2: INTO <insert_table>`; `sql:insert: INSERT <insert_lock_option> <opt_ignore> <insert2> <insert_field_spec> <opt_insert_update>` |
+| planned | roadmap `ddl.create-schema` | 11 | `sql:alter: ALTER DATABASE <ident> UPGRADE DATA DIRECTORY NAME`; `sql:alter: ALTER DATABASE <ident_or_empty> <create_database_options>`; `sql:create: CREATE DATABASE <opt_if_not_exists> <ident> <opt_create_database_options>` |
+| planned | roadmap `ddl.create-trigger` | 9 | `sql:drop: DROP TRIGGER <if_exists> <sp_name>`; `sql:trg_action_time: AFTER`; `sql:trg_action_time: BEFORE` |
+| planned | roadmap `transactions.isolation-levels` | 9 | `sql:isolation_level: ISOLATION LEVEL <isolation_types>`; `sql:isolation_types: READ COMMITTED`; `sql:isolation_types: READ UNCOMMITTED` |
+| planned | roadmap `dml.delete` | 8 | `sql:delete: DELETE <opt_delete_options> <single_multi>`; `sql:opt_delete_option: IGNORE`; `sql:opt_delete_option: LOW_PRIORITY` |
+| planned | roadmap `transactions.savepoints` | 7 | `sql:opt_savepoint: SAVEPOINT`; `sql:release: RELEASE SAVEPOINT <ident>`; `sql:rollback: ROLLBACK <opt_work> TO <opt_savepoint> <ident>` |
+| planned | roadmap `connection-parameters` | 5 | `sql:option_value_no_option_type: NAMES <charset_name_or_default> <opt_collate>`; `sql:option_value_no_option_type: NAMES <equal> <expr>`; `help:Administration: SET CHARACTER SET` |
+| planned | roadmap `dml.update` | 3 | `sql:opt_low_priority: LOW_PRIORITY`; `sql:update: UPDATE <opt_low_priority> <opt_ignore> <join_table_list> SET <update_list> <where_clause> <opt_order_clause> <delete_limit_clause>`; `help:Data Manipulation: UPDATE` |
+| planned | roadmap `dml.call` | 2 | `sql:call: CALL <sp_name> <opt_sp_cparam_list>`; `help:Data Manipulation: CALL` |
+| planned | roadmap `admin.user-management` | 2 | `sql:option_value_no_option_type: PASSWORD <equal> <text_or_password>`; `sql:option_value_no_option_type: PASSWORD FOR <user> <equal> <text_or_password>` |
+| planned | roadmap `session.use-schema` | 2 | `sql:use: USE <ident>`; `help:Utility: USE` |
+
+### mysql 5.7.44: open and planned
+
+| status | what | items | examples |
+|---|---|---|---|
+| planned | roadmap `lexical.functions` | 883 | `sql:func_datetime_precision: ( )`; `sql:func_datetime_precision: ( <NUM> )`; `sql:function_call_conflict: ASCII ( <expr> )` |
+| planned | roadmap `ddl.create-table` | 265 | `sql:ascii: ASCII`; `sql:ascii: ASCII BINARY`; `sql:ascii: BINARY ASCII` |
+| planned | roadmap `dml.select` | 199 | `sql:all_or_any: ALL`; `sql:all_or_any: ANY`; `sql:and: &&` |
+| planned | roadmap `ddl.create-routine` | 123 | `sql:alter: ALTER FUNCTION <sp_name> <sp_a_chistics>`; `sql:alter: ALTER PROCEDURE <sp_name> <sp_a_chistics>`; `sql:condition_information_item: <simple_target_specification> = <condition_information_item_name>` |
+| planned | roadmap `admin.user-management` | 97 | `sql:alter: <alter_user_command> <user_func> IDENTIFIED BY <TEXT_STRING>`; `sql:alter_user_command: ALTER USER <if_exists> <clear_privileges>`; `sql:connect_option: MAX_CONNECTIONS_PER_HOUR <ulong_num>` |
+| planned | roadmap `syntax.show-statements` | 85 | `sql:from_or_in: FROM`; `sql:from_or_in: IN`; `sql:opt_full: FULL` |
+| planned | roadmap `ddl.alter-table` | 34 | `sql:add_part_extra: ( <part_def_list> )`; `sql:add_part_extra: PARTITIONS <real_ulong_num>`; `sql:add_partition_rule: ADD PARTITION <opt_no_write_to_binlog> <add_part_extra>` |
+| planned | roadmap `dml.load-data` | 26 | `sql:data_or_xml: DATA`; `sql:data_or_xml: XML`; `sql:field_or_var: @ <ident_or_text>` |
+| planned | roadmap `query.optimizer-hints` | 25 | `hints:index_level_hint: <key_level_hint_type_off> ( <hint_param_table_ext> <opt_hint_param_index_list> )`; `hints:index_level_hint: <key_level_hint_type_on> ( <hint_param_table_ext> <opt_hint_param_index_list> )`; `hints:key_level_hint_type_off: NO_ICP` |
+| planned | roadmap `transactions.control` | 25 | `sql:begin: BEGIN <opt_work>`; `sql:begin_or_start: BEGIN`; `sql:begin_or_start: START` |
+| planned | Function-like words (SYM_FN in sql/lex.h): keywords only directly before '('; not in information_schema.KEYWORDS. | 24 | `kw:ADDDATE`; `kw:BIT_AND`; `kw:BIT_OR` |
+| planned | roadmap `dml.insert` | 24 | `sql:expr_or_default: DEFAULT`; `sql:insert_from_constructor: ( ) <insert_values>`; `sql:insert_from_constructor: ( <fields> ) <insert_values>` |
+| planned | roadmap `introspection.server-variables` | 24 | `sql:internal_variable_name: <ident> . <ident>`; `sql:internal_variable_name: DEFAULT . <ident>`; `sql:opt_var_ident_type: GLOBAL .` |
+| planned | roadmap `introspection.list-events` | 22 | `sql:alter: ALTER <definer_opt> EVENT <sp_name> <ev_alter_on_schedule_completion> <opt_ev_rename_to> <opt_ev_status> <opt_ev_comment> <opt_ev_sql_stmt>`; `sql:drop: DROP EVENT <if_exists> <sp_name>`; `sql:ev_alter_on_schedule_completion: ON SCHEDULE <ev_schedule_time>` |
+| planned | roadmap `ddl.create-view` | 21 | `sql:alter: ALTER <definer_opt> <view_tail>`; `sql:alter: ALTER <view_algorithm> <definer_opt> <view_tail>`; `sql:create: CREATE <view_or_trigger_or_sp_or_event>` |
+| planned | Words of the optimizer-hint parser only (SYM_H in sql/lex.h), inside /*+ ... */. | 18 | `kw:BKA`; `kw:BNL`; `kw:DUPSWEEDOUT` |
+| planned | roadmap `ddl.create-schema` | 11 | `sql:alter: ALTER DATABASE <ident> UPGRADE DATA DIRECTORY NAME`; `sql:alter: ALTER DATABASE <ident_or_empty> <create_database_options>`; `sql:create: CREATE DATABASE <opt_if_not_exists> <ident> <opt_create_database_options>` |
+| planned | roadmap `ddl.create-trigger` | 11 | `sql:drop: DROP TRIGGER <if_exists> <sp_name>`; `sql:trg_action_time: AFTER`; `sql:trg_action_time: BEFORE` |
+| planned | roadmap `transactions.isolation-levels` | 9 | `sql:isolation_level: ISOLATION LEVEL <isolation_types>`; `sql:isolation_types: READ COMMITTED`; `sql:isolation_types: READ UNCOMMITTED` |
+| planned | roadmap `dml.delete` | 7 | `sql:delete_stmt: DELETE <opt_delete_options> <table_alias_ref_list> FROM <join_table_list> <opt_where_clause>`; `sql:delete_stmt: DELETE <opt_delete_options> FROM <table_alias_ref_list> USING <join_table_list> <opt_where_clause>`; `sql:delete_stmt: DELETE <opt_delete_options> FROM <table_ident> <opt_use_partition> <opt_where_clause> <opt_order_clause> <opt_simple_limit>` |
+| planned | roadmap `transactions.savepoints` | 7 | `sql:opt_savepoint: SAVEPOINT`; `sql:release: RELEASE SAVEPOINT <ident>`; `sql:rollback: ROLLBACK <opt_work> TO <opt_savepoint> <ident>` |
+| planned | roadmap `connection-parameters` | 5 | `sql:option_value_no_option_type: NAMES <charset_name_or_default> <opt_collate>`; `sql:option_value_no_option_type: NAMES <equal> <expr>`; `help:Administration: SET CHARACTER SET` |
+| planned | roadmap `admin.user-management` | 4 | `sql:start_option_value_list: PASSWORD <equal> <password>`; `sql:start_option_value_list: PASSWORD <equal> PASSWORD ( <password> )`; `sql:start_option_value_list: PASSWORD FOR <user> <equal> <password>` |
+| planned | roadmap `dml.update` | 3 | `sql:opt_low_priority: LOW_PRIORITY`; `sql:update_stmt: UPDATE <opt_low_priority> <opt_ignore> <join_table_list> SET <update_list> <opt_where_clause> <opt_order_clause> <opt_simple_limit>`; `help:Data Manipulation: UPDATE` |
+| planned | roadmap `dml.call` | 2 | `sql:call: CALL <sp_name> <opt_sp_cparam_list>`; `help:Data Manipulation: CALL` |
+| planned | roadmap `session.use-schema` | 2 | `sql:use: USE <ident>`; `help:Utility: USE` |
+
+### mysql 8.0.46: open and planned
+
+| status | what | items | examples |
+|---|---|---|---|
+| open | query.explain covers EXPLAIN [ANALYZE] [FORMAT=...] <statement>; EXPLAIN FOR CONNECTION n (plan of a running statement), EXPLAIN ... INTO @var and FOR SCHEMA are not described. | 1 | `sql:explainable_stmt: FOR CONNECTION <real_ulong_num>` |
+| planned | roadmap `lexical.functions` | 912 | `sql:func_datetime_precision: ( )`; `sql:func_datetime_precision: ( <NUM> )`; `sql:function_call_conflict: ASCII ( <expr> )` |
+| planned | roadmap `ddl.create-table` | 262 | `sql:as_create_query_expression: AS <query_expression_with_opt_locking_clauses>`; `sql:ascii: ASCII`; `sql:ascii: ASCII BINARY` |
+| planned | roadmap `dml.select` | 226 | `sql:all_or_any: ALL`; `sql:all_or_any: ANY`; `sql:and: &&` |
+| planned | roadmap `admin.user-management` | 156 | `sql:alter_user: <user> <identified_by_password> REPLACE <TEXT_STRING_password> <opt_retain_current_password>`; `sql:alter_user: <user> <identified_by_random_password> REPLACE <TEXT_STRING_password> <opt_retain_current_password>`; `sql:alter_user: <user> <identified_with_plugin_by_password> REPLACE <TEXT_STRING_password> <opt_retain_current_password>` |
+| planned | roadmap `ddl.create-routine` | 124 | `sql:alter_function_stmt: ALTER FUNCTION <sp_name> <sp_a_chistics>`; `sql:alter_procedure_stmt: ALTER PROCEDURE <sp_name> <sp_a_chistics>`; `sql:condition_information_item: <simple_target_specification> = <condition_information_item_name>` |
+| planned | roadmap `syntax.show-statements` | 62 | `sql:engine_or_all: ALL`; `sql:from_or_in: FROM`; `sql:from_or_in: IN` |
+| planned | roadmap `query.optimizer-hints` | 53 | `hints:index_level_hint: <key_level_hint_type_off> ( <hint_param_table_ext> <opt_hint_param_index_list> )`; `hints:index_level_hint: <key_level_hint_type_on> ( <hint_param_table_ext> <opt_hint_param_index_list> )`; `hints:key_level_hint_type_off: NO_GROUP_INDEX` |
+| planned | roadmap `ddl.alter-table` | 43 | `sql:adm_partition: PARTITION ( <all_or_alt_part_name_list> )`; `sql:all_or_alt_part_name_list: ALL`; `sql:alter_list_item: ADD <table_constraint_def>` |
+| planned | Words of the optimizer-hint parser only (SYM_H in sql/lex.h), inside /*+ ... */. | 40 | `kw:BKA`; `kw:BNL`; `kw:DERIVED_CONDITION_PUSHDOWN` |
+| planned | roadmap `introspection.server-variables` | 38 | `sql:lvalue_variable: <lvalue_ident> . <ident>`; `sql:lvalue_variable: DEFAULT . <ident>`; `sql:opt_rvalue_system_variable_type: GLOBAL .` |
+| planned | roadmap `dml.load-data` | 32 | `sql:data_or_xml: DATA`; `sql:data_or_xml: XML`; `sql:field_or_var: @ <ident_or_text>` |
+| planned | roadmap `transactions.control` | 26 | `sql:begin_or_start: BEGIN`; `sql:begin_or_start: START`; `sql:begin_stmt: BEGIN <opt_work>` |
+| planned | Function-like words (SYM_FN in sql/lex.h): keywords only directly before '('; not in information_schema.KEYWORDS. | 25 | `kw:ADDDATE`; `kw:BIT_AND`; `kw:BIT_OR` |
+| planned | roadmap `introspection.list-events` | 24 | `sql:alter_event_stmt: ALTER <definer_opt> EVENT <sp_name> <ev_alter_on_schedule_completion> <opt_ev_rename_to> <opt_ev_status> <opt_ev_comment> <opt_ev_sql_stmt>`; `sql:drop_event_stmt: DROP EVENT <if_exists> <sp_name>`; `sql:ev_alter_on_schedule_completion: ON SCHEDULE <ev_schedule_time>` |
+| planned | roadmap `dml.insert` | 23 | `sql:expr_or_default: DEFAULT`; `sql:insert_from_constructor: ( ) <insert_values>`; `sql:insert_from_constructor: ( <insert_columns> ) <insert_values>` |
+| planned | roadmap `ddl.create-view` | 17 | `sql:alter_view_stmt: ALTER <definer_opt> <view_tail>`; `sql:alter_view_stmt: ALTER <view_algorithm> <definer_opt> <view_tail>`; `sql:create: CREATE <view_or_trigger_or_sp_or_event>` |
+| planned | roadmap `ddl.create-schema` | 11 | `sql:alter_database_option: READ ONLY <opt_equal> <ternary_option>`; `sql:alter_database_stmt: ALTER DATABASE <ident_or_empty> <alter_database_options>`; `sql:create: CREATE DATABASE <opt_if_not_exists> <ident> <opt_create_database_options>` |
+| planned | roadmap `ddl.create-trigger` | 11 | `sql:drop_trigger_stmt: DROP TRIGGER <if_exists> <sp_name>`; `sql:trg_action_time: AFTER`; `sql:trg_action_time: BEFORE` |
+| planned | roadmap `admin.user-management` | 11 | `sql:set_role_stmt: SET DEFAULT ROLE <role_list> TO <role_list>`; `sql:set_role_stmt: SET DEFAULT ROLE ALL TO <role_list>`; `sql:set_role_stmt: SET DEFAULT ROLE NONE TO <role_list>` |
+| planned | roadmap `transactions.isolation-levels` | 9 | `sql:isolation_level: ISOLATION LEVEL <isolation_types>`; `sql:isolation_types: READ COMMITTED`; `sql:isolation_types: READ UNCOMMITTED` |
+| planned | roadmap `dml.delete` | 7 | `sql:delete_stmt: <opt_with_clause> DELETE <opt_delete_options> <table_alias_ref_list> FROM <table_reference_list> <opt_where_clause>`; `sql:delete_stmt: <opt_with_clause> DELETE <opt_delete_options> FROM <table_alias_ref_list> USING <table_reference_list> <opt_where_clause>`; `sql:delete_stmt: <opt_with_clause> DELETE <opt_delete_options> FROM <table_ident> <opt_table_alias> <opt_use_partition> <opt_where_clause> <opt_order_clause> <opt_simple_limit>` |
+| planned | roadmap `transactions.savepoints` | 7 | `sql:opt_savepoint: SAVEPOINT`; `sql:release: RELEASE SAVEPOINT <ident>`; `sql:rollback: ROLLBACK <opt_work> TO <opt_savepoint> <ident>` |
+| planned | roadmap `connection-parameters` | 6 | `sql:option_value_no_option_type: NAMES <charset_name> <opt_collate>`; `sql:option_value_no_option_type: NAMES <equal> <expr>`; `sql:option_value_no_option_type: NAMES DEFAULT` |
+| planned | roadmap `dml.update` | 3 | `sql:opt_low_priority: LOW_PRIORITY`; `sql:update_stmt: <opt_with_clause> UPDATE <opt_low_priority> <opt_ignore> <table_reference_list> SET <update_list> <opt_where_clause> <opt_order_clause> <opt_simple_limit>`; `help:Data Manipulation: UPDATE` |
+| planned | roadmap `dml.call` | 2 | `sql:call_stmt: CALL <sp_name> <opt_paren_expr_list>`; `help:Data Manipulation: CALL` |
+| planned | roadmap `session.use-schema` | 2 | `sql:use: USE <ident>`; `help:Utility: USE` |
+
+### mysql 8.4.13: open and planned
+
+| status | what | items | examples |
+|---|---|---|---|
+| open | query.explain covers EXPLAIN [ANALYZE] [FORMAT=...] <statement>; EXPLAIN FOR CONNECTION n (plan of a running statement), EXPLAIN ... INTO @var and FOR SCHEMA are not described. | 3 | `sql:explainable_stmt: FOR CONNECTION <real_ulong_num>`; `sql:opt_explain_for_schema: FOR DATABASE <ident_or_text>`; `sql:opt_explain_into: INTO @ <ident_or_text>` |
+| planned | roadmap `lexical.functions` | 912 | `sql:func_datetime_precision: ( )`; `sql:func_datetime_precision: ( <NUM> )`; `sql:function_call_conflict: ASCII ( <expr> )` |
+| planned | roadmap `ddl.create-table` | 262 | `sql:as_create_query_expression: AS <query_expression_with_opt_locking_clauses>`; `sql:ascii: ASCII`; `sql:ascii: ASCII BINARY` |
+| planned | roadmap `dml.select` | 233 | `sql:all_or_any: ALL`; `sql:all_or_any: ANY`; `sql:and: &&` |
+| planned | roadmap `admin.user-management` | 156 | `sql:alter_user: <user> <identified_by_password> REPLACE <TEXT_STRING_password> <opt_retain_current_password>`; `sql:alter_user: <user> <identified_by_random_password> REPLACE <TEXT_STRING_password> <opt_retain_current_password>`; `sql:alter_user: <user> <identified_with_plugin_by_password> REPLACE <TEXT_STRING_password> <opt_retain_current_password>` |
+| planned | roadmap `ddl.create-routine` | 126 | `sql:alter_function_stmt: ALTER FUNCTION <sp_name> <sp_a_chistics>`; `sql:alter_procedure_stmt: ALTER PROCEDURE <sp_name> <sp_a_chistics>`; `sql:condition_information_item: <simple_target_specification> = <condition_information_item_name>` |
+| planned | roadmap `syntax.show-statements` | 64 | `sql:engine_or_all: ALL`; `sql:from_or_in: FROM`; `sql:from_or_in: IN` |
+| planned | roadmap `query.optimizer-hints` | 53 | `hints:index_level_hint: <key_level_hint_type_off> ( <hint_param_table_ext> <opt_hint_param_index_list> )`; `hints:index_level_hint: <key_level_hint_type_on> ( <hint_param_table_ext> <opt_hint_param_index_list> )`; `hints:key_level_hint_type_off: NO_GROUP_INDEX` |
+| planned | roadmap `ddl.alter-table` | 43 | `sql:adm_partition: PARTITION ( <all_or_alt_part_name_list> )`; `sql:all_or_alt_part_name_list: ALL`; `sql:alter_list_item: ADD <table_constraint_def>` |
+| planned | Words of the optimizer-hint parser only (SYM_H in sql/lex.h), inside /*+ ... */. | 40 | `kw:BKA`; `kw:BNL`; `kw:DERIVED_CONDITION_PUSHDOWN` |
+| planned | roadmap `introspection.server-variables` | 38 | `sql:lvalue_variable: <lvalue_ident> . <ident>`; `sql:lvalue_variable: DEFAULT . <ident>`; `sql:opt_rvalue_system_variable_type: GLOBAL .` |
+| planned | roadmap `dml.load-data` | 34 | `sql:data_or_xml: DATA`; `sql:data_or_xml: XML`; `sql:field_or_var: @ <ident_or_text>` |
+| planned | Function-like words (SYM_FN in sql/lex.h): keywords only directly before '('; not in information_schema.KEYWORDS. | 25 | `kw:ADDDATE`; `kw:BIT_AND`; `kw:BIT_OR` |
+| planned | roadmap `introspection.list-events` | 25 | `sql:alter_event_stmt: ALTER <definer_opt> EVENT <sp_name> <ev_alter_on_schedule_completion> <opt_ev_rename_to> <opt_ev_status> <opt_ev_comment> <opt_ev_sql_stmt>`; `sql:drop_event_stmt: DROP EVENT <if_exists> <sp_name>`; `sql:ev_alter_on_schedule_completion: ON SCHEDULE <ev_schedule_time>` |
+| planned | roadmap `transactions.control` | 25 | `sql:begin_or_start: BEGIN`; `sql:begin_or_start: START`; `sql:begin_stmt: BEGIN <opt_work>` |
+| planned | roadmap `dml.insert` | 23 | `sql:expr_or_default: DEFAULT`; `sql:insert_from_constructor: ( ) <insert_values>`; `sql:insert_from_constructor: ( <insert_columns> ) <insert_values>` |
+| planned | roadmap `ddl.create-view` | 17 | `sql:alter_view_stmt: ALTER <definer_opt> <view_tail>`; `sql:alter_view_stmt: ALTER <view_algorithm> <definer_opt> <view_tail>`; `sql:create: CREATE <view_or_trigger_or_sp_or_event>` |
+| planned | roadmap `ddl.create-schema` | 11 | `sql:alter_database_option: READ ONLY <opt_equal> <ternary_option>`; `sql:alter_database_stmt: ALTER DATABASE <ident_or_empty> <alter_database_options>`; `sql:create: CREATE DATABASE <opt_if_not_exists> <ident> <opt_create_database_options>` |
+| planned | roadmap `ddl.create-trigger` | 11 | `sql:drop_trigger_stmt: DROP TRIGGER <if_exists> <sp_name>`; `sql:trg_action_time: AFTER`; `sql:trg_action_time: BEFORE` |
+| planned | roadmap `admin.user-management` | 11 | `sql:set_role_stmt: SET DEFAULT ROLE <role_list> TO <role_list>`; `sql:set_role_stmt: SET DEFAULT ROLE ALL TO <role_list>`; `sql:set_role_stmt: SET DEFAULT ROLE NONE TO <role_list>` |
+| planned | roadmap `transactions.isolation-levels` | 9 | `sql:isolation_level: ISOLATION LEVEL <isolation_types>`; `sql:isolation_types: READ COMMITTED`; `sql:isolation_types: READ UNCOMMITTED` |
+| planned | roadmap `dml.delete` | 7 | `sql:delete_stmt: <opt_with_clause> DELETE <opt_delete_options> <table_alias_ref_list> FROM <table_reference_list> <opt_where_clause>`; `sql:delete_stmt: <opt_with_clause> DELETE <opt_delete_options> FROM <table_alias_ref_list> USING <table_reference_list> <opt_where_clause>`; `sql:delete_stmt: <opt_with_clause> DELETE <opt_delete_options> FROM <table_ident> <opt_table_alias> <opt_use_partition> <opt_where_clause> <opt_order_clause> <opt_simple_limit>` |
+| planned | roadmap `transactions.savepoints` | 7 | `sql:opt_savepoint: SAVEPOINT`; `sql:release: RELEASE SAVEPOINT <ident>`; `sql:rollback: ROLLBACK <opt_work> TO <opt_savepoint> <ident>` |
+| planned | roadmap `connection-parameters` | 6 | `sql:option_value_no_option_type: NAMES <charset_name> <opt_collate>`; `sql:option_value_no_option_type: NAMES <equal> <expr>`; `sql:option_value_no_option_type: NAMES DEFAULT` |
+| planned | roadmap `dml.update` | 3 | `sql:opt_low_priority: LOW_PRIORITY`; `sql:update_stmt: <opt_with_clause> UPDATE <opt_low_priority> <opt_ignore> <table_reference_list> SET <update_list> <opt_where_clause> <opt_order_clause> <opt_simple_limit>`; `help:Data Manipulation: UPDATE` |
+| planned | roadmap `dml.call` | 2 | `sql:call_stmt: CALL <sp_name> <opt_paren_expr_list>`; `help:Data Manipulation: CALL` |
+| planned | roadmap `session.use-schema` | 2 | `sql:use: USE <ident>`; `help:Utility: USE` |
+
+### mysql 9.7.4: open and planned
+
+| status | what | items | examples |
+|---|---|---|---|
+| open | query.explain covers EXPLAIN [ANALYZE] [FORMAT=...] <statement>; EXPLAIN FOR CONNECTION n (plan of a running statement), EXPLAIN ... INTO @var and FOR SCHEMA are not described. | 3 | `sql:explainable_stmt: FOR CONNECTION <real_ulong_num>`; `sql:opt_explain_for_schema: FOR DATABASE <ident_or_text>`; `sql:opt_explain_into: INTO @ <ident_or_text>` |
+| planned | roadmap `lexical.functions` | 921 | `sql:func_datetime_precision: ( )`; `sql:func_datetime_precision: ( <NUM> )`; `sql:function_call_conflict: ASCII ( <expr> )` |
+| planned | roadmap `ddl.create-table` | 283 | `sql:as_create_query_expression: AS <query_expression_with_opt_locking_clauses>`; `sql:ascii: ASCII`; `sql:ascii: ASCII BINARY` |
+| planned | roadmap `dml.select` | 237 | `sql:all_or_any: ALL`; `sql:all_or_any: ANY`; `sql:and: &&` |
+| planned | roadmap `admin.user-management` | 157 | `sql:alter_user: <user> <identified_by_password> REPLACE <TEXT_STRING_password> <opt_retain_current_password>`; `sql:alter_user: <user> <identified_by_random_password> REPLACE <TEXT_STRING_password> <opt_retain_current_password>`; `sql:alter_user: <user> <identified_with_plugin_by_password> REPLACE <TEXT_STRING_password> <opt_retain_current_password>` |
+| planned | roadmap `ddl.create-routine` | 136 | `sql:alter_function_stmt: ALTER FUNCTION <sp_name> <sp_a_chistics>`; `sql:alter_library_stmt: ALTER LIBRARY <sp_name> COMMENT <TEXT_STRING_sys>`; `sql:alter_procedure_stmt: ALTER PROCEDURE <sp_name> <sp_a_chistics>` |
+| planned | roadmap `syntax.show-statements` | 65 | `sql:engine_or_all: ALL`; `sql:from_or_in: FROM`; `sql:from_or_in: IN` |
+| planned | roadmap `query.optimizer-hints` | 53 | `hints:index_level_hint: <key_level_hint_type_off> ( <hint_param_table_ext> <opt_hint_param_index_list> )`; `hints:index_level_hint: <key_level_hint_type_on> ( <hint_param_table_ext> <opt_hint_param_index_list> )`; `hints:key_level_hint_type_off: NO_GROUP_INDEX` |
+| planned | roadmap `ddl.alter-table` | 50 | `sql:adm_partition: PARTITION ( <all_or_alt_part_name_list> )`; `sql:all_or_alt_part_name_list: ALL`; `sql:alter_list_item: ADD <table_constraint_def>` |
+| planned | roadmap `dml.load-data` | 49 | `sql:data_or_xml: DATA`; `sql:data_or_xml: XML`; `sql:field_or_var: @ <ident_or_text>` |
+| planned | Words of the optimizer-hint parser only (SYM_H in sql/lex.h), inside /*+ ... */. | 40 | `kw:BKA`; `kw:BNL`; `kw:DERIVED_CONDITION_PUSHDOWN` |
+| planned | roadmap `introspection.server-variables` | 38 | `sql:lvalue_variable: <lvalue_ident> . <ident>`; `sql:lvalue_variable: DEFAULT . <ident>`; `sql:opt_rvalue_system_variable_type: GLOBAL .` |
+| planned | roadmap `ddl.create-view` | 29 | `sql:alter_view_stmt: ALTER <definer_opt> <view_tail>`; `sql:alter_view_stmt: ALTER <view_algorithm_or_materialization> <definer_opt> <view_tail>`; `sql:create: CREATE <view_or_trigger_or_sp_or_event>` |
+| planned | Function-like words (SYM_FN in sql/lex.h): keywords only directly before '('; not in information_schema.KEYWORDS. | 26 | `kw:ADDDATE`; `kw:BIT_AND`; `kw:BIT_OR` |
+| planned | roadmap `introspection.list-events` | 25 | `sql:alter_event_stmt: ALTER <definer_opt> EVENT <sp_name> <ev_alter_on_schedule_completion> <opt_ev_rename_to> <opt_ev_status> <opt_ev_comment> <opt_ev_sql_stmt>`; `sql:drop_event_stmt: DROP EVENT <if_exists> <sp_name>`; `sql:ev_alter_on_schedule_completion: ON SCHEDULE <ev_schedule_time>` |
+| planned | roadmap `transactions.control` | 25 | `sql:begin_or_start: BEGIN`; `sql:begin_or_start: START`; `sql:begin_stmt: BEGIN <opt_work>` |
+| planned | roadmap `dml.insert` | 23 | `sql:expr_or_default: DEFAULT`; `sql:insert_from_constructor: ( ) <insert_values>`; `sql:insert_from_constructor: ( <insert_columns> ) <insert_values>` |
+| planned | roadmap `ddl.create-schema` | 11 | `sql:alter_database_option: READ ONLY <opt_equal> <ternary_option>`; `sql:alter_database_stmt: ALTER DATABASE <ident_or_empty> <alter_database_options>`; `sql:create: CREATE DATABASE <opt_if_not_exists> <ident> <opt_create_database_options>` |
+| planned | roadmap `ddl.create-trigger` | 11 | `sql:drop_trigger_stmt: DROP TRIGGER <if_exists> <sp_name>`; `sql:trg_action_time: AFTER`; `sql:trg_action_time: BEFORE` |
+| planned | roadmap `admin.user-management` | 11 | `sql:set_role_stmt: SET DEFAULT ROLE <role_list> TO <role_list>`; `sql:set_role_stmt: SET DEFAULT ROLE ALL TO <role_list>`; `sql:set_role_stmt: SET DEFAULT ROLE NONE TO <role_list>` |
+| planned | roadmap `transactions.isolation-levels` | 9 | `sql:isolation_level: ISOLATION LEVEL <isolation_types>`; `sql:isolation_types: READ COMMITTED`; `sql:isolation_types: READ UNCOMMITTED` |
+| planned | roadmap `dml.delete` | 7 | `sql:delete_stmt: <opt_with_clause> DELETE <opt_delete_options> <table_alias_ref_list> FROM <table_reference_list> <opt_where_clause>`; `sql:delete_stmt: <opt_with_clause> DELETE <opt_delete_options> FROM <table_alias_ref_list> USING <table_reference_list> <opt_where_clause>`; `sql:delete_stmt: <opt_with_clause> DELETE <opt_delete_options> FROM <table_ident> <opt_table_alias> <opt_use_partition> <opt_where_clause> <opt_order_clause> <opt_simple_limit>` |
+| planned | roadmap `transactions.savepoints` | 7 | `sql:opt_savepoint: SAVEPOINT`; `sql:release: RELEASE SAVEPOINT <ident>`; `sql:rollback: ROLLBACK <opt_work> TO <opt_savepoint> <ident>` |
+| planned | roadmap `connection-parameters` | 6 | `sql:option_value_no_option_type: NAMES <charset_name> <opt_collate>`; `sql:option_value_no_option_type: NAMES <equal> <expr>`; `sql:option_value_no_option_type: NAMES DEFAULT` |
+| planned | roadmap `dml.update` | 3 | `sql:opt_low_priority: LOW_PRIORITY`; `sql:update_stmt: <opt_with_clause> UPDATE <opt_low_priority> <opt_ignore> <table_reference_list> SET <update_list> <opt_where_clause> <opt_order_clause> <opt_simple_limit>`; `help:Data Manipulation: UPDATE` |
+| planned | roadmap `dml.call` | 2 | `sql:call_stmt: CALL <sp_name> <opt_paren_expr_list>`; `help:Data Manipulation: CALL` |
+| planned | roadmap `session.use-schema` | 2 | `sql:use: USE <ident>`; `help:Utility: USE` |
+
 ### sphinx 2.2.11: open and planned
 
 | status | what | items | examples |
@@ -343,7 +504,7 @@ Everything the engine has, from its own parser grammar and the manual's referenc
 | open | No transaction-control spec (see Manticore); BEGIN / COMMIT / ROLLBACK on one RT index. | 13 | `sphinxql:isolation_level: READ COMMITTED`; `sphinxql:isolation_level: READ UNCOMMITTED`; `sphinxql:isolation_level: REPEATABLE READ` |
 | open | session.list-processes: SHOW THREADS not mapped (columns differ between 2.2 and 3.x). | 1 | `docs-page:sphinxql-threads: SHOW THREADS syntax` |
 | planned | roadmap `ddl.create-table` | 195 | `docs-page:fields: Full-text fields`; `docs-page:attributes: Attributes`; `docs-page:mva: MVA (multi-valued attributes)` |
-| planned | roadmap `dml.select` | 41 | `sphinxexpr:arg: { <maparg> }`; `sphinxexpr:for_loop: <for> <ident> <func_in> <json_field>`; `sphinxexpr:maparg: <map_key> <eq> <const_int>` |
+| planned | roadmap `dml.select` | 43 | `sphinxexpr:arg: { <maparg> }`; `sphinxexpr:constlist_or_uservar: @<uservar>`; `sphinxexpr:for_loop: <for> <ident> <func_in> <json_field>` |
 | planned | roadmap `introspection.server-variables` | 40 | `sphinxql:boolean_value: FALSE`; `sphinxql:boolean_value: TRUE`; `sphinxql:opt_scope: GLOBAL` |
 | planned | roadmap `lexical.functions` | 11 | `sphinxexpr:function: <func> ( )`; `sphinxexpr:function: <func> ( <arglist> )`; `sphinxexpr:function: <func> ( <expr> <for_loop> )` |
 | planned | roadmap `dml.call` | 5 | `sphinxql:call_arg: ( <const_string_list> )`; `sphinxql:call_opt_name: LIMIT`; `sphinxql:call_proc: CALL <ident> ( <call_args_list> <opt_call_opts_list> )` |
@@ -375,11 +536,18 @@ Everything the engine has, from its own parser grammar and the manual's referenc
 | medium | query | `introspection.list-partitions` | List partitions of a table with bounds | mysql, mariadb, postgresql, sqlserver |
 | medium | query | `introspection.server-variables` | Server / session settings (sql_mode, search_path, compatibility level, ...) | all |
 | medium | query | `introspection.table-statistics` | Per-table statistics (row count, sizes) where list-tables cannot include them | manticore |
+| medium | syntax | `admin.user-management` | CREATE / ALTER / DROP USER and ROLE, GRANT / REVOKE, SET ROLE / PASSWORD | all |
 | medium | syntax | `ddl.alter-table` | ALTER TABLE syntax | all |
+| medium | syntax | `ddl.create-routine` | CREATE / ALTER / DROP FUNCTION and PROCEDURE incl. the stored-program language (compound statements, handlers, cursors) | all |
+| medium | syntax | `ddl.create-schema` | CREATE / ALTER / DROP DATABASE or SCHEMA with options (charset, collation, encryption) | all |
+| medium | syntax | `ddl.create-view` | CREATE / ALTER / DROP VIEW (algorithm, security, check option, materialized views) | all |
 | medium | syntax | `dml.call` | CALL statements (Manticore SUGGEST / QSUGGEST / SNIPPETS / KEYWORDS / PQ / AUTOCOMPLETE, stored procedure calls) | all |
+| medium | syntax | `dml.delete` | DELETE incl. multi-table forms, ORDER BY / LIMIT | all |
 | medium | syntax | `dml.insert` | INSERT incl. upsert clauses | all |
 | medium | syntax | `dml.select` | SELECT skeleton (joins, grouping, paging, locking clauses) | all |
+| medium | syntax | `dml.update` | UPDATE incl. multi-table forms, ORDER BY / LIMIT | all |
 | medium | syntax | `fulltext.mysql-boolean-query` | Operator language inside AGAINST ('...' IN BOOLEAN MODE) for MySQL / MariaDB | mysql, mariadb |
+| medium | syntax | `transactions.control` | Transaction control (BEGIN / START TRANSACTION options, COMMIT / ROLLBACK [AND CHAIN], autocommit, LOCK TABLES) | all |
 | low | capability | `query.full-outer-join` | FULL / RIGHT OUTER JOIN | all |
 | low | capability | `query.lateral` | LATERAL / CROSS APPLY | all |
 | low | engine | `azure-sql` | Azure SQL Database / Managed Instance | - |
@@ -387,4 +555,8 @@ Everything the engine has, from its own parser grammar and the manual's referenc
 | low | engine | `percona` | Percona Server for MySQL | - |
 | low | engine | `tidb` | TiDB (MySQL protocol) | - |
 | low | protocol | `tds-type-codes-verified` | Verify the TDS / ODBC type codes against msodbcsql (currently unverified) | all |
+| low | syntax | `ddl.create-trigger` | CREATE / DROP TRIGGER | all |
+| low | syntax | `dml.load-data` | Bulk import / export statements (LOAD DATA, SELECT ... INTO OUTFILE, COPY, BULK INSERT) | all |
 | low | syntax | `fulltext.postgresql-tsquery` | tsquery / websearch_to_tsquery input syntax | postgresql |
+| low | syntax | `query.optimizer-hints` | Optimizer hints (/*+ ... */ in MySQL, OPTION (...) in SQL Server) and index hints | all |
+| low | syntax | `syntax.show-statements` | SHOW statements (query-editor autocomplete; the object tree uses the introspection queries) | mysql, mariadb, manticore, sphinx |

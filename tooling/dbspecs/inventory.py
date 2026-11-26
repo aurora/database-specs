@@ -98,8 +98,12 @@ def parse_bison(text: str) -> dict[str, list[list[str]]]:
     body = _strip_actions(_strip_c(body))
     body = re.sub(r"%prec\s+\S+|%empty", " ", body)
     rules: dict[str, list[list[str]]] = {}
-    for m in re.finditer(r"([A-Za-z_][A-Za-z0-9_]*)\s*:(.*?)(?:;\s*(?=[A-Za-z_][A-Za-z0-9_]*\s*:|$))", body + "\n", re.S):
-        name, rhs = m.group(1), m.group(2)
+    # rule headers start a line; the closing ';' is optional in Bison (MySQL omits it)
+    heads = list(re.finditer(r"^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*:(?!:)", body, re.M))
+    for k, m in enumerate(heads):
+        name = m.group(1)
+        rhs = body[m.end():heads[k + 1].start() if k + 1 < len(heads) else len(body)]
+        rhs = re.sub(r";\s*$", "", rhs.rstrip())
         # tokenize first, then split on bare '|' (a quoted '|' is the bitwise / full-text OR token)
         tokens = re.findall(r"'[^']'|'\\.'|[A-Za-z_][A-Za-z0-9_]*|\|", rhs)
         alts, cur = [], []
@@ -159,8 +163,9 @@ def _is_keyword_list(alts: list[list[str]], keywords: dict[str, str]) -> bool:
     return (bool(others) and len(singles) >= 6) or len(singles) >= 30
 
 
-def grammar_items(parser: str, grammar: str, lexer: str | None) -> list[dict]:
-    keywords = parse_flex_keywords(lexer) if lexer else {}
+def grammar_items(parser: str, grammar: str, lexer: str | None, keywords: dict[str, str] | None = None) -> list[dict]:
+    """keywords: TOKEN -> text when the engine has no Flex lexer (MySQL: sql/lex.h)."""
+    keywords = keywords if keywords is not None else (parse_flex_keywords(lexer) if lexer else {})
     rules = parse_bison(grammar)
     items = []
     seen = set()
@@ -261,14 +266,14 @@ def page_items(markdown: str, page: str, base_url: str) -> list[dict]:
     return items
 
 
-def function_items(source: str, base_url: str) -> list[dict]:
-    """Names of the built-in expression functions from the C++ function table (the grammar only has
-    TOK_FUNC; the Functions pages miss some, e.g. DATABASE(), VERSION())."""
-    start = source.find("g_dFuncs[")
+def function_items(source: str, base_url: str, table: str = "g_dFuncs", source_file: str | None = None) -> list[dict]:
+    """Names of the built-in functions from a C++ function table (Manticore g_dFuncs: names in
+    comments, the grammar only has TOK_FUNC; MySQL func_array: {"ABS", ...})."""
+    start = source.find(table + "[")
     end = source.find("};", start)
-    names = re.findall(r'/\*\s*"(\w+)"', source[start:end]) if start >= 0 else []
+    names = re.findall(r'"(\w+)"', source[start:end]) if start >= 0 else []
     return [{"id": f"func:{n.upper()}", "kind": "function",
-             "url": base_url + MANTICORE_FUNC_TABLE} for n in dict.fromkeys(names)]
+             "url": base_url + (source_file or MANTICORE_FUNC_TABLE)} for n in dict.fromkeys(names)]
 
 
 def buddy_items(buddy_commit: str) -> tuple[list[dict], str | None]:
@@ -321,6 +326,92 @@ def generate_manticore(version: str, short_commit: str, buddy_commit: str | None
             "Statements handled by the Buddy sidecar (SHOW QUERIES, SHOW FULL TABLES, CREATE SOURCE / MATERIALIZED VIEW, the information_schema emulation, ...) are not in the C++ grammar: buddy: items name its plugins, the manual pages describe their statements.",
             "Function names come from the C++ function table (func: items). OPTION and setting names are resolved in C++ tables too: docs-page: items (headings of the manual pages) are the source for them. Names that the pages only list inside text or tables (most OPTION names, CALL SUGGEST / AUTOCOMPLETE / KEYWORDS / PQ options, knn() options, ranker names and ranking factors) are not separate items - the specs for them (dml.select, dml.call) must take them from the pages.",
             "Grammar items: alternatives with a keyword, a syntax character or (expression / full-text parsers, which have no keyword lexer) an operator token; plain sequences of nonterminals are internal structure.",
+        ],
+        "items": list(unique.values()),
+    }
+
+
+MYSQL_REPO = "mysql/mysql-server"
+# parser id -> grammar file; keywords come from sql/lex.h (no Flex lexer)
+MYSQL_PARSERS = {"sql": "sql/sql_yacc.yy", "hints": "sql/sql_hints.yy"}
+MYSQL_KEYWORDS = "sql/lex.h"
+MYSQL_FUNC_TABLE = "sql/item_create.cc"
+
+
+def parse_lex_h(text: str) -> dict[str, tuple[str, str | None]]:
+    """TOKEN -> (keyword text, group) from sql/lex.h: SYM = keyword, SYM_HK = keyword that may start
+    an optimizer hint, SYM_FN = function-like word (group "function"), SYM_H = hint-only word
+    (group "hint"). 5.6 writes { "ADD", SYM(ADD)}; there function words are in a separate sql_functions[]."""
+    groups = {"_FN": "function", "_H": "hint", "_HK": None, "": None}
+    out = {}
+    for m in re.finditer(r'SYM(_FN|_HK|_H)?\(\s*"([^"]+)"\s*,\s*([A-Za-z0-9_]+)\s*\)', text):
+        out.setdefault(m.group(3), (m.group(2), groups[m.group(1) or ""]))
+    funcs_at = text.find("sql_functions[]")
+    for m in re.finditer(r'\{\s*"([^"]+)"\s*,\s*SYM(_FN|_HK|_H)?\(\s*([A-Za-z0-9_]+)', text):
+        group = "function" if 0 <= funcs_at < m.start() else groups[m.group(2) or ""]
+        out.setdefault(m.group(3), (m.group(1), group))
+    return out
+
+
+HELP_CATEGORIES_SQL = "SELECT help_category_id, name, parent_category_id FROM mysql.help_category"
+HELP_TOPICS_SQL = "SELECT help_category_id, name, url FROM mysql.help_topic ORDER BY help_topic_id"
+
+
+def help_items(categories: list[tuple], topics: list[tuple]) -> list[dict]:
+    """Topic names of the server's HELP tables (generated from the reference manual):
+    help:<category path>: <topic>. Only names, categories and links are read - never the help text."""
+    cats = {int(cid): (name, int(parent)) for cid, name, parent in categories}
+    topics = [(int(cid), name, url) for cid, name, url in topics]
+
+    def path(cid):
+        name, parent = cats[cid]
+        if cid == parent or parent not in cats or cats[parent][0] == "Contents":
+            return name
+        return f"{path(parent)} / {name}"
+
+    items = []
+    for cid, name, url in topics:
+        if cats.get(cid, ("",))[0] == "Help Metadata":
+            continue
+        items.append({"id": f"help:{path(cid)}: {name}", "kind": "docs", **({"url": url} if url else {})})
+    return items
+
+
+def generate_mysql(version: str, help_categories: list[tuple], help_topics: list[tuple]) -> dict:
+    commit = resolve_commit(MYSQL_REPO, f"mysql-{version}")
+    lex = parse_lex_h(fetch(MYSQL_REPO, commit, MYSQL_KEYWORDS))
+    keywords = {tok: text for tok, (text, _g) in lex.items()}
+    word_group = {}
+    for text, group in lex.values():  # a word listed both ways counts as a keyword
+        word_group[text] = None if text in word_group and word_group[text] is None else group
+    items, parsers = [], []
+    for parser, gfile in MYSQL_PARSERS.items():
+        try:
+            g = fetch(MYSQL_REPO, commit, gfile)
+        except Exception:  # noqa: BLE001 - sql_hints.yy exists since 5.7
+            continue
+        parsers.append(gfile)
+        items += [it for it in grammar_items(parser, g, None, keywords) if it["kind"] == "grammar"]
+    kw_items = [{"id": f"kw:{w}", "kind": "keyword", **({"group": g} if g else {})} for w, g in sorted(word_group.items())]
+    funcs = function_items(fetch(MYSQL_REPO, commit, MYSQL_FUNC_TABLE), f"https://github.com/{MYSQL_REPO}/blob/{commit}/",
+                           table="func_array", source_file=MYSQL_FUNC_TABLE)
+    docs = help_items(help_categories, help_topics)
+    unique = {}
+    for it in kw_items + sorted(items, key=lambda i: i["id"]) + funcs + docs:
+        unique.setdefault(it["id"], it)
+    return {
+        "engine": "mysql",
+        "version": version,
+        "generated_at": dt.date.today().isoformat(),
+        "sources": [
+            {"kind": "grammar", "repository": MYSQL_REPO, "commit": commit,
+             "files": parsers + [MYSQL_KEYWORDS, MYSQL_FUNC_TABLE]},
+            {"kind": "server", "files": ["mysql.help_category", "mysql.help_topic"]},
+        ],
+        "notes": [
+            "Keywords: every name in sql/lex.h; group function = function-like word (COUNT, CAST, ...), group hint = word of the optimizer-hint parser only. information_schema.KEYWORDS (8.0+) lists neither, so keyword lists leave them out.",
+            "func: items are the native functions resolved by name (func_array in sql/item_create.cc); functions with their own grammar (CAST, EXTRACT, aggregates, window functions, ...) are grammar items.",
+            "help: items are the topics of the server's HELP tables (mysql.help_topic), which are generated from the reference manual - names, categories and links only. The source tree has them only from 8.0 on (5.x: a placeholder file), and dev.mysql.com refuses automated requests.",
         ],
         "items": list(unique.values()),
     }

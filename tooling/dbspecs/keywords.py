@@ -161,7 +161,8 @@ def _grammar_list(engine: str, version: str) -> list[str] | None:
     doc = stored().get(engine, {}).get(version)
     if not doc:
         return None
-    return [i["id"][3:] for i in doc["items"] if i["kind"] == "keyword"]
+    # words only: MySQL's sql/lex.h also lists operators (&&, <=>, ...)
+    return [i["id"][3:] for i in doc["items"] if i["kind"] == "keyword" and not i.get("group") and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", i["id"][3:])]
 
 
 def generate(specs: Specs, server: Server) -> dict:
@@ -193,7 +194,7 @@ def generate(specs: Specs, server: Server) -> dict:
                         " contains can be missing."]
     if method == "grammar":
         doc["notes"] = ["All keywords of the server's SQL parsers (from its grammar at the build commit, see "
-                        "inventory/); reserved = fails as a SELECT list item, also probed for keywords of other "
+                        "inventory/); reserved = rejected by the probe statement, also probed for keywords of other "
                         "engines (function-like words such as DATE are reserved without being grammar keywords)."]
     doc["reserved"] = sorted(reserved)
     doc["nonreserved"] = sorted(candidates - reserved) if complete else []

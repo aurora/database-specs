@@ -32,7 +32,7 @@ rules:
             "capability:query.multi-result-select"]
   - match: ["sphinxql:select1: *", "sphinxql:select: *", "sphinxql:opt_outer_*", "sphinxql:tablefunc_arg: *",
             "sphinxql:select_expr: *", "sphinxql:function: *", "sphinxql:consthash: *", "sphinxql:hash_key: *",
-            "sphinxql:select_sysvar: *", "sphinxexpr:for_loop: *", "sphinxexpr:maparg: *", "sphinxexpr:arg: *",
+            "sphinxql:select_sysvar: *", "sphinxql:sysvar_name: *", "sphinxexpr:constlist_or_uservar: *", "sphinxexpr:for_loop: *", "sphinxexpr:maparg: *", "sphinxexpr:arg: *",
             "docs-page:sphinxql-select-sysvar: *", "docs-page:sphinxql-show-warnings: *", "docs-page:weighting: *",
             "docs-page:ranking-*", "docs-page:sphinx3: Nested SELECTs*", "docs-page:sphinx3: *table function*",
             "docs-page:sphinx3: JSON syntax extensions", "docs-page:sphinx3: Index hints clause",

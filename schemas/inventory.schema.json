@@ -36,6 +36,7 @@
           "kind": { "enum": ["keyword", "grammar", "function", "docs", "plugin"] },
           "parser": { "type": "string" },
           "parsers": { "type": "array", "items": { "type": "string" } },
+          "group": { "enum": ["function", "hint"], "description": "Keywords only: a function-like word or a word of the optimizer-hint parser, not an SQL keyword." },
           "url": { "type": "string" }
         }
       }

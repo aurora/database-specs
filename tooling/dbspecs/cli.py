@@ -156,6 +156,17 @@ def cmd_inventory(args) -> int:
             path = inv.write(doc)
             print(f"{target['id']:16} {server.version:10} {len(doc['items'])} items -> {path.relative_to(ROOT)}", flush=True)
             continue
+        if target["engine"] == "mysql":
+            with running(target) as server, server.connect() as conn, conn.cursor() as cur:
+                version = server.detect_version()
+                cur.execute(inv.HELP_CATEGORIES_SQL)
+                cats = cur.fetchall()
+                cur.execute(inv.HELP_TOPICS_SQL)
+                topics = cur.fetchall()
+            doc = inv.generate_mysql(version, cats, topics)
+            path = inv.write(doc)
+            print(f"{target['id']:16} {version:10} {len(doc['items'])} items -> {path.relative_to(ROOT)}", flush=True)
+            continue
         if target["engine"] != "manticore":
             print(f"{target['id']}: no inventory generator for {target['engine']} yet", file=sys.stderr)
             continue

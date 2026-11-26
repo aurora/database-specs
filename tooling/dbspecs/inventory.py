@@ -398,6 +398,7 @@ def help_items(categories: list[tuple], topics: list[tuple]) -> list[dict]:
     for cid, name, url in topics:
         if cats.get(cid, ("",))[0] == "Help Metadata":
             continue
+        name = re.sub(r"\\([_*\\\[\]])", r"\1", name).strip()  # MariaDB's KB export escapes markdown: AES\_DECRYPT
         items.append({"id": f"help:{path(cid)}: {name}", "kind": "docs", **({"url": url} if url else {})})
     return items
 
@@ -405,46 +406,81 @@ def help_items(categories: list[tuple], topics: list[tuple]) -> list[dict]:
 PRIVILEGES_SQL = "SHOW PRIVILEGES"
 
 
+def preprocess_bison_ifdef(text: str, keep: str = "MARIADB") -> str:
+    """MariaDB's sql_yacc.yy holds both grammars: %ifdef MARIADB ... %else ... %endif ORACLE. The build
+    generates sql_yacc.yy (default mode) and sql_yacc_ora.yy from it; keep the default branch."""
+    out, stack = [], []
+    for line in text.splitlines(keepends=True):
+        m = re.match(r"^%(ifdef|else|endif)\b\s*(\w*)", line)
+        if m:
+            if m.group(1) == "ifdef":
+                stack.append(m.group(2) == keep)
+            elif m.group(1) == "else" and stack:
+                stack[-1] = not stack[-1]
+            elif stack:
+                stack.pop()
+            continue
+        if all(stack):
+            out.append(line)
+    return "".join(out)
+
+
+MARIADB_REPO = "MariaDB/server"
+MARIADB_FUNC_TABLES = [("sql/item_create.cc", "func_array"), ("sql/item_geofunc.cc", "func_array_geom")]
+
+
 def generate_mysql(version: str, help_categories: list[tuple], help_topics: list[tuple],
-                   privileges: list[tuple] = ()) -> dict:
-    commit = resolve_commit(MYSQL_REPO, f"mysql-{version}")
-    lex = parse_lex_h(fetch(MYSQL_REPO, commit, MYSQL_KEYWORDS))
+                   privileges: list[tuple] = (), engine: str = "mysql") -> dict:
+    maria = engine == "mariadb"
+    repo = MARIADB_REPO if maria else MYSQL_REPO
+    commit = resolve_commit(repo, f"{engine}-{version}")
+    lex = parse_lex_h(fetch(repo, commit, MYSQL_KEYWORDS))
     keywords = {tok: text for tok, (text, _g) in lex.items()}
     word_group = {}
     for text, group in lex.values():  # a word listed both ways counts as a keyword
         word_group[text] = None if text in word_group and word_group[text] is None else group
     items, parsers = [], []
-    for parser, gfile in MYSQL_PARSERS.items():
+    for parser, gfile in ({"sql": "sql/sql_yacc.yy"} if maria else MYSQL_PARSERS).items():
         try:
-            g = fetch(MYSQL_REPO, commit, gfile)
+            g = fetch(repo, commit, gfile)
         except Exception:  # noqa: BLE001 - sql_hints.yy exists since 5.7
             continue
         parsers.append(gfile)
+        if maria:
+            g = preprocess_bison_ifdef(g)
         items += [it for it in grammar_items(parser, g, None, keywords) if it["kind"] == "grammar"]
     kw_items = [{"id": f"kw:{w}", "kind": "keyword", **({"group": g} if g else {})} for w, g in sorted(word_group.items())]
-    funcs = function_items(fetch(MYSQL_REPO, commit, MYSQL_FUNC_TABLE), f"https://github.com/{MYSQL_REPO}/blob/{commit}/",
-                           table="func_array", source_file=MYSQL_FUNC_TABLE)
+    base = f"https://github.com/{repo}/blob/{commit}/"
+    func_tables = MARIADB_FUNC_TABLES if maria else [(MYSQL_FUNC_TABLE, "func_array")]
+    funcs = [f for file, table in func_tables
+             for f in function_items(fetch(repo, commit, file), base, table=table, source_file=file)]
     docs = help_items(help_categories, help_topics)
     # static privileges are grammar keywords, dynamic ones (8.0+: BACKUP_ADMIN, ...) are only names
     privs = [{"id": f"priv:{row[0].upper().replace(' ', '_')}", "kind": "privilege"} for row in privileges]
     unique = {}
     for it in kw_items + sorted(items, key=lambda i: i["id"]) + funcs + privs + docs:
         unique.setdefault(it["id"], it)
+    notes = [
+        "Keywords: every name in sql/lex.h; group function = function-like word (COUNT, CAST, ...), group hint = word of the optimizer-hint parser only. information_schema.KEYWORDS (MySQL 8.0+) lists neither, so keyword lists leave them out.",
+        "func: items are the native functions resolved by name (" + ", ".join(f"{t} in {f}" for f, t in func_tables) + "); functions with their own grammar (CAST, EXTRACT, aggregates, window functions, ...) are grammar items.",
+        "priv: items are the privilege names of SHOW PRIVILEGES (static and, since MySQL 8.0, dynamic privileges, which the grammar reads as identifiers); grammar items ending in (name) are words the parser actions compare an identifier with (ALGORITHM = INSTANT, FORMAT = TREE).",
+        "help: items are the topics of the server's HELP tables (mysql.help_topic), which are generated from the reference manual - names, categories and links only. Some categories are misfiled upstream (MySQL: JSON functions under Spatial Functions / MBR Functions, 9.x vector functions under Window Functions): classify by topic name.",
+    ]
+    if maria:
+        notes += ["sql_yacc.yy is the default-mode branch of %ifdef MARIADB (sql_mode=ORACLE has its own generated grammar, 10.3 / 10.4 a separate sql_yacc_ora.yy) - Oracle mode is not inventoried.",
+                  "Optimizer hints (12.x) are parsed by a hand-written parser (sql/opt_hints_parser.cc), not inventoried."]
+    else:
+        notes[3] += " The source tree has the HELP data only from 8.0 on (5.x: a placeholder file), and dev.mysql.com refuses automated requests."
     return {
-        "engine": "mysql",
+        "engine": engine,
         "version": version,
         "generated_at": dt.date.today().isoformat(),
         "sources": [
-            {"kind": "grammar", "repository": MYSQL_REPO, "commit": commit,
-             "files": parsers + [MYSQL_KEYWORDS, MYSQL_FUNC_TABLE]},
+            {"kind": "grammar", "repository": repo, "commit": commit,
+             "files": parsers + [MYSQL_KEYWORDS] + [f for f, _t in func_tables]},
             {"kind": "server", "files": ["mysql.help_category", "mysql.help_topic", "SHOW PRIVILEGES"]},
         ],
-        "notes": [
-            "Keywords: every name in sql/lex.h; group function = function-like word (COUNT, CAST, ...), group hint = word of the optimizer-hint parser only. information_schema.KEYWORDS (8.0+) lists neither, so keyword lists leave them out.",
-            "func: items are the native functions resolved by name (func_array in sql/item_create.cc); functions with their own grammar (CAST, EXTRACT, aggregates, window functions, ...) are grammar items.",
-            "priv: items are the privilege names of SHOW PRIVILEGES (static and, since 8.0, dynamic privileges, which the grammar reads as identifiers); grammar items ending in (name) are words the parser actions compare an identifier with (ALGORITHM = INSTANT, FORMAT = TREE).",
-            "help: items are the topics of the server's HELP tables (mysql.help_topic), which are generated from the reference manual - names, categories and links only. The source tree has them only from 8.0 on (5.x: a placeholder file), and dev.mysql.com refuses automated requests. The categories are partly misfiled upstream (JSON functions under Spatial Functions / MBR Functions, 9.x vector functions under Window Functions): classify by topic name.",
-        ],
+        "notes": notes,
         "items": list(unique.values()),
     }
 

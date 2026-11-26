@@ -156,7 +156,7 @@ def cmd_inventory(args) -> int:
             path = inv.write(doc)
             print(f"{target['id']:16} {server.version:10} {len(doc['items'])} items -> {path.relative_to(ROOT)}", flush=True)
             continue
-        if target["engine"] == "mysql":
+        if target["engine"] in ("mysql", "mariadb"):
             with running(target) as server, server.connect() as conn, conn.cursor() as cur:
                 version = server.detect_version()
                 cur.execute(inv.HELP_CATEGORIES_SQL)
@@ -165,7 +165,7 @@ def cmd_inventory(args) -> int:
                 topics = cur.fetchall()
                 cur.execute(inv.PRIVILEGES_SQL)
                 privileges = cur.fetchall()
-            doc = inv.generate_mysql(version, cats, topics, privileges)
+            doc = inv.generate_mysql(version, cats, topics, privileges, engine=target["engine"])
             path = inv.write(doc)
             print(f"{target['id']:16} {version:10} {len(doc['items'])} items -> {path.relative_to(ROOT)}", flush=True)
             continue

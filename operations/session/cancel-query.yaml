@@ -19,7 +19,7 @@ implementations:
   mariadb:
     - status: supported
       template: "KILL {{^terminate}}QUERY {{/terminate}}{{session_id}}"
-      caveats: ["As MySQL; KILL [HARD | SOFT] and KILL QUERY ID <query_id> are MariaDB extensions."]
+      caveats: ["As MySQL; KILL [HARD | SOFT], KILL QUERY ID <query_id> and KILL USER <user> (all sessions of an account) are MariaDB extensions."]
       sources: [{ evidence: tested }]
   postgresql:
     - status: supported

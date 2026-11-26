@@ -18,7 +18,7 @@ grammars:
   mariadb:
     file: mariadb.ebnf
     start: create_index
-    since: "10.6"
+    since: "10.3"
     notes:
       - "No functional key parts; index a (virtual) generated column instead."
       - "IGNORED / NOT IGNORED (10.6+) is MariaDB's counterpart to MySQL's INVISIBLE / VISIBLE."

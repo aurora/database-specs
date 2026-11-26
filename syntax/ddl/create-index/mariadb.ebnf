@@ -1,4 +1,4 @@
-/* MariaDB - CREATE INDEX (10.6 - 12.x)
+/* MariaDB - CREATE INDEX (10.3 - 12.x)
    Built-ins: identifier, string_literal, integer, expression.
    Version annotations apply to the item that follows them. */
 

@@ -21,6 +21,10 @@ items:
     title: List partitions of a table with bounds
     priority: medium
     engines: [mysql, mariadb, postgresql, sqlserver]
+  - id: introspection.list-collations
+    kind: query
+    title: List collations (column editor COLLATE choice, version mismatch after ICU / glibc upgrades)
+    priority: low
   - id: introspection.server-variables
     kind: query
     title: Server / session settings (sql_mode, search_path, compatibility level, ...)

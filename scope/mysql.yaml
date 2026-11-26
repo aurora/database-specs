@@ -104,7 +104,7 @@ rules:
     roadmap: syntax.show-statements
     reason: "DESCRIBE <table> [column] is SHOW COLUMNS (introspection.list-columns reads information_schema); 8.0+ opt_extended is SHOW EXTENDED COLUMNS / INDEX."
   - match: ["sql:describe_command: *", "sql:explain_stmt: *", "sql:describe: <describe_command> <opt_extended_describe> *",
-            "sql:explainable_stmt: *", "sql:explainable_command: *", "sql:opt_explain_*",
+            "sql:opt_explain_*",
             "sql:opt_extended_describe: *", "help:Utility: EXPLAIN"]
     status: covered
     specs: ["operation:query.explain"]
@@ -242,7 +242,7 @@ rules:
     status: planned
     roadmap: query.json
   - match: ["sql:select_*", "sql:query_*", "sql:table_reference*", "sql:join_table: *", "sql:joined_table*", "sql:table_factor: *",
-            "sql:derived_table: *", "sql:table_function: *", "sql:from_clause: *", "sql:from_tables: *",
+            "sql:from_clause: *", "sql:from_tables: *",
             "sql:where_clause: *", "sql:opt_where_clause: *", "sql:group_clause: *", "sql:opt_group_clause: *", "sql:having_clause: *", "sql:opt_having_clause: *", "sql:order_clause: *", "sql:order_dir: *", "sql:ordering_direction: *",
             "sql:locking_clause: *", "sql:lock_strength: *", "sql:locked_row_action: *",
             "sql:opt_select_lock_type: *", "sql:into: *", "sql:into_clause: *", "sql:union_*", "sql:table_value_constructor: *",
@@ -251,7 +251,7 @@ rules:
             "sql:esc_table_ref: *", "sql:natural_join_type: *", "sql:inner_join_type: *", "sql:outer_join_type: *", "sql:normal_join: *",
             "sql:opt_inner: *", "sql:opt_outer: *", "sql:table_alias: *", "sql:table_wild*", "sql:opt_as: *", "sql:single_table_parens: *",
             "sql:opt_procedure_analyse_clause: *", "sql:procedure_analyse_clause: *", "sql:opt_paren_expr_list: *",
-            "sql:use_partition: *", "sql:opt_partition_clause: *", "sql:no_braces: *", "sql:optional_braces: *",
+            "sql:use_partition: *", "sql:no_braces: *", "sql:optional_braces: *",
             "sql:expr: *", "sql:bool_pri: *", "sql:predicate: *", "sql:bit_expr: *", "sql:simple_expr: *", "sql:comp_op: *",
             "sql:all_or_any: *", "sql:and: *", "sql:or: *", "sql:not: *", "sql:not2: *", "sql:opt_not: *", "sql:opt_escape: *",
             "sql:literal: *", "sql:signed_literal*", "sql:temporal_literal: *", "sql:null_as_literal: *", "sql:interval_time_stamp: *",
@@ -298,8 +298,7 @@ rules:
     roadmap: transactions.savepoints
   - match: ["sql:begin*", "sql:commit: *", "sql:rollback: *", "sql:opt_chain: *", "sql:opt_release: *", "sql:opt_work: *",
             "sql:start: *", "sql:start_transaction_option: *", "sql:lock: LOCK <table_or_tables> *", "sql:unlock: UNLOCK <table_or_tables>",
-            "sql:table_locking_list: *", "sql:lock_option: *", "sql:load_data_lock: *",
-            "help:Transactions: BEGIN", "help:Transactions: COMMIT", "help:Transactions: ROLLBACK", "help:Transactions: START TRANSACTION",
+            "sql:table_locking_list: *", "sql:lock_option: *", "help:Transactions: BEGIN", "help:Transactions: COMMIT", "help:Transactions: ROLLBACK", "help:Transactions: START TRANSACTION",
             "help:Transactions: LOCK TABLES"]
     status: planned
     roadmap: transactions.control
@@ -344,7 +343,7 @@ rules:
             "sql:replica*", "sql:start_replica_stmt: *", "sql:stop_replica_stmt: *", "sql:opt_replica_*", "sql:group_replication*",
             "sql:binlog_*", "sql:opt_binlog_in: *", "sql:purge*", "sql:privilege_check_def: *", "sql:assign_gtids_to_anonymous_transactions_def: *",
             "sql:table_primary_key_check_def: *", "sql:reset: RESET <reset_options>", "sql:reset_option: *", "sql:opt_ssl: *",
-            "sql:opt_plugin_dir_option: *", "sql:opt_default_auth_option*", "sql:opt_compression_algorithm: *",
+            "sql:opt_plugin_dir_option: *", "sql:opt_compression_algorithm: *",
             "help:Replication Statements: *", "help:Administration: BINLOG", "help:Administration: RESET"]
     status: out-of-scope
     reason: "Replication (sources, replicas, filters, group replication) and binary logs: server administration, not something a database client edits."
@@ -373,7 +372,7 @@ rules:
             "sql:opt_cache_key_list: *", "sql:opt_ignore_leaves: *", "sql:flush*", "sql:opt_flush_lock: *", "sql:shutdown_stmt: *",
             "sql:restart_server_stmt: *", "sql:alter_instance*", "sql:lock: LOCK INSTANCE *", "sql:unlock: UNLOCK INSTANCE",
             "sql:create_srs_stmt: *", "sql:drop_srs_stmt: *", "sql:srs_attributes: *", "sql:create_masking_policy_stmt: *",
-            "sql:drop_masking_policy_stmt: *", "sql:show_create_masking_policy_stmt: *", "sql:help: *", "sql:import_stmt: *",
+            "sql:drop_masking_policy_stmt: *", "sql:help: *", "sql:import_stmt: *",
             "sql:xa: *", "sql:opt_one_phase: *", "sql:opt_suspend: *", "sql:opt_join_or_resume: *", "sql:opt_convert_xid: *",
             "sql:opt_migrate: *", "sql:do_stmt: *", "sql:do: *",
             "help:Administration: CACHE INDEX", "help:Administration: LOAD INDEX", "help:Administration: FLUSH*",

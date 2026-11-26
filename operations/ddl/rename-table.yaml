@@ -28,7 +28,7 @@ implementations:
     - status: supported
       template: "ALTER TABLE {{table}} RENAME TO {{new_name}}"
       transactional: true
-      caveats: ["The new name must be unqualified. Views, foreign keys and triggers follow (by OID); the owned sequences of SERIAL columns keep their old names."]
+      caveats: ["The new name must be unqualified. Views, foreign keys and triggers follow (by OID); the owned sequences of SERIAL columns keep their old names.", "ALTER TABLE IF EXISTS t RENAME TO n is a notice instead of an error when t is missing."]
       sources: [{ evidence: tested }]
   sqlserver:
     - status: supported

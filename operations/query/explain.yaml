@@ -31,7 +31,7 @@ implementations:
       template: "EXPLAIN (FORMAT {{#format}}{{format}}{{/format}}{{^format}}TEXT{{/format}}{{#analyze}}, ANALYZE{{/analyze}}) {{sql}}"
       caveats:
         - "format: TEXT (one row per line, column QUERY PLAN), JSON, YAML, XML (one row). ANALYZE executes the statement - wrap data-modifying statements in BEGIN ... ROLLBACK."
-        - "Further options: BUFFERS, VERBOSE, SETTINGS, WAL, SERIALIZE (17+), MEMORY (17+)."
+        - "Further options (from the option checks in the C sources per version): VERBOSE, COSTS, BUFFERS, TIMING, SUMMARY (all versions), SETTINGS (12+), WAL (13+), GENERIC_PLAN (16+), SERIALIZE and MEMORY (17+). Since 18 ANALYZE includes buffer statistics by default (BUFFERS OFF turns them off; observed 18.7)."
         - "Legacy form without parentheses: EXPLAIN [ANALYZE] [VERBOSE] <statement> (only these two options, in this order)."
       sources: [{ evidence: tested }]
   sqlserver:

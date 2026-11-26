@@ -40,7 +40,7 @@ implementations:
     - status: supported
       template: "ALTER TABLE {{table}} RENAME COLUMN {{column}} TO {{new_name}}"
       transactional: true
-      caveats: ["Views, constraints and indexes follow the rename (they reference columns by number); function bodies do not."]
+      caveats: ["Views, constraints and indexes follow the rename (they reference columns by number); function bodies do not.", "ALTER TABLE IF EXISTS t RENAME [COLUMN] c TO n is a notice instead of an error when t is missing."]
       sources: [{ evidence: tested }]
   sqlserver:
     - status: supported

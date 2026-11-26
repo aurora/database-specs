@@ -6,6 +6,122 @@
 engine: postgresql
 
 rules:
+  # --- corrections from the PostgreSQL audit (before the generic rules) ----------------------------
+  - match: ["sql:drop_type_any_name: TABLE", "sql:drop_type_any_name: INDEX", "sql:DropStmt: DROP <drop_type_any_name> *"]
+    status: covered
+    specs: ["operation:ddl.drop-table", "operation:ddl.drop-index"]
+    reason: "11 - 13 name of the generic DROP production (object_type_any_name since 14)."
+  - match: ["sql:drop_type_any_name: SEQUENCE", "sql:object_type_any_name: SEQUENCE", "sql:RenameStmt: ALTER SEQUENCE *"]
+    status: covered
+    specs: ["capability:schema.sequences"]
+  - match: ["sql:drop_type_any_name: VIEW", "sql:drop_type_any_name: MATERIALIZED VIEW"]
+    status: planned
+    roadmap: ddl.create-view
+  - match: ["sql:sub_type: *"]
+    status: planned
+    roadmap: dml.select
+    reason: "x = ANY / ALL / SOME (subquery) in expressions."
+  - match: ["sql:drop_type_name_on_any_name: TRIGGER", "sql:object_type_name_on_any_name: TRIGGER"]
+    status: planned
+    roadmap: ddl.create-trigger
+  - match: ["sql:drop_type_name_on_any_name: RULE", "sql:object_type_name_on_any_name: RULE"]
+    status: planned
+    roadmap: ddl.create-view
+  - match: ["sql:drop_type_name_on_any_name: POLICY", "sql:object_type_name_on_any_name: POLICY", "sql:RenameStmt: ALTER USER *",
+            "sql:object_type_name: ROLE", "sql:alter_table_cmd: *ROW LEVEL SECURITY"]
+    status: planned
+    roadmap: admin.user-management
+  - match: ["sql:object_type_name: DATABASE"]
+    status: planned
+    roadmap: ddl.create-schema
+  - match: ["func:PG_CANCEL_BACKEND", "func:PG_TERMINATE_BACKEND"]
+    status: covered
+    specs: ["operation:session.cancel-query"]
+  - match: ["func:PG_BLOCKING_PIDS"]
+    status: covered
+    specs: ["query:session.list-processes"]
+  - match: ["func:PG_GET_KEYWORDS"]
+    status: covered
+    specs: ["query:lexical.keywords"]
+  - match: ["func:PG_GET_VIEWDEF"]
+    status: covered
+    specs: ["operation:introspection.view-ddl"]
+  - match: ["func:PG_GET_FUNCTIONDEF"]
+    status: covered
+    specs: ["operation:introspection.routine-ddl"]
+  - match: ["func:PG_GET_TRIGGERDEF"]
+    status: covered
+    specs: ["operation:introspection.trigger-ddl"]
+  - match: ["func:TO_TSVECTOR", "func:*TO_TSQUERY", "func:TS_RANK*", "op:@@"]
+    status: covered
+    specs: ["capability:query.fulltext-search"]
+  - match: ["func:NEXTVAL", "func:CURRVAL", "func:SETVAL", "func:LASTVAL"]
+    status: covered
+    specs: ["capability:schema.sequences"]
+  - match: ["func:ROW_NUMBER", "func:RANK", "func:DENSE_RANK", "func:PERCENT_RANK", "func:CUME_DIST", "func:NTILE", "func:LAG", "func:LEAD",
+            "func:FIRST_VALUE", "func:LAST_VALUE", "func:NTH_VALUE"]
+    status: covered
+    specs: ["capability:query.window-functions"]
+  - match: ["type:TRIGGER", "type:EVENT_TRIGGER", "type:ANY*", "type:RECORD", "type:VOID", "type:INTERNAL", "type:CSTRING", "type:*_HANDLER"]
+    status: planned
+    roadmap: ddl.create-routine
+    reason: "Pseudo-types: argument / result types of functions, not column types."
+  - match: ["opt:EXPLAIN: *"]
+    status: covered
+    specs: ["operation:query.explain"]
+  - match: ["opt:COPY: *"]
+    status: planned
+    roadmap: dml.load-data
+  - match: ["opt:VACUUM / ANALYZE: *", "opt:REINDEX: *", "opt:CLUSTER: *"]
+    status: planned
+    roadmap: admin.table-maintenance
+  - match: ["opt:CREATE / ALTER DATABASE: *"]
+    status: planned
+    roadmap: ddl.create-schema
+  - match: ["opt:storage parameter: *"]
+    status: planned
+    roadmap: ddl.create-table
+    reason: "Table / index storage parameters (WITH (fillfactor = ...)); syntax ddl.create-index accepts any name, the names belong to the table / index editor."
+  - match: ["op:*"]
+    status: planned
+    roadmap: lexical.functions
+    reason: "Operator names of pg_operator (autocomplete / highlighting); lexical:postgresql lists the operators the tokenizer must know."
+  - match: ["sql:JsonType: *"]
+    status: planned
+    roadmap: query.json
+  - match: ["sql:AlterCollationStmt: *", "sql:DefineStmt: CREATE COLLATION *", "docs:SQL Commands: *COLLATION"]
+    status: planned
+    roadmap: introspection.list-collations
+  - match: ["sql:AlterOwnerStmt: ALTER FUNCTION *", "sql:AlterOwnerStmt: ALTER PROCEDURE *", "sql:AlterOwnerStmt: ALTER ROUTINE *",
+            "sql:AlterOwnerStmt: ALTER AGGREGATE *", "sql:AlterObjectSchemaStmt: ALTER FUNCTION *", "sql:AlterObjectSchemaStmt: ALTER PROCEDURE *",
+            "sql:AlterObjectSchemaStmt: ALTER ROUTINE *", "sql:AlterObjectSchemaStmt: ALTER AGGREGATE *", "sql:AlterObjectDependsStmt: ALTER FUNCTION *",
+            "sql:AlterObjectDependsStmt: ALTER PROCEDURE *", "sql:AlterObjectDependsStmt: ALTER ROUTINE *"]
+    status: planned
+    roadmap: ddl.create-routine
+  - match: ["sql:AlterOwnerStmt: ALTER TYPE *", "sql:AlterOwnerStmt: ALTER DOMAIN *", "sql:AlterObjectSchemaStmt: ALTER TYPE *",
+            "sql:AlterObjectSchemaStmt: ALTER DOMAIN *"]
+    status: planned
+    roadmap: ddl.create-type
+  - match: ["sql:AlterOwnerStmt: ALTER DATABASE *", "sql:AlterOwnerStmt: ALTER SCHEMA *"]
+    status: planned
+    roadmap: ddl.create-schema
+  - match: ["sql:AlterObjectSchemaStmt: ALTER VIEW *", "sql:AlterObjectSchemaStmt: ALTER MATERIALIZED VIEW *",
+            "sql:AlterObjectDependsStmt: ALTER MATERIALIZED VIEW *"]
+    status: planned
+    roadmap: ddl.create-view
+  - match: ["sql:AlterObjectSchemaStmt: ALTER EXTENSION *"]
+    status: planned
+    roadmap: introspection.list-extensions
+  - match: ["sql:AlterOwnerStmt: ALTER LARGE OBJECT *", "sql:AlterOwnerStmt: ALTER OPERATOR *", "sql:AlterOwnerStmt: ALTER TEXT SEARCH *",
+            "sql:AlterOwnerStmt: ALTER PUBLICATION *", "sql:AlterOwnerStmt: ALTER SUBSCRIPTION *", "sql:AlterOwnerStmt: ALTER TABLESPACE *",
+            "sql:AlterOwnerStmt: ALTER SERVER *", "sql:AlterOwnerStmt: ALTER FOREIGN DATA WRAPPER *", "sql:AlterOwnerStmt: ALTER EVENT TRIGGER *",
+            "sql:AlterOwnerStmt: ALTER COLLATION *", "sql:AlterOwnerStmt: ALTER CONVERSION *", "sql:AlterOwnerStmt: ALTER STATISTICS *",
+            "sql:AlterOwnerStmt: ALTER <opt_procedural> LANGUAGE *", "sql:AlterObjectSchemaStmt: ALTER OPERATOR *",
+            "sql:AlterObjectSchemaStmt: ALTER TEXT SEARCH *", "sql:AlterObjectSchemaStmt: ALTER COLLATION *",
+            "sql:AlterObjectSchemaStmt: ALTER CONVERSION *", "sql:AlterObjectSchemaStmt: ALTER STATISTICS *"]
+    status: out-of-scope
+    reason: "OWNER TO / SET SCHEMA of catalog extension and administration objects (see the catalog extension rule)."
+
   # --- specs that exist ---------------------------------------------------------------------------
   - match: ["sql:IndexStmt: *", "sql:index_elem: *", "sql:opt_concurrently: *", "sql:opt_unique: *", "sql:access_method_clause: *",
             "sql:opt_include: *", "sql:opt_unique_null_treatment: *", "sql:opt_nulls_order: *", "sql:opt_asc_desc: *",
@@ -50,9 +166,11 @@ rules:
     status: covered
     specs: ["operation:ddl.drop-foreign-key"]
   - match: ["sql:alter_table_cmd: ADD <TableConstraint>", "sql:TableConstraint: *", "sql:ConstraintElem: FOREIGN KEY ( <columnList> ) *",
-            "sql:key_action: *", "sql:key_delete: *", "sql:key_update: *"]
+            "sql:key_action: *", "sql:key_delete: *", "sql:key_update: *", "sql:key_match: *",
+            "sql:ConstraintElem: FOREIGN KEY ( <columnList> <optionalPeriodName> ) *"]
     status: covered
     specs: ["operation:ddl.add-foreign-key"]
+    reason: "The operation generates ADD CONSTRAINT ... FOREIGN KEY; its caveats name MATCH, the 18 PERIOD form and the other constraint kinds of ADD CONSTRAINT."
   - match: ["sql:ConstraintElem: CHECK *", "sql:ColConstraintElem: CHECK *"]
     status: covered
     specs: ["capability:ddl.check-constraints"]
@@ -90,7 +208,7 @@ rules:
             "sql:replica_identity: *", "sql:partition_cmd: *", "sql:index_partition_cmd: *", "sql:enable_trigger: *",
             "sql:set_access_method_name: *", "sql:set_statistics_value: *", "sql:column_storage: *", "sql:column_compression: *",
             "sql:RenameStmt: ALTER TABLE *", "sql:RenameStmt: ALTER INDEX *", "sql:AlterObjectSchemaStmt: ALTER TABLE *",
-            "sql:AlterOwnerStmt: *", "sql:AlterObjectSchemaStmt: *", "sql:AlterObjectDependsStmt: *", "sql:opt_no: *", "sql:opt_if_exists: *", "docs:SQL Commands: ALTER TABLE",
+            "sql:AlterObjectSchemaStmt: *", "sql:AlterObjectDependsStmt: *", "sql:opt_no: *", "sql:opt_if_exists: *", "docs:SQL Commands: ALTER TABLE",
             "docs:SQL Commands: ALTER INDEX"]
     status: planned
     roadmap: ddl.alter-table
@@ -99,18 +217,23 @@ rules:
             "sql:PartitionSpec: *", "sql:part_elem: *", "sql:PartitionBoundSpec: *", "sql:PartitionRangeDatum: *", "sql:partbound_datum: *",
             "sql:ColConstraint: *", "sql:ColConstraintElem: *", "sql:ConstraintElem: *", "sql:ConstraintAttr: *", "sql:ConstraintAttributeElem: *",
             "sql:ExclusionConstraintElem: *", "sql:ExclusionWhereClause: *", "sql:ExistingIndex: *", "sql:OptConstrFromTable: *",
-            "sql:key_match: *", "sql:opt_no_inherit: *", "sql:generated_when: *", "sql:opt_virtual_or_stored: *", "sql:TableLikeClause: *",
+            "sql:opt_no_inherit: *", "sql:generated_when: *", "sql:opt_virtual_or_stored: *", "sql:TableLikeClause: *",
             "sql:TableLikeOption*", "sql:columnOptions: *", "sql:opt_column_list: *", "sql:opt_column_and_period_list: *",
             "sql:optionalPeriodName: *", "sql:opt_without_overlaps: *", "sql:opt_c_include: *", "sql:opt_name_list: *", "sql:opt_with_data: *", "sql:OptNoLog: *", "sql:opt_if_not_exists: *",
             "sql:Typename: *", "sql:SimpleTypename: *", "sql:Numeric: *", "sql:opt_float: *", "sql:BitWithLength: *", "sql:BitWithoutLength: *",
             "sql:CharacterWithLength: *", "sql:CharacterWithoutLength: *", "sql:character: *", "sql:opt_varying: *", "sql:ConstDatetime: *",
             "sql:ConstInterval: *", "sql:opt_interval: *", "sql:interval_second: *", "sql:opt_timezone: *", "sql:opt_array_bounds: *",
-            "sql:opt_type_modifiers: *", "sql:JsonType: *", "sql:opt_collate: *", "sql:opt_collate_clause: *", "sql:opt_oids: *",
+            "sql:opt_type_modifiers: *", "sql:opt_collate: *", "sql:opt_collate_clause: *",
             "type:*", "docs:SQL Commands: CREATE TABLE", "docs:SQL Commands: CREATE TABLE AS", "docs:SQL Commands: SELECT INTO"]
     status: planned
     roadmap: ddl.create-table
+    reason: "Syntax planned; operation:introspection.table-ddl already reconstructs CREATE TABLE (round-trip tested)."
   - match: ["sql:CreateForeignTableStmt: *", "sql:AlterForeignTableStmt: *", "sql:ImportForeignSchemaStmt: *", "sql:import_qualification*",
-            "sql:CreateFdwStmt: *", "sql:AlterFdwStmt: *", "sql:fdw_option: *", "sql:CreateForeignServerStmt: *", "sql:AlterForeignServerStmt: *",
+            "sql:RenameStmt: ALTER FOREIGN TABLE *", "docs:SQL Commands: *FOREIGN TABLE", "docs:SQL Commands: IMPORT FOREIGN SCHEMA"]
+    status: planned
+    roadmap: ddl.create-table
+    reason: "Foreign tables appear in the object tree; their columns and OPTIONS belong to the table editor / DDL reconstruction."
+  - match: ["sql:CreateFdwStmt: *", "sql:AlterFdwStmt: *", "sql:fdw_option: *", "sql:CreateForeignServerStmt: *", "sql:AlterForeignServerStmt: *",
             "sql:foreign_server_version: *", "sql:CreateUserMappingStmt: *", "sql:AlterUserMappingStmt: *", "sql:DropUserMappingStmt: *",
             "sql:create_generic_options: *", "sql:auth_ident: *", "sql:validator_clause: *", "sql:opt_inline_handler: *",
             "sql:RenameStmt: ALTER FOREIGN *", "sql:RenameStmt: ALTER SERVER *",
@@ -130,10 +253,12 @@ rules:
             "sql:RenameStmt: ALTER RULE *", "docs:SQL Commands: *VIEW", "docs:SQL Commands: *RULE"]
     status: planned
     roadmap: ddl.create-view
+    reason: "Syntax planned; query:introspection.list-views and operation:introspection.view-ddl already describe the objects."
   - match: ["sql:CreateTrigStmt: *", "sql:Trigger*", "sql:TransitionOldOrNew: *", "sql:TransitionRowOrTable: *", "sql:RenameStmt: ALTER TRIGGER *",
             "docs:SQL Commands: CREATE TRIGGER", "docs:SQL Commands: ALTER TRIGGER", "docs:SQL Commands: DROP TRIGGER"]
     status: planned
     roadmap: ddl.create-trigger
+    reason: "Syntax planned; query:introspection.list-triggers and operation:introspection.trigger-ddl already describe the objects."
   - match: ["sql:CreateFunctionStmt: *", "sql:AlterFunctionStmt: *", "sql:RemoveFuncStmt: *", "sql:RemoveAggrStmt: *", "sql:DefineStmt: CREATE <opt_or_replace> AGGREGATE *",
             "sql:FUNCTION_or_PROCEDURE: *", "sql:func_arg*", "sql:func_args*", "sql:func_type: *", "sql:arg_class: *",
             "sql:parameter_name: *", "sql:plassign_equals: *", "sql:createfunc_opt_item: *", "sql:common_func_opt_item: *", "sql:FunctionSetResetClause: *",
@@ -144,6 +269,7 @@ rules:
             "docs:SQL Commands: DO"]
     status: planned
     roadmap: ddl.create-routine
+    reason: "Syntax planned; the objects are already covered by capability:schema.stored-routines, query:introspection.list-routines and operation:introspection.routine-ddl."
   - match: ["kw:ALIAS", "kw:ASSERT", "kw:COLUMN_NAME", "kw:CONSTANT", "kw:CONSTRAINT_NAME", "kw:DATATYPE", "kw:DEBUG",
             "kw:DETAIL", "kw:DIAGNOSTICS", "kw:DUMP", "kw:ELSIF", "kw:ERRCODE", "kw:ERROR", "kw:EXCEPTION", "kw:EXIT",
             "kw:FOREACH", "kw:GET", "kw:HINT", "kw:INFO", "kw:LOG", "kw:LOOP", "kw:MESSAGE", "kw:MESSAGE_TEXT",
@@ -164,6 +290,7 @@ rules:
             "sql:def_arg: *", "sql:opt_definition: *", "docs:SQL Commands: *TYPE", "docs:SQL Commands: *DOMAIN"]
     status: planned
     roadmap: ddl.create-type
+    reason: "Syntax planned; query:introspection.list-types already lists the objects."
   - match: ["sql:CommentStmt: *", "sql:comment_*", "docs:SQL Commands: COMMENT"]
     status: planned
     roadmap: ddl.comment-on
@@ -179,30 +306,34 @@ rules:
             "sql:AlterPolicyStmt: *", "sql:RowSecurity*", "sql:row_security_cmd: *", "sql:RenameStmt: ALTER ROLE *",
             "sql:RenameStmt: ALTER GROUP *", "sql:RenameStmt: ALTER POLICY *", "sql:opt_in_database: *", "sql:opt_with: *",
             "sql:set_rest_more: ROLE *", "sql:set_rest_more: SESSION AUTHORIZATION *",
-            "sql:VariableShowStmt: SHOW SESSION AUTHORIZATION", "sql:alter_table_cmd: *ROW LEVEL SECURITY",
+            "sql:VariableShowStmt: SHOW SESSION AUTHORIZATION",
             "docs:SQL Commands: *ROLE", "docs:SQL Commands: *USER", "docs:SQL Commands: *GROUP", "docs:SQL Commands: GRANT",
             "docs:SQL Commands: REVOKE", "docs:SQL Commands: ALTER DEFAULT PRIVILEGES", "docs:SQL Commands: *OWNED",
             "docs:SQL Commands: *POLICY", "docs:SQL Commands: SET SESSION AUTHORIZATION"]
     status: planned
     roadmap: admin.user-management
+    reason: "Syntax planned; query:introspection.list-users / list-privileges already list roles and grants."
 
   # --- planned: DML / queries -------------------------------------------------------------------------
   - match: ["sql:InsertStmt: *", "sql:insert_rest: *", "sql:insert_target: *", "sql:override_kind: *", "docs:SQL Commands: INSERT"]
     status: planned
     roadmap: dml.insert
+    reason: "Full syntax planned; operation:dml.insert-row generates the single-row form."
   - match: ["sql:UpdateStmt: *", "sql:set_clause: *", "docs:SQL Commands: UPDATE"]
     status: planned
     roadmap: dml.update
+    reason: "Full syntax planned; operation:dml.update-row generates the single-row form."
   - match: ["sql:DeleteStmt: *", "sql:using_clause: *", "sql:where_or_current_clause: *", "docs:SQL Commands: DELETE"]
     status: planned
     roadmap: dml.delete
+    reason: "Full syntax planned; operation:dml.delete-row generates the single-row form."
   - match: ["sql:MergeStmt: *", "sql:merge_*", "sql:opt_merge_when_condition: *", "docs:SQL Commands: MERGE"]
     status: planned
     roadmap: dml.merge
   - match: ["sql:CopyStmt: *", "sql:copy_*", "sql:opt_program: *", "sql:opt_binary: *", "sql:opt_oids: *", "docs:SQL Commands: COPY"]
     status: planned
     roadmap: dml.load-data
-  - match: ["sql:json_*", "sql:JsonType: *", "func:JSON*", "func:TO_JSON*", "func:ROW_TO_JSON", "func:ARRAY_TO_JSON"]
+  - match: ["sql:json_*", "func:JSON*", "func:TO_JSON*", "func:ROW_TO_JSON", "func:ARRAY_TO_JSON"]
     status: planned
     roadmap: query.json
   - match: ["sql:func_application: *", "sql:func_expr_common_subexpr: *", "sql:extract_list: *", "sql:overlay_*", "sql:position_list: *",
@@ -283,22 +414,25 @@ rules:
             "sql:cast_context: *", "sql:DropCastStmt: *", "sql:CreateConversionStmt: *", "sql:CreateTransformStmt: *", "sql:transform_*",
             "sql:DropTransformStmt: *", "sql:CreatePLangStmt: *", "sql:DropPLangStmt: *", "sql:opt_trusted: *", "sql:opt_procedural: *",
             "sql:CreateEventTrigStmt: *", "sql:AlterEventTrigStmt: *", "sql:event_trigger_when_*", "sql:CreateStatsStmt: *", "sql:AlterStatsStmt: *",
-            "sql:stats_param: *", "sql:AlterCollationStmt: *", "sql:AlterTSConfigurationStmt: *", "sql:AlterTSDictionaryStmt: *",
+            "sql:stats_param: *", "sql:AlterTSConfigurationStmt: *", "sql:AlterTSDictionaryStmt: *",
             "sql:any_with: *", "sql:SecLabelStmt: *", "sql:security_label*", "sql:opt_provider: *", "sql:CreateAssertStmt: *",
-            "sql:CreateAssertionStmt: *", "sql:DropAssertStmt: *", "sql:sub_type: *", "sql:drop_type_name: *", "sql:drop_type_any_name: *",
-            "sql:drop_type_name_on_any_name: *", "sql:object_type_*", "sql:RenameStmt: *", "sql:DropStmt: *", "sql:opt_restrict: *",
+            "sql:CreateAssertionStmt: *", "sql:DropAssertStmt: *", "sql:drop_type_name: *", "sql:drop_type_any_name: *",
+            "sql:object_type_*", "sql:RenameStmt: *", "sql:DropStmt: *", "sql:opt_restrict: *",
             "sql:opt_type: *",
             "docs:SQL Commands: *ACCESS METHOD", "docs:SQL Commands: *OPERATOR*", "docs:SQL Commands: *CAST", "docs:SQL Commands: *CONVERSION",
             "docs:SQL Commands: *TRANSFORM", "docs:SQL Commands: *LANGUAGE", "docs:SQL Commands: *EVENT TRIGGER", "docs:SQL Commands: *STATISTICS",
-            "docs:SQL Commands: *COLLATION", "docs:SQL Commands: *TEXT SEARCH*", "docs:SQL Commands: SECURITY LABEL",
+            "docs:SQL Commands: *TEXT SEARCH*", "docs:SQL Commands: SECURITY LABEL",
             "docs:SQL Commands: ALTER LARGE OBJECT"]
     status: out-of-scope
     reason: "Catalog extension objects for extension authors (access methods, operator classes, casts, conversions, transforms, languages, event triggers, extended statistics, collations, text search configuration, security labels); DROP / RENAME of them uses the generic productions."
   - match: ["sql:PrepareStmt: *", "sql:prep_type_clause: *", "sql:ExecuteStmt: *", "sql:execute_param_clause: *", "sql:DeallocateStmt: *",
             "docs:SQL Commands: PREPARE", "docs:SQL Commands: EXECUTE", "docs:SQL Commands: DEALLOCATE"]
+    status: open
+    reason: "SQL-level PREPARE / EXECUTE / DEALLOCATE (also EXPLAIN EXECUTE): typed in query editors, no syntax spec; generated SQL uses the extended query protocol instead."
+  - match: ["sql:ListenStmt: *", "sql:NotifyStmt: *", "sql:UnlistenStmt: *", "docs:SQL Commands: LISTEN", "docs:SQL Commands: NOTIFY",
+            "docs:SQL Commands: UNLISTEN"]
+    status: open
+    reason: "Asynchronous notifications: a client that shows them needs the protocol's NotificationResponse described (protocols/postgresql) and LISTEN / NOTIFY syntax."
+  - match: ["sql:DiscardStmt: *", "docs:SQL Commands: DISCARD"]
     status: out-of-scope
-    reason: "SQL-level prepared statements: a client prepares through the extended query protocol; PL/pgSQL uses EXECUTE of its own (plpgsql:stmt_dynexecute)."
-  - match: ["sql:ListenStmt: *", "sql:NotifyStmt: *", "sql:UnlistenStmt: *", "sql:DiscardStmt: *",
-            "docs:SQL Commands: LISTEN", "docs:SQL Commands: NOTIFY", "docs:SQL Commands: UNLISTEN", "docs:SQL Commands: DISCARD"]
-    status: out-of-scope
-    reason: "Asynchronous notifications and session reset: protocol / connection-pool features rather than statement syntax a client generates."
+    reason: "Session reset (DISCARD ALL): a connection-pool feature."

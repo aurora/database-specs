@@ -11,7 +11,9 @@ support:
       notes: ["A sequence is a special table (TABLE_TYPE = 'SEQUENCE'); NEXT VALUE FOR s / NEXTVAL(s)."]
   postgresql:
     - status: supported
-      notes: ["SERIAL and IDENTITY columns are backed by sequences owned by the column."]
+      notes:
+        - "SERIAL and IDENTITY columns are backed by sequences owned by the column (SERIAL / BIGSERIAL / SMALLSERIAL are expanded by the parser; they are not types in pg_type)."
+        - "CREATE SEQUENCE options: AS smallint | integer | bigint (10+), INCREMENT, MINVALUE / MAXVALUE, START, CACHE, [NO] CYCLE, OWNED BY t.c; UNLOGGED / LOGGED since 15. ALTER SEQUENCE takes the same options plus RESTART [WITH n]; setval() / nextval() / currval() / lastval() work on any sequence."
   sqlserver:
     - since: "11"
       status: supported

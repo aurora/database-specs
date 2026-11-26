@@ -40,7 +40,7 @@ rules:
     status: planned
     roadmap: dml.select
   - match: ["sphinxexpr:function: *", "docs-page:expressions: *", "docs-page:sphinx3: `*()` function", "docs-page:sphinx3: *functions*",
-            "docs-page:sphinx3: Expression types", "docs-page:sphinx3: Bitwise operators"]
+            "docs-page:sphinx3: Expression types"]
     status: planned
     roadmap: lexical.functions
 
@@ -117,7 +117,7 @@ rules:
   - match: ["sphinxql:create_function: *", "sphinxql:drop_function: *", "sphinxql:create_plugin: *", "sphinxql:drop_plugin: *",
             "sphinxql:udf_type: *", "docs-page:sphinxql-create-function: *", "docs-page:sphinxql-drop-function: *",
             "docs-page:sphinxql-create-plugin: *", "docs-page:sphinxql-drop-plugin: *", "docs-page:sphinxql-show-plugins: *",
-            "docs-page:sphinx3: UDF*", "docs-page:sphinx3: *plugin*"]
+            "docs-page:sphinx3: UDF*"]
     status: out-of-scope
     reason: "UDF and plugin libraries are server extensions."
   - match: ["sphinxql:attach_index: *", "sphinxql:flush_*", "sphinxql:optimize_index: *", "sphinxql:alter: ALTER RTINDEX *",
@@ -126,7 +126,7 @@ rules:
             "docs-page:sphinxql-show-agent-status: *", "docs-page:sphinxql-log-format: *", "docs-page:sphinxql-upgrading-magics: *",
             "docs-page:sphinx3: ATTACH*", "docs-page:sphinx3: FLUSH*", "docs-page:sphinx3: ALTER OPTION syntax",
             "docs-page:sphinx3: ALTER REMOTE syntax", "docs-page:sphinx3: *replica*", "docs-page:sphinx3: *Replica*",
-            "docs-page:sphinx3: *agent*", "docs-page:sphinx3: *Agent*", "docs-page:sphinx3: LOCK USER syntax"]
+            "docs-page:sphinx3: *Agent*", "docs-page:sphinx3: LOCK USER syntax"]
     status: out-of-scope
     reason: "Maintenance, replication and agents: administration a client passes through."
   - match: ["docs-page:api-*", "docs-page:sphinxse-*", "docs-page:ref-*", "docs-page:compiling-*", "docs-page:installing-*",

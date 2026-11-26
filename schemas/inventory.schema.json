@@ -32,8 +32,8 @@
         "required": ["id", "kind"],
         "additionalProperties": false,
         "properties": {
-          "id": { "type": "string", "description": "kw:<KEYWORD> | <parser>:<rule>: <form> | docs:<section>: <entry> | docs-page:<page>: <heading> | buddy:<plugin> | func:<NAME> (built-in function table) | priv:<NAME> | type:<NAME> (data type plugins)" },
-          "kind": { "enum": ["keyword", "grammar", "function", "type", "privilege", "docs", "plugin"] },
+          "id": { "type": "string", "description": "kw:<KEYWORD> | <parser>:<rule>: <form> | docs:<section>: <entry> | docs-page:<page>: <heading> | buddy:<plugin> | func:<NAME> (built-in function table) | priv:<NAME> | type:<NAME> | opt:<command>: <NAME> | op:<operator>" },
+          "kind": { "enum": ["keyword", "grammar", "function", "type", "option", "operator", "privilege", "docs", "plugin"] },
           "parser": { "type": "string" },
           "parsers": { "type": "array", "items": { "type": "string" } },
           "group": { "enum": ["function", "hint", "plpgsql"], "description": "Keywords only: a function-like word or a word of the optimizer-hint parser, not an SQL keyword." },

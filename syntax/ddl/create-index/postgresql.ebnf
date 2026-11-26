@@ -14,12 +14,16 @@ create_index ::= 'CREATE' 'UNIQUE'? 'INDEX' 'CONCURRENTLY'?
 
 table_name ::= identifier ( '.' identifier )?
 
+/* COLLATE and the operator class may be schema-qualified (pg_catalog."C", pg_catalog.text_pattern_ops) */
 index_element ::= ( identifier | function_call | '(' expression ')' )
-                  ( 'COLLATE' identifier )?
-                  ( identifier /* @since 13 */ ( '(' storage_parameter ( ',' storage_parameter )* ')' )? )?
+                  ( 'COLLATE' identifier ( '.' identifier )? )?
+                  ( identifier ( '.' identifier )? /* @since 13 */ ( '(' storage_parameter ( ',' storage_parameter )* ')' )? )?
                   ( 'ASC' | 'DESC' )?
                   ( 'NULLS' ( 'FIRST' | 'LAST' ) )?
 
 function_call ::= identifier ( '.' identifier )? '(' ( expression ( ',' expression )* )? ')'
 
-storage_parameter ::= identifier ( '=' ( identifier | integer | string_literal ) )?
+/* fillfactor = 70, deduplicate_items = off, buffering = auto; a namespace (toast.x) parses but is
+   rejected for indexes ("unrecognized parameter namespace") */
+storage_parameter ::= identifier ( '.' identifier )? ( '=' parameter_value )?
+parameter_value ::= identifier | 'ON' | 'OFF' | 'TRUE' | 'FALSE' | '-'? number | string_literal

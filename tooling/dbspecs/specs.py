@@ -26,8 +26,9 @@ KINDS = {
 }
 
 
-class _Loader(yaml.SafeLoader):
-    """SafeLoader that keeps dates as strings (JSON has no date type)."""
+class _Loader(getattr(yaml, "CSafeLoader", yaml.SafeLoader)):
+    """SafeLoader (libyaml when available: the inventories are large) that keeps dates as strings
+    (JSON has no date type)."""
 
 
 _Loader.yaml_implicit_resolvers = {

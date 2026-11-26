@@ -129,6 +129,25 @@ examples:
     expect: invalid
     engines: { postgresql: {}, sqlserver: {}, sqlite: {} }
 
+  # --- PostgreSQL only ------------------------------------------------------
+  - sql: CREATE INDEX i_dd ON t_idx (a) WITH (deduplicate_items = off)
+    expect: valid
+    engines: { postgresql: { since: "13" } }
+  - sql: CREATE INDEX i_dd ON t_idx (a) WITH (deduplicate_items = off)
+    expect: semantic-error
+    engines: { postgresql: { until: "13" } }
+    notes: ["B-tree deduplication exists since 13: unrecognized parameter before."]
+  - sql: CREATE INDEX i_ops ON t_idx (b pg_catalog.text_pattern_ops)
+    expect: valid
+    engines: { postgresql: {} }
+  - sql: CREATE INDEX i_coll ON t_idx (b COLLATE pg_catalog."C")
+    expect: valid
+    engines: { postgresql: {} }
+  - sql: CREATE INDEX i_ns ON t_idx (a) WITH (toast.fillfactor = 70)
+    expect: semantic-error
+    engines: { postgresql: {} }
+    notes: ["Namespaced parameters exist for tables (toast.*), not for indexes."]
+
   # --- MySQL only -----------------------------------------------------------
   - sql: CREATE INDEX i_type TYPE BTREE ON t_idx (a)
     expect: valid

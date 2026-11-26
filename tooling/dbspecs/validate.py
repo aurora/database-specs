@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import fnmatch
+import re
 import json
 from pathlib import Path
 
@@ -216,6 +217,9 @@ def validate(specs: Specs) -> list[str]:
     scopes = {d["engine"]: d for d in specs.docs["scope"].values()}
     roadmap_ids = {i["id"] for i in load_yaml(specs.root / "roadmap.yaml").get("items", [])}
     used_patterns: dict[str, set[tuple[int, int]]] = {}
+    winning_patterns: dict[str, set[tuple[int, int]]] = {}
+    compiled_patterns: dict[str, list] = {}
+    seen_ids: dict[str, set[str]] = {}
     for doc in specs.docs["inventory"].values():
         engine = doc["engine"]
         rel = f"inventory/{engine}/{doc['version']}.yaml"
@@ -230,16 +234,30 @@ def validate(specs: Specs) -> list[str]:
             errors.append(f"scope/{engine}.yaml: {len(missing)} item(s) of {rel} unclassified, e.g. "
                           + "; ".join(missing[:5]))
         used = used_patterns.setdefault(engine, set())
+        won = winning_patterns.setdefault(engine, set())
+        compiled = compiled_patterns.setdefault(engine, [
+            (n, k, re.compile(fnmatch.translate(pat)).match)
+            for n, rule in enumerate(scope["rules"]) for k, pat in enumerate(rule["match"])])
+        seen = seen_ids.setdefault(engine, set())  # most items repeat in every version: check each id once
         for item in doc["items"]:
-            for n, rule in enumerate(scope["rules"]):
-                for k, pat in enumerate(rule["match"]):
-                    if fnmatch.fnmatchcase(item["id"], pat):
-                        used.add((n, k))
+            if item["id"] in seen:
+                continue
+            seen.add(item["id"])
+            first = None
+            for n, k, match in compiled:
+                if match(item["id"]):
+                    used.add((n, k))
+                    if first is None or first == n:
+                        first = n
+                        won.add((n, k))
     for engine, used in used_patterns.items():  # a pattern must match an item of at least one inventory
         for n, rule in enumerate(scopes[engine]["rules"]):
             for k, pat in enumerate(rule["match"]):
                 if (n, k) not in used:
                     errors.append(f"scope/{engine}.yaml: rule {n} pattern {pat!r} matches no inventory item")
+                elif (n, k) not in winning_patterns[engine]:  # first match wins: the pattern never decides anything
+                    errors.append(f"scope/{engine}.yaml: rule {n} pattern {pat!r} is shadowed - every item it matches "
+                                  "is classified by an earlier rule")
     for engine, scope in scopes.items():
         for n, rule in enumerate(scope["rules"]):
             for ref in rule.get("specs", []):

@@ -529,6 +529,16 @@ WHERE n.nspname = 'pg_catalog' AND p.prorettype NOT IN ('internal'::regtype, 'cs
   AND NOT 'internal'::regtype = ANY (p.proargtypes) AND NOT 'cstring'::regtype = ANY (p.proargtypes)
   AND p.prorettype <> 'trigger'::regtype AND p.prorettype <> 'event_trigger'::regtype
 ORDER BY 1"""
+POSTGRES_OPERATORS_SQL = "SELECT DISTINCT oprname FROM pg_operator ORDER BY 1"
+# option names checked with strcmp(opt->defname, "...") in the C code (the grammar takes <name> <value> lists)
+POSTGRES_OPTION_SOURCES = [
+    ("EXPLAIN", "src/backend/commands/explain.c"), ("EXPLAIN", "src/backend/commands/explain_state.c"),
+    ("VACUUM / ANALYZE", "src/backend/commands/vacuum.c"), ("COPY", "src/backend/commands/copy.c"),
+    ("CREATE / ALTER DATABASE", "src/backend/commands/dbcommands.c"), ("REINDEX", "src/backend/commands/indexcmds.c"),
+    ("CLUSTER", "src/backend/commands/cluster.c"),
+]
+POSTGRES_RELOPTIONS = "src/backend/access/common/reloptions.c"
+POSTGRES_SERIALS = "src/backend/parser/parse_utilcmd.c"
 POSTGRES_TYPES_SQL = """
 SELECT t.typname FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
 WHERE n.nspname = 'pg_catalog' AND t.typtype IN ('b', 'r', 'm', 'd', 'e', 'p') AND t.typname NOT LIKE '\\_%'
@@ -553,7 +563,24 @@ def sgml_statement_items(sources: dict[str, str], major: str) -> list[dict]:
     return items
 
 
-def generate_postgresql(version: str, functions: list[tuple], types: list[tuple]) -> dict:
+def postgres_option_items(repo: str, commit: str) -> tuple[list[dict], list[str]]:
+    items, used = [], []
+    for command, path in POSTGRES_OPTION_SOURCES:
+        try:
+            text = fetch(repo, commit, path)
+        except Exception:  # noqa: BLE001 - explain_state.c exists since 18
+            continue
+        used.append(path)
+        for name in sorted(set(re.findall(r'strcmp\(\s*(?:opt|defel)->defname\s*,\s*"(\w+)"\s*\)', text))):
+            items.append({"id": f"opt:{command}: {name.upper()}", "kind": "option"})
+    text = fetch(repo, commit, POSTGRES_RELOPTIONS)
+    used.append(POSTGRES_RELOPTIONS)
+    for name in sorted(set(re.findall(r'\{\s*\{\s*"(\w+)"', text))):  # {{"fillfactor", "...", RELOPT_KIND_HEAP ...
+        items.append({"id": f"opt:storage parameter: {name.upper()}", "kind": "option"})
+    return items, used
+
+
+def generate_postgresql(version: str, functions: list[tuple], types: list[tuple], operators: list[tuple] = ()) -> dict:
     major = version.split(".")[0]
     tag = f"REL_{version.replace('.', '_')}"
     commit = resolve_commit(POSTGRES_REPO, tag)
@@ -577,10 +604,17 @@ def generate_postgresql(version: str, functions: list[tuple], types: list[tuple]
     kinds = {"f": None, "a": "aggregate", "w": "window", "p": "procedure"}
     funcs = [{"id": f"func:{name.upper()}", "kind": "function"} for name, _k in functions]
     tys = [{"id": f"type:{name.upper()}", "kind": "type"} for (name,) in types]
+    # serial / bigserial / smallserial are expanded by parse_utilcmd.c, not types in pg_type
+    serials = sorted(set(re.findall(r'"(\w*serial\d*)"', fetch(POSTGRES_REPO, commit, POSTGRES_SERIALS))))
+    tys += [{"id": f"type:{name.upper()}", "kind": "type"} for name in serials]
+    files.append(POSTGRES_SERIALS)
+    opts, opt_files = postgres_option_items(POSTGRES_REPO, commit)
+    files += opt_files
+    ops = [{"id": f"op:{name}", "kind": "operator"} for (name,) in operators]
     ref = [p for p in _tree(POSTGRES_REPO, commit) if p.startswith("doc/src/sgml/ref/") and p.endswith(".sgml")]
     docs = sgml_statement_items({p: fetch(POSTGRES_REPO, commit, p) for p in ref}, major)
     unique = {}
-    for it in kw_items + sorted(items, key=lambda i: i["id"]) + funcs + tys + docs:
+    for it in kw_items + sorted(items, key=lambda i: i["id"]) + funcs + tys + opts + ops + docs:
         unique.setdefault(it["id"], it)
     del kinds
     return {
@@ -590,13 +624,15 @@ def generate_postgresql(version: str, functions: list[tuple], types: list[tuple]
         "sources": [
             {"kind": "grammar", "repository": POSTGRES_REPO, "commit": commit, "files": files},
             {"kind": "docs-index", "repository": POSTGRES_REPO, "commit": commit, "files": ["doc/src/sgml/ref/*.sgml"]},
-            {"kind": "server", "files": ["pg_catalog.pg_proc", "pg_catalog.pg_type"]},
+            {"kind": "server", "files": ["pg_catalog.pg_proc", "pg_catalog.pg_type", "pg_catalog.pg_operator"]},
         ],
         "notes": [
             "Keywords: kwlist.h (SQL) and the PL/pgSQL keyword lists (group plpgsql: words of the procedural language only, not in pg_get_keywords()).",
             "func: items are the pg_catalog functions of the running server without type I/O, planner-support and trigger functions (arguments / result internal, cstring, trigger); type: items are pg_catalog base, range, multirange, domain, enum and pseudo types (no array or catalog row types).",
             "docs: items are the <refname> entries of the SQL command reference (doc/src/sgml/ref, refmiscinfo 'SQL - Language Statements') - names and links only.",
             "Grammar items ending in (name) are words the parser actions compare an identifier with (CREATE ROLE ... SUPERUSER / LOGIN options, ...).",
+            "opt: items are option names the C code checks (EXPLAIN / VACUUM / COPY / CREATE DATABASE / REINDEX / CLUSTER option lists, storage parameters from reloptions.c); op: items are the operator names of pg_operator; SERIAL / BIGSERIAL / SMALLSERIAL come from parse_utilcmd.c.",
+            "Not inventoried: EXTRACT / date_part field names (datetime.c tables), configuration parameters (pg_settings), system catalog / information_schema views, number literal forms (scan.l), and grammar alternatives without a keyword of their own (CREATE INDEX ON t (a), FROM t) - their parent rules are items.",
             "psql meta-commands and client applications are not inventoried (client side).",
         ],
         "items": list(unique.values()),
@@ -686,9 +722,11 @@ def classify(inventory: dict, scope: dict | None, keyword_doc: dict | None) -> d
     engine's keyword file are covered without a rule."""
     rules = (scope or {}).get("rules", [])
     known = set((keyword_doc or {}).get("reserved", [])) | set((keyword_doc or {}).get("nonreserved", []))
+    # one regex per rule (patterns joined), compiled once: inventories have thousands of items
+    compiled = [(re.compile("|".join(f"(?:{fnmatch.translate(p)})" for p in r["match"])), r) for r in rules]
     out = {}
     for it in inventory["items"]:
-        rule = next((r for r in rules if any(fnmatch.fnmatchcase(it["id"], p) for p in r["match"])), None)
+        rule = next((r for rx, r in compiled if rx.match(it["id"])), None)
         if rule is None and it["kind"] == "keyword" and it["id"][3:] in known:
             rule = AUTO_KEYWORDS
         out[it["id"]] = rule

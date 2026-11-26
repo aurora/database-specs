@@ -55,6 +55,8 @@ statements:
   terminator: ";"
   body_quoting: [dollar-quoted strings, "BEGIN ATOMIC ... END (SQL-standard function bodies, since 14)"]
   notes:
+    - "Number literals: since 16 also 0x1F / 0o17 / 0b101 integers and _ digit separators (1_000_000); observed 16.x: SELECT 0x1F, 1_000 gives 31, 1000. On 15 both are an error (trailing junk after numeric literal); before 15 a number directly followed by letters was read as a number plus an alias (unverified)."
+    - "The operators list holds the tokens a tokenizer must keep together; pg_operator has about 75 distinct operator names (op: items in inventory/postgresql/), and user-defined operators can add more."
     - "psql meta-commands (\\d, \\i, \\gexec, ...) start with a backslash at line start; a client may choose to support a subset."
     - "Since 14, CREATE FUNCTION ... BEGIN ATOMIC ... END contains ';' without dollar quoting; the splitter must track BEGIN ATOMIC/END nesting."
 

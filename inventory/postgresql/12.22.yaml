@@ -12,6 +12,14 @@ sources:
   - src/pl/plpgsql/src/pl_gram.y
   - src/pl/plpgsql/src/pl_reserved_kwlist.h
   - src/pl/plpgsql/src/pl_unreserved_kwlist.h
+  - src/backend/parser/parse_utilcmd.c
+  - src/backend/commands/explain.c
+  - src/backend/commands/vacuum.c
+  - src/backend/commands/copy.c
+  - src/backend/commands/dbcommands.c
+  - src/backend/commands/indexcmds.c
+  - src/backend/commands/cluster.c
+  - src/backend/access/common/reloptions.c
 - kind: docs-index
   repository: postgres/postgres
   commit: 498f30a8b7025a2a7bd3715acc1d1692122ba542
@@ -21,6 +29,7 @@ sources:
   files:
   - pg_catalog.pg_proc
   - pg_catalog.pg_type
+  - pg_catalog.pg_operator
 notes:
 - 'Keywords: kwlist.h (SQL) and the PL/pgSQL keyword lists (group plpgsql: words of the procedural language only, not in pg_get_keywords()).'
 - 'func: items are the pg_catalog functions of the running server without type I/O, planner-support and trigger functions
@@ -30,6 +39,12 @@ notes:
   - names and links only.'
 - Grammar items ending in (name) are words the parser actions compare an identifier with (CREATE ROLE ... SUPERUSER / LOGIN
   options, ...).
+- 'opt: items are option names the C code checks (EXPLAIN / VACUUM / COPY / CREATE DATABASE / REINDEX / CLUSTER option lists,
+  storage parameters from reloptions.c); op: items are the operator names of pg_operator; SERIAL / BIGSERIAL / SMALLSERIAL
+  come from parse_utilcmd.c.'
+- 'Not inventoried: EXTRACT / date_part field names (datetime.c tables), configuration parameters (pg_settings), system catalog
+  / information_schema views, number literal forms (scan.l), and grammar alternatives without a keyword of their own (CREATE
+  INDEX ON t (a), FROM t) - their parent rules are items.'
 - psql meta-commands and client applications are not inventoried (client side).
 items:
 - id: kw:ABORT
@@ -9572,6 +9587,310 @@ items:
   kind: type
 - id: type:XML
   kind: type
+- id: type:BIGSERIAL
+  kind: type
+- id: type:SERIAL
+  kind: type
+- id: type:SERIAL2
+  kind: type
+- id: type:SERIAL4
+  kind: type
+- id: type:SERIAL8
+  kind: type
+- id: type:SMALLSERIAL
+  kind: type
+- id: 'opt:EXPLAIN: ANALYZE'
+  kind: option
+- id: 'opt:EXPLAIN: BUFFERS'
+  kind: option
+- id: 'opt:EXPLAIN: COSTS'
+  kind: option
+- id: 'opt:EXPLAIN: FORMAT'
+  kind: option
+- id: 'opt:EXPLAIN: SETTINGS'
+  kind: option
+- id: 'opt:EXPLAIN: SUMMARY'
+  kind: option
+- id: 'opt:EXPLAIN: TIMING'
+  kind: option
+- id: 'opt:EXPLAIN: VERBOSE'
+  kind: option
+- id: 'opt:VACUUM / ANALYZE: ANALYZE'
+  kind: option
+- id: 'opt:VACUUM / ANALYZE: DISABLE_PAGE_SKIPPING'
+  kind: option
+- id: 'opt:VACUUM / ANALYZE: FREEZE'
+  kind: option
+- id: 'opt:VACUUM / ANALYZE: FULL'
+  kind: option
+- id: 'opt:VACUUM / ANALYZE: INDEX_CLEANUP'
+  kind: option
+- id: 'opt:VACUUM / ANALYZE: SKIP_LOCKED'
+  kind: option
+- id: 'opt:VACUUM / ANALYZE: TRUNCATE'
+  kind: option
+- id: 'opt:VACUUM / ANALYZE: VERBOSE'
+  kind: option
+- id: 'opt:COPY: CONVERT_SELECTIVELY'
+  kind: option
+- id: 'opt:COPY: DELIMITER'
+  kind: option
+- id: 'opt:COPY: ENCODING'
+  kind: option
+- id: 'opt:COPY: ESCAPE'
+  kind: option
+- id: 'opt:COPY: FORCE_NOT_NULL'
+  kind: option
+- id: 'opt:COPY: FORCE_NULL'
+  kind: option
+- id: 'opt:COPY: FORCE_QUOTE'
+  kind: option
+- id: 'opt:COPY: FORMAT'
+  kind: option
+- id: 'opt:COPY: FREEZE'
+  kind: option
+- id: 'opt:COPY: HEADER'
+  kind: option
+- id: 'opt:COPY: NULL'
+  kind: option
+- id: 'opt:COPY: QUOTE'
+  kind: option
+- id: 'opt:CREATE / ALTER DATABASE: ALLOW_CONNECTIONS'
+  kind: option
+- id: 'opt:CREATE / ALTER DATABASE: CONNECTION_LIMIT'
+  kind: option
+- id: 'opt:CREATE / ALTER DATABASE: ENCODING'
+  kind: option
+- id: 'opt:CREATE / ALTER DATABASE: IS_TEMPLATE'
+  kind: option
+- id: 'opt:CREATE / ALTER DATABASE: LC_COLLATE'
+  kind: option
+- id: 'opt:CREATE / ALTER DATABASE: LC_CTYPE'
+  kind: option
+- id: 'opt:CREATE / ALTER DATABASE: LOCATION'
+  kind: option
+- id: 'opt:CREATE / ALTER DATABASE: OWNER'
+  kind: option
+- id: 'opt:CREATE / ALTER DATABASE: TABLESPACE'
+  kind: option
+- id: 'opt:CREATE / ALTER DATABASE: TEMPLATE'
+  kind: option
+- id: 'opt:storage parameter: AUTOSUMMARIZE'
+  kind: option
+- id: 'opt:storage parameter: AUTOVACUUM_ANALYZE_SCALE_FACTOR'
+  kind: option
+- id: 'opt:storage parameter: AUTOVACUUM_ANALYZE_THRESHOLD'
+  kind: option
+- id: 'opt:storage parameter: AUTOVACUUM_ENABLED'
+  kind: option
+- id: 'opt:storage parameter: AUTOVACUUM_FREEZE_MAX_AGE'
+  kind: option
+- id: 'opt:storage parameter: AUTOVACUUM_FREEZE_MIN_AGE'
+  kind: option
+- id: 'opt:storage parameter: AUTOVACUUM_FREEZE_TABLE_AGE'
+  kind: option
+- id: 'opt:storage parameter: AUTOVACUUM_MULTIXACT_FREEZE_MAX_AGE'
+  kind: option
+- id: 'opt:storage parameter: AUTOVACUUM_MULTIXACT_FREEZE_MIN_AGE'
+  kind: option
+- id: 'opt:storage parameter: AUTOVACUUM_MULTIXACT_FREEZE_TABLE_AGE'
+  kind: option
+- id: 'opt:storage parameter: AUTOVACUUM_VACUUM_COST_DELAY'
+  kind: option
+- id: 'opt:storage parameter: AUTOVACUUM_VACUUM_COST_LIMIT'
+  kind: option
+- id: 'opt:storage parameter: AUTOVACUUM_VACUUM_SCALE_FACTOR'
+  kind: option
+- id: 'opt:storage parameter: AUTOVACUUM_VACUUM_THRESHOLD'
+  kind: option
+- id: 'opt:storage parameter: BUFFERING'
+  kind: option
+- id: 'opt:storage parameter: CHECK_OPTION'
+  kind: option
+- id: 'opt:storage parameter: EFFECTIVE_IO_CONCURRENCY'
+  kind: option
+- id: 'opt:storage parameter: FASTUPDATE'
+  kind: option
+- id: 'opt:storage parameter: FILLFACTOR'
+  kind: option
+- id: 'opt:storage parameter: GIN_PENDING_LIST_LIMIT'
+  kind: option
+- id: 'opt:storage parameter: LOG_AUTOVACUUM_MIN_DURATION'
+  kind: option
+- id: 'opt:storage parameter: N_DISTINCT'
+  kind: option
+- id: 'opt:storage parameter: N_DISTINCT_INHERITED'
+  kind: option
+- id: 'opt:storage parameter: PAGES_PER_RANGE'
+  kind: option
+- id: 'opt:storage parameter: PARALLEL_WORKERS'
+  kind: option
+- id: 'opt:storage parameter: RANDOM_PAGE_COST'
+  kind: option
+- id: 'opt:storage parameter: SECURITY_BARRIER'
+  kind: option
+- id: 'opt:storage parameter: SEQ_PAGE_COST'
+  kind: option
+- id: 'opt:storage parameter: TOAST_TUPLE_TARGET'
+  kind: option
+- id: 'opt:storage parameter: USER_CATALOG_TABLE'
+  kind: option
+- id: 'opt:storage parameter: VACUUM_CLEANUP_INDEX_SCALE_FACTOR'
+  kind: option
+- id: 'opt:storage parameter: VACUUM_INDEX_CLEANUP'
+  kind: option
+- id: 'opt:storage parameter: VACUUM_TRUNCATE'
+  kind: option
+- id: op:!
+  kind: operator
+- id: op:!!
+  kind: operator
+- id: op:!~
+  kind: operator
+- id: op:!~*
+  kind: operator
+- id: op:!~~
+  kind: operator
+- id: op:!~~*
+  kind: operator
+- id: op:#
+  kind: operator
+- id: op:##
+  kind: operator
+- id: op:#-
+  kind: operator
+- id: op:#>
+  kind: operator
+- id: op:#>>
+  kind: operator
+- id: op:%
+  kind: operator
+- id: op:&
+  kind: operator
+- id: op:&&
+  kind: operator
+- id: op:&<
+  kind: operator
+- id: op:&<|
+  kind: operator
+- id: op:&>
+  kind: operator
+- id: op:*
+  kind: operator
+- id: op:*<
+  kind: operator
+- id: op:*<=
+  kind: operator
+- id: op:*<>
+  kind: operator
+- id: op:*=
+  kind: operator
+- id: op:*>
+  kind: operator
+- id: op:*>=
+  kind: operator
+- id: op:+
+  kind: operator
+- id: op:-
+  kind: operator
+- id: op:->
+  kind: operator
+- id: op:->>
+  kind: operator
+- id: op:-|-
+  kind: operator
+- id: op:/
+  kind: operator
+- id: op:<
+  kind: operator
+- id: op:<->
+  kind: operator
+- id: op:<<
+  kind: operator
+- id: op:<<=
+  kind: operator
+- id: op:<<|
+  kind: operator
+- id: op:<=
+  kind: operator
+- id: op:<>
+  kind: operator
+- id: op:<@
+  kind: operator
+- id: op:<^
+  kind: operator
+- id: op:=
+  kind: operator
+- id: op:>
+  kind: operator
+- id: op:>=
+  kind: operator
+- id: op:>>
+  kind: operator
+- id: op:>>=
+  kind: operator
+- id: op:>^
+  kind: operator
+- id: op:?
+  kind: operator
+- id: op:?#
+  kind: operator
+- id: op:?&
+  kind: operator
+- id: op:?-
+  kind: operator
+- id: op:?-|
+  kind: operator
+- id: op:?|
+  kind: operator
+- id: op:?||
+  kind: operator
+- id: op:@
+  kind: operator
+- id: op:@-@
+  kind: operator
+- id: op:@>
+  kind: operator
+- id: op:@?
+  kind: operator
+- id: op:@@
+  kind: operator
+- id: op:@@@
+  kind: operator
+- id: op:^
+  kind: operator
+- id: op:^@
+  kind: operator
+- id: op:|
+  kind: operator
+- id: op:|&>
+  kind: operator
+- id: op:|/
+  kind: operator
+- id: op:|>>
+  kind: operator
+- id: op:||
+  kind: operator
+- id: op:||/
+  kind: operator
+- id: op:~
+  kind: operator
+- id: op:~*
+  kind: operator
+- id: op:~<=~
+  kind: operator
+- id: op:~<~
+  kind: operator
+- id: op:~=
+  kind: operator
+- id: op:~>=~
+  kind: operator
+- id: op:~>~
+  kind: operator
+- id: op:~~
+  kind: operator
+- id: op:~~*
+  kind: operator
 - id: 'docs:SQL Commands: ABORT'
   kind: docs
   url: https://www.postgresql.org/docs/12/sql-abort.html

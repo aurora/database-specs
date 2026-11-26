@@ -210,8 +210,7 @@ rules:
             "sql:spatial_or_vector: *"]
     status: covered
     specs: ["syntax:ddl.create-index"]
-  - match: ["help:Contents: CREATE TABLE with Vectors", "help:Contents: Vector*", "help:Contents: VEC_*",
-            "help:Contents: Optimizing Hybrid Search*"]
+  - match: ["help:Contents: CREATE TABLE with Vectors", "help:Contents: Vector*", "help:Contents: Optimizing Hybrid Search*"]
     status: open
     reason: "Vector search (11.7+): CREATE INDEX ... VECTOR is in syntax ddl.create-index, but VECTOR columns and the VEC_* distance functions have no spec yet."
   - match: ["sql:explain_for_connection: *", "sql:show_param: <describe_command> *", "sql:show_param: ANALYZE *"]
@@ -321,8 +320,7 @@ rules:
     roadmap: lexical.functions
   - match: ["sql:boolean_test: *", "sql:column_default_non_parenthesized_expr: *", "sql:primary_expr: *", "sql:simple_ident*",
             "sql:bool: *", "sql:with_list_element: *", "sql:opt_recursive: *", "sql:opt_with_column_list: *", "sql:inner_join: *",
-            "sql:join_table_parens: *", "sql:table_primary_*", "sql:derived_*", "sql:subquery: *", "sql:opt_select_expressions: *",
-            "sql:no_braces_with_names: *", "sql:opt_expr_list_or_join_operator: *", "sql:opt_udf_expr_list_or_join_operator: *",
+            "sql:join_table_parens: *", "sql:table_primary_*", "sql:derived_*", "sql:subquery: *", "sql:no_braces_with_names: *", "sql:opt_expr_list_or_join_operator: *", "sql:opt_udf_expr_list_or_join_operator: *",
             "sql:order_by_single_element_list: *", "sql:limit_clause_init: *", "sql:limit_option: *", "sql:opt_by: *", "sql:opt_plus: *",
             "sql:opt_object_member_access: *", "sql:keyword_table_alias: *", "sql:keyword_ident: *", "sql:procedure_clause: *",
             "sql:opt_into: *", "sql:choice: *", "sql:expr_or_ignore*", "sql:update_elem: *", "sql:delete_part2: *",
@@ -430,37 +428,35 @@ rules:
             "help:Administration: SHOW PROCEDURE CODE"]
     status: planned
     roadmap: ddl.create-routine
-  - match: ["sql:call: *", "help:Data Manipulation: CALL"]
+  - match: ["sql:call: *"]
     status: planned
     roadmap: dml.call
 
   # --- planned: DML -------------------------------------------------------------------------------------
-  - match: ["sql:insert*", "sql:replace*", "sql:opt_ignore: *", "help:Data Manipulation: INSERT*",
-            "help:Data Manipulation: REPLACE"]
+  - match: ["sql:insert*", "sql:replace*", "sql:opt_ignore: *"]
     status: planned
     roadmap: dml.insert
-  - match: ["sql:update: *", "sql:opt_low_priority: *", "help:Data Manipulation: UPDATE"]
+  - match: ["sql:update: *", "sql:opt_low_priority: *"]
     status: planned
     roadmap: dml.update
-  - match: ["sql:delete: *", "sql:single_multi: *", "sql:opt_delete_option*", "help:Data Manipulation: DELETE"]
+  - match: ["sql:delete: *", "sql:single_multi: *", "sql:opt_delete_option*"]
     status: planned
     roadmap: dml.delete
   - match: ["sql:load*", "sql:data_or_xml: *", "sql:field_term: *", "sql:line_term: *", "sql:opt_field_term: *",
             "sql:opt_line_term: *", "sql:opt_ignore_lines: *", "sql:lines_or_rows: *", "sql:opt_xml_rows_identified_by: *",
             "sql:field_or_var: *", "sql:opt_field_or_var_spec: *", "sql:opt_load_*", "sql:opt_local: *",
-            "sql:into_destination: *", "help:Data Manipulation: LOAD XML"]
+            "sql:into_destination: *"]
     status: planned
     roadmap: dml.load-data
   - match: ["sql:function_call_*", "sql:sum_expr: *", "sql:geometry_function: *", "sql:opt_gconcat_separator: *",
-            "sql:opt_gorder_clause: *", "sql:json_on_response: *", "sql:ws_*", "sql:opt_ws_levels: *", "func:*",
+            "sql:opt_gorder_clause: *", "sql:ws_*", "sql:opt_ws_levels: *", "func:*",
             "help:Functions / *"]
     status: planned
     roadmap: lexical.functions
   - match: ["sql:table_function: JSON_TABLE *"]
     status: planned
     roadmap: query.json
-  - match: ["sql:select_*", "sql:query_*", "sql:table_reference*", "sql:join_table: *", "sql:table_function: *",
-            "sql:from_clause: *", "sql:opt_where_clause: *", "sql:opt_group_clause: *", "sql:opt_having_clause: *",
+  - match: ["sql:select_*", "sql:query_*", "sql:table_reference*", "sql:join_table: *", "sql:from_clause: *", "sql:opt_where_clause: *", "sql:opt_group_clause: *", "sql:opt_having_clause: *",
             "sql:order_clause: *", "sql:order_dir: *", "sql:opt_select_lock_type: *", "sql:into: *", "sql:union_*",
             "sql:table_value_constructor: *", "sql:index_hint_*", "sql:opt_all: *", "sql:opt_distinct: *",
             "sql:esc_table_ref: *", "sql:normal_join: *", "sql:opt_outer: *", "sql:table_alias: *", "sql:table_wild*",
@@ -469,39 +465,35 @@ rules:
             "sql:or: *", "sql:not: *", "sql:not2: *", "sql:literal: *", "sql:signed_literal*", "sql:temporal_literal: *",
             "sql:interval_time_stamp: *", "sql:cast_type: *", "sql:when_list: *", "sql:variable: *", "sql:variable_aux: *",
             "sql:field_ident: *", "sql:table_ident: *", "sql:table_ident_opt_wild: *", "sql:equal: *", "sql:opt_value: *",
-            "sql:opt_wild: *", "sql:simple_target_specification: *", "sql:key_usage_element: *",
-            "help:Data Manipulation: SELECT", "help:Data Manipulation: UNION", "help:Data Manipulation: EXCEPT",
-            "help:Data Manipulation: INTERSECT", "help:Data Manipulation: DUAL"]
+            "sql:opt_wild: *", "sql:simple_target_specification: *", "sql:key_usage_element: *"]
     status: planned
     roadmap: dml.select
   # --- planned: session, variables, transactions -----------------------------------------------------------
   - match: ["sql:use: *"]
     status: planned
     roadmap: session.use-schema
-  - match: ["sql:option_value_no_option_type: NAMES *", "help:Administration: SET NAMES",
-            "help:Administration: SET CHARACTER SET"]
+  - match: ["sql:option_value_no_option_type: NAMES *"]
     status: planned
     roadmap: connection-parameters
   - match: ["sql:option_value_no_option_type: PASSWORD *"]
     status: planned
     roadmap: admin.user-management
   - match: ["sql:start_option_value_list: TRANSACTION *", "sql:isolation_level: *", "sql:isolation_types: *",
-            "sql:transaction_access_mode_types: *", "help:Transactions: SET TRANSACTION"]
+            "sql:transaction_access_mode_types: *"]
     status: planned
     roadmap: transactions.isolation-levels
   - match: ["sql:set: *", "sql:option_value: *", "sql:start_option_value_list*", "sql:option_value_no_option_type: *",
             "sql:option_type: *", "sql:opt_var_type: *", "sql:opt_var_ident_type: *", "sql:set_expr_or_default: *",
-            "help:Administration: SET", "help:Administration: SHOW VARIABLES", "help:Administration: SHOW STATUS",
+            "help:Administration: SHOW VARIABLES", "help:Administration: SHOW STATUS",
             "help:Administration: SHOW CHARACTER SET", "help:Administration: SHOW COLLATION"]
     status: planned
     roadmap: introspection.server-variables
-  - match: ["sql:savepoint: *", "sql:release: *", "sql:rollback: ROLLBACK <opt_work> TO *", "help:Transactions: *SAVEPOINT"]
+  - match: ["sql:savepoint: *", "sql:release: *", "sql:rollback: ROLLBACK <opt_work> TO *"]
     status: planned
     roadmap: transactions.savepoints
   - match: ["sql:begin*", "sql:commit: *", "sql:rollback: *", "sql:opt_chain: *", "sql:opt_release: *", "sql:opt_work: *",
             "sql:start: *", "sql:start_transaction_option: *", "sql:lock: LOCK <table_or_tables> *",
-            "sql:unlock: UNLOCK <table_or_tables>", "sql:lock_option: *", "sql:load_data_lock: *", "help:Transactions: COMMIT",
-            "help:Transactions: ROLLBACK", "help:Transactions: START TRANSACTION", "help:Transactions: LOCK TABLES"]
+            "sql:unlock: UNLOCK <table_or_tables>", "sql:lock_option: *"]
     status: planned
     roadmap: transactions.control
 
@@ -513,16 +505,13 @@ rules:
   - match: ["sql:drop: DROP USER *", "sql:alter: ALTER USER *", "sql:rename: RENAME USER *", "sql:rename_list: *",
             "sql:opt_and: *", "sql:opt_column_list: *", "sql:grant*", "sql:revoke*", "sql:opt_*password*", "sql:require_*",
             "sql:opt_with_admin_option: *", "sql:opt_grant_*", "sql:object_privilege: *", "sql:opt_privileges: *",
-            "sql:text_or_password: *", "help:Account Management: *USER", "help:Account Management: *ROLE",
-            "help:Account Management: GRANT", "help:Account Management: REVOKE", "help:Account Management: SET PASSWORD",
-            "help:Administration: SHOW GRANTS", "help:Administration: SHOW CREATE USER", "help:Administration: SHOW PRIVILEGES"]
+            "sql:text_or_password: *", "help:Administration: SHOW GRANTS", "help:Administration: SHOW CREATE USER", "help:Administration: SHOW PRIVILEGES"]
     status: planned
     roadmap: admin.user-management
 
   # --- planned: SHOW ----------------------------------------------------------------------------------------
   - match: ["help:Administration: SHOW BINARY LOG*", "help:Administration: SHOW BINLOG EVENTS",
-            "help:Administration: SHOW MASTER *", "help:Administration: SHOW RELAYLOG EVENTS",
-            "help:Administration: SHOW REPLICA*", "help:Administration: SHOW SLAVE *"]
+            "help:Administration: SHOW RELAYLOG EVENTS"]
     status: out-of-scope
     reason: "Replication / binary log status: server administration."
   - match: ["sql:show*", "sql:opt_db: *", "sql:opt_full: *", "sql:wild_and_where: *", "sql:from_or_in: *", "sql:profile_def: *",
@@ -535,7 +524,7 @@ rules:
     status: out-of-scope
     reason: "Tablespaces (5.x ALTER TABLESPACE ... CHANGE): storage administration."
   - match: ["sql:change*", "sql:master_*", "sql:slave*", "sql:binlog_*", "sql:purge*", "sql:reset: RESET <reset_options>",
-            "sql:reset_option: *", "help:Administration: BINLOG", "help:Administration: RESET"]
+            "help:Administration: BINLOG", "help:Administration: RESET"]
     status: out-of-scope
     reason: "Replication (sources, replicas, filters, group replication) and binary logs: server administration, not something a database client edits."
   - match: ["sql:ts_*", "sql:opt_ts_*", "sql:tablespace_info: *", "sql:alter_tablespace*", "sql:add_log_file: *", "sql:lg_*",
@@ -552,8 +541,7 @@ rules:
   - match: ["sql:handler*", "sql:keycache*", "sql:key_cache_name: *", "sql:preload*", "sql:cache_key_list_or_empty: *",
             "sql:opt_ignore_leaves: *", "sql:flush*", "sql:help: *", "sql:xa: *", "sql:opt_one_phase: *", "sql:opt_suspend: *",
             "sql:opt_join_or_resume: *", "sql:opt_migrate: *", "sql:do: *", "help:Administration: CACHE INDEX",
-            "help:Administration: LOAD INDEX", "help:Administration: FLUSH*", "help:Administration: SHUTDOWN",
-            "help:Data Manipulation: DO"]
+            "help:Administration: LOAD INDEX", "help:Administration: FLUSH*", "help:Administration: SHUTDOWN"]
     status: out-of-scope
     reason: "Administration and low-level statements a client passes through without specs: HANDLER, key caches, FLUSH, SHUTDOWN / RESTART, instance locks, spatial reference systems, masking policies (Enterprise), IMPORT TABLE, XA, DO, HELP."
   - match: ["sql:analyze*", "sql:check: *", "sql:checksum: *", "sql:optimize*", "sql:repair*", "sql:mi_*",

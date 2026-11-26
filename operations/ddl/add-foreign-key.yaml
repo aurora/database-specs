@@ -37,6 +37,8 @@ implementations:
       caveats:
         - "No index is created on the referencing columns (add one for joins / cascading deletes)."
         - "Add NOT VALID to skip checking existing rows, then VALIDATE CONSTRAINT separately."
+        - "MATCH FULL / SIMPLE (default) are enforced; MATCH PARTIAL is a syntax-level placeholder (not implemented). Since 18 a temporal foreign key FOREIGN KEY (a, PERIOD p) REFERENCES t (a, PERIOD q) is possible - not generated here."
+        - "ADD CONSTRAINT also takes UNIQUE, PRIMARY KEY, CHECK and EXCLUDE constraints; this operation generates FOREIGN KEY only."
       sources: [{ evidence: tested }]
   sqlserver:
     - status: supported

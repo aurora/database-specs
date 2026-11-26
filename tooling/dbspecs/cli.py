@@ -163,7 +163,9 @@ def cmd_inventory(args) -> int:
                 functions = cur.fetchall()
                 cur.execute(inv.POSTGRES_TYPES_SQL)
                 types = cur.fetchall()
-            doc = inv.generate_postgresql(version, functions, types)
+                cur.execute(inv.POSTGRES_OPERATORS_SQL)
+                operators = cur.fetchall()
+            doc = inv.generate_postgresql(version, functions, types, operators)
             path = inv.write(doc)
             print(f"{target['id']:16} {version:10} {len(doc['items'])} items -> {path.relative_to(ROOT)}", flush=True)
             continue

@@ -17,7 +17,7 @@ support:
   postgresql:
     - status: supported
       notes:
-        - "Exceptions: CREATE/DROP DATABASE, CREATE/DROP TABLESPACE, CREATE INDEX CONCURRENTLY, VACUUM, ALTER SYSTEM, and ALTER TYPE ... ADD VALUE before 12."
+        - "Exceptions: CREATE/DROP DATABASE, CREATE/DROP TABLESPACE, CREATE / DROP INDEX CONCURRENTLY and REINDEX CONCURRENTLY (observed 18.7: cannot run inside a transaction block), VACUUM, ALTER SYSTEM, and ALTER TYPE ... ADD VALUE before 12."
   sqlserver:
     - status: supported
       notes:

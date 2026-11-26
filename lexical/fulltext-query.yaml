@@ -3,7 +3,10 @@ id: fulltext-query
 description: >
   Tokens of the Sphinx / Manticore full-text query language (the MATCH() argument), used to
   tokenize syntax fulltext.manticore-query: double quotes delimit phrases, a backslash escapes
-  operator characters. Not an engine's SQL lexical spec.
+  operator characters. Not an engine's SQL lexical spec. To search user input literally, a client
+  escapes these characters with a backslash: ! " $ ' ( ) - / < @ \ ^ | ~ (Manticore, observed on
+  32.1.3; the manual says * cannot be escaped). The query is itself an SQL string literal, so each
+  backslash is doubled once more there (MATCH('r\\&b')).
 
 identifiers:
   quotes: []

@@ -25,17 +25,19 @@ operand ::= ( '-' | '!' )? atom ( '^' number )?
 
 atom ::= term
        | phrase
-       | '(' alternatives ')'
+       | '(' alternatives? ')'
        | regex
 
 /* ^word = at field start, word$ = at field end, =word = exact form; * ? % are wildcards
    (they need min_infix_len / min_prefix_len on the table to match anything); a backslash
-   escapes an operator character as part of a word: r\&b, \(live\) */
+   escapes an operator character as part of a word: r\&b, \(live\). The characters a client must
+   escape in user input: ! " $ ' ( ) - / < @ \ ^ | ~ (inside an SQL string literal the backslash is
+   doubled again). An empty group () matches nothing and is not an error. */
 term ::= ( '^' | '=' )? term_piece+ '$'?
 
 term_piece ::= word | wildcard | escaped
 
-escaped ::= '\' ( '&' | '(' | ')' | '|' | '-' | '!' | '@' | '~' | '/' | '^' | '$' | '<' | '=' | '*' | '?' | '%' | '\' )
+escaped ::= '\' ( '"' | "'" | '&' | '(' | ')' | '|' | '-' | '!' | '@' | '~' | '/' | '^' | '$' | '<' | '=' | '*' | '?' | '%' | '\' )
 
 wildcard ::= '*' | '?' | '%'
 

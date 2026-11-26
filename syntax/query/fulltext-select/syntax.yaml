@@ -17,14 +17,17 @@ grammars:
       - "Precedence trap: everything after the last MATCH item is one filter, so MATCH('a') AND x = 1 OR y = 2 means MATCH('a') AND (x = 1 OR y = 2). Before a MATCH item, a top-level OR is a syntax error."
       - "HAVING takes a single predicate (no AND / OR). Optimizer hints go into a comment after the statement (SecondaryIndex(col), ColumnarScan(col), DocidIndex(col) and NO_ variants)."
       - "Full-text fields cannot be compared (title = 'x' is an error: filters only work on attributes)."
-      - "ORDER BY items need ASC or DESC. Without LIMIT 20 rows are returned."
+      - "ORDER BY / WITHIN GROUP ORDER BY items need ASC or DESC - the server reads the list as name / direction pairs, so only the last of two or more may omit it (ORDER BY v DESC, id works; ORDER BY id and ORDER BY v, id fail). A FACET also sorts by a single item without direction. Without LIMIT 20 rows are returned."
       - "GROUP n BY returns up to n rows per group; WITHIN GROUP ORDER BY chooses them; plain columns next to aggregates are allowed (one representative row per group)."
       - "Each FACET adds a result set (query.multi-result-select)."
-      - "Subqueries only as SELECT * FROM (SELECT ...) ORDER BY ... (re-sorting). JOIN: INNER / LEFT with ON equality conditions (casts like ON a = INT(b) are not covered)."
+      - "Subqueries only as SELECT * FROM (SELECT ...) ORDER BY ... (re-sorting). JOIN: one at most (a second JOIN is a syntax error), INNER (also plain JOIN) / LEFT with ON equality conditions; casts such as ON a = INT(b.json.key) on JSON attributes only."
       - "JSON attributes: meta.a.b, meta['a'], meta.k[0] in the select list and filters. String attributes: brand ANY ('a', 'b'). No LIKE in WHERE."
       - "FACET items are expressions (INTERVAL(price, 200, 400) AS r); BY, ALL / EXCLUDE FILTERS, ZEROES, MODE, DISTINCT, ORDER BY FACET() / COUNT(*) and LIMIT per facet."
+      - "Select-list expressions take arithmetic, comparisons and AND / OR / NOT (v > 1 AS c, IF(v > 1 AND v < 3, 1, 0)); WHERE does not. GROUP BY takes JSON paths (meta.a.b, missing keys form a NULL group) and MVAs."
+      - "A table alias (FROM t AS a) only works as a column prefix in the select list: a.v in WHERE / ORDER BY / JOIN ON fails (unknown column / sort-by attribute not found / JOIN ON table not found), and the JOIN table takes no alias (syntax error). Generate unaliased, table-qualified SQL."
+      - "FROM @@system.sessions (all connections incl. idle ones) and @@system.threads are built-in system tables (not in the manual); @@system.tables crashes 32.1.3 (signal 11) - never send it."
       - "Not covered: KNN / HYBRID_MATCH, sub-selects, table functions, SELECT ... FROM t.@table (crashes 32.1.3, see engine notes)."
-      - "Version boundaries from the grammar diffs (dbspecs inventory-diff) and tests: JOIN with table-qualified columns, FACET ... FILTERS / MODE since 27.1 (absent in 25.0.0; 26.x has no image and is untested), FACET ... ZEROES since 28.4, GROUP_CONCAT(... SEPARATOR / ORDER BY) since 28.6. 25.0 parses JOIN but rejects qualified columns ('unknown column')."
+      - "Version boundaries from the grammar diffs (dbspecs inventory-diff) and tests: JOIN with table-qualified columns, FACET ... FILTERS / MODE since 27.1 (absent in 25.0.0; 26.x has no image and is untested), FACET ... ZEROES since 28.4, GROUP_CONCAT(... SEPARATOR / ORDER BY) since 28.6, table aliases (FROM t AS a) since 28.4. 25.0 parses JOIN but rejects qualified columns ('unknown column')."
     sources: [{ evidence: tested }]
   sphinx:
     file: sphinx.ebnf
@@ -230,6 +233,51 @@ examples:
     expect: semantic-error
     engines: { manticore: { since: "27.1" } }
     notes: ["Explicit casts only on JSON attributes."]
+  # --- Manticore forms found by the third inventory audit
+  - sql: "SELECT id, IF(price > 1 AND cat < 3, 1, 0) AS c, cat > 1 AS big, NOT cat AS z FROM t_fts"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT id, (price + 1) * 2 AS p FROM t_fts"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts WHERE IF(cat > 1, 1, 0) = 1"
+    expect: invalid
+    engines: { manticore: {} }
+    notes: ["Function arguments with operators only in the select list."]
+  - sql: "SELECT GROUPBY() AS g, COUNT(*) AS c FROM t_fts GROUP BY meta.a.b"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts ORDER BY cat DESC, id"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT id FROM t_fts ORDER BY cat, id DESC"
+    expect: invalid
+    engines: { manticore: {} }
+    notes: ["Server error 'invalid sorting order': only the last item may omit the direction."]
+  - sql: "SELECT id FROM t_fts FACET cat ORDER BY cat"
+    expect: valid
+    engines: { manticore: {} }
+  - sql: "SELECT a.id FROM t_fts AS a"
+    expect: valid
+    engines: { manticore: { since: "28.4" } }
+  - sql: "SELECT a.id FROM t_fts AS a"
+    expect: invalid
+    engines: { manticore: { until: "28" } }
+    notes: ["Table aliases arrived with 28.x (opt_table_alias in the grammar diff 27.1.5 -> 28.4.4; 28.0 - 28.3 have no image)."]
+  - sql: "SELECT a.id FROM t_fts a WHERE a.cat = 1"
+    expect: semantic-error
+    engines: { manticore: { since: "28.4" } }
+    notes: ["'unknown column: a' - the alias is only a select-list prefix."]
+  - sql: "SELECT t_fts.id FROM t_fts JOIN t_cat ON t_fts.cat = t_cat.cid"
+    expect: valid
+    engines: { manticore: { since: "27.1" } }
+  - sql: "SELECT t_fts.id FROM t_fts LEFT JOIN t_cat ON t_fts.cat = t_cat.cid LEFT JOIN t_fts2 ON t_fts.id = t_fts2.id"
+    expect: invalid
+    engines: { manticore: {} }
+    notes: ["One JOIN at most."]
+  - sql: "SELECT id, connid, state FROM @@system.sessions"
+    expect: valid
+    engines: { manticore: {} }
   # --- Sphinx
   - sql: "SELECT id, WEIGHT() AS w FROM t_ft WHERE MATCH('apple') ORDER BY w DESC LIMIT 10"
     expect: valid

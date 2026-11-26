@@ -14,8 +14,13 @@ rules:
     status: covered
     specs: ["syntax:query.fulltext-select", "capability:query.fulltext-search"]
   - match: ["sphinxql:like_filter: *"]
-    status: planned
-    roadmap: introspection.server-variables
+    status: covered
+    specs: ["engine:manticore"]
+    reason: "LIKE 'pattern' after SHOW TABLES / DESCRIBE / SHOW COLUMNS / SHOW META / SHOW VARIABLES filters the output (engine notes); WHERE has no LIKE."
+  - match: ["sphinxql:sysvar: *", "sphinxql:sysvar_ext: *", "sphinxexpr:constlist_or_uservar: *"]
+    status: covered
+    specs: ["syntax:query.fulltext-select", "query:session.list-processes"]
+    reason: "SELECT @@version_comment, FROM @@system.sessions / threads (@@system.tables crashes 32.1.3, engine notes), IN @uservar filters."
   - match: ["sphinxql:ident_*", "sphinxql:names_transaction_collate: *", "sphinxql:reserved_tokens_without_option: *",
             "sphinxql:ident_or_string_or_num_or_null*", "sphinxql_second:ident: *", "sphinxql_second:ident_all: *",
             "ddl:tableident: *"]
@@ -85,7 +90,39 @@ rules:
   - match: ["docs-page:Creating_a_table/Data_types: *"]
     status: planned
     roadmap: ddl.create-table
-  - match: ["docs:Functions / *", "sphinxql:accepted_funcs: *", "sphinxql:time_unit: *", "sphinxexpr:function: *",
+  - match: ["func:DATABASE", "func:USER", "func:CURRENT_USER", "func:VERSION", "func:CONNECTION_ID", "func:LAST_INSERT_ID"]
+    status: covered
+    specs: ["engine:manticore"]
+    reason: "Session functions with their Manticore values in the engine notes (DATABASE() = 'Manticore', USER() = 'Usual')."
+  - match: ["func:IF", "func:IN", "func:ANY", "func:ALL"]
+    status: covered
+    specs: ["syntax:query.fulltext-select"]
+  - match: ["docs-page:Searching/Grouping: Aggregation functions", "docs-page:Searching/Grouping: Grouping accuracy"]
+    status: planned
+    roadmap: dml.select
+  - match: ["docs-page:Searching/Grouping: *"]
+    status: covered
+    specs: ["syntax:query.fulltext-select", "capability:query.top-n-per-group"]
+  - match: ["docs-page:Searching/Pagination: HTTP JSON", "docs-page:Searching/Pagination: Scrolling via JSON",
+            "docs-page:Searching/Full_text_matching/Escaping: In HTTP JSON API"]
+    status: out-of-scope
+    reason: "HTTP JSON API: the client talks SQL over the mysql protocol."
+  - match: ["docs-page:Searching/Pagination: Scroll*"]
+    status: planned
+    roadmap: dml.select
+  - match: ["docs-page:Searching/Pagination: *"]
+    status: covered
+    specs: ["capability:query.limit-offset", "syntax:query.fulltext-select"]
+  - match: ["docs-page:Searching/Full_text_matching/Escaping: Escaping json node names in SQL"]
+    status: open
+    reason: "Backticked JSON keys with special characters (j.`a=b`) are not in the select grammar yet."
+  - match: ["docs-page:Searching/Full_text_matching/Escaping: *"]
+    status: covered
+    specs: ["syntax:fulltext.manticore-query", "lexical:manticore"]
+  - match: ["docs-page:Server_settings/Setting_variables_online: *"]
+    status: planned
+    roadmap: introspection.server-variables
+  - match: ["docs:Functions / *", "func:*", "sphinxql:accepted_funcs: *", "sphinxql:time_unit: *", "sphinxexpr:function: *",
             "docs-page:Functions/*", "docs-page:Searching/Highlighting: *"]
     status: planned
     roadmap: lexical.functions
@@ -143,6 +180,7 @@ rules:
     status: covered
     specs: ["query:introspection.list-tables"]
   - match: ["buddy:Show", "buddy:Select", "buddy:Alias", "sphinxql_extra:show_fields: *", "sphinxql_extra:fields_or_columns: *",
+            "sphinxql_extra:table_ident: *", "sphinxql_extra:table_db_ident: *", "sphinxql_extra:like_filter: *",
             "sphinxql_extra:create_database: *", "sphinxql_extra:lock_tables: *", "sphinxql_extra:unlock_tables: *",
             "sphinxql_extra:read_or_write: *"]
     status: covered
@@ -217,11 +255,11 @@ rules:
     status: planned
     roadmap: introspection.server-variables
   - match: ["sphinxql:show_what: THREADS", "docs:SQL commands / Server status: SHOW THREADS", "docs-page:Node_info_and_management/SHOW_QUERIES: *"]
-    status: open
-    reason: "session.list-processes has no Manticore variant: SHOW THREADS lists working threads only; SHOW QUERIES (Buddy) lists running statements of all protocols with the id KILL takes - variant candidate (no idle sessions either)."
+    status: out-of-scope
+    reason: "Alternatives to session.list-processes, which reads @@system.sessions (all sessions incl. idle ones): SHOW THREADS lists working threads only, SHOW QUERIES (Buddy) running statements only."
   - match: ["sphinxql_second:kill_connid: *", "sphinxql_second:opt_word_query: *", "docs-page:Node_info_and_management/KILL: *"]
     status: open
-    reason: "session.cancel-query: KILL takes a query id from SHOW QUERIES, not CONNECTION_ID(); needs a test with a long-running SELECT (KILL on DEBUG SLEEP returned OK without effect)."
+    reason: "session.cancel-query: KILL <connid> marks the session killed (@@system.sessions.killed = 1) but an idle connection keeps working, so terminate is not possible; cancelling a running SELECT is untested (KILL on DEBUG SLEEP returned OK without effect)."
   - match: ["sphinxql_extra:use_database: *"]
     status: planned
     roadmap: session.use-schema
@@ -248,16 +286,22 @@ rules:
   - match: ["sphinxql:show_what: PLUGINS"]
     status: open
     reason: "Loaded UDFs are callable in SELECT (autocomplete), and SHOW PLUGINS lists them; introspection.list-routines has no Manticore variant (gap) - candidate source."
-  - match: ["ddl:create_function: *", "ddl:drop_function: *", "buddy:Plugin", "ddl:create_plugin: *", "ddl:drop_plugin: *", "ddl:udf_type: *",
+  - match: ["ddl:drop_function: *"]
+    status: open
+    reason: "Context action for UDFs once SHOW PLUGINS feeds introspection.list-routines (object tree)."
+  - match: ["ddl:create_function: *", "buddy:Plugin", "ddl:create_plugin: *", "ddl:drop_plugin: *", "ddl:udf_type: *",
             "sphinxql_second:reload_plugins: *", "docs:SQL commands / Plugins: *"]
     status: out-of-scope
     reason: "C plugins / UDFs and Buddy plugins are server extensions (shared libraries), not client-side SQL."
+  - match: ["sphinxql_second:set_global_stmt: SET <index_or_table> *"]
+    status: out-of-scope
+    reason: "Per-table user variable for IN @var filters, plain tables only (RT tables: 'unknown table in Set statement'); SET GLOBAL @var is planned with introspection.server-variables."
   - match: ["sphinxql:optimize_index: *", "sphinxql:sysfilters: *", "sphinxql_second:attach_index: *", "sphinxql_second:backup*",
             "sphinxql_second:drop_cache: *", "sphinxql_second:flush_*", "sphinxql_second:freeze_indexes: *",
             "sphinxql_second:unfreeze_indexes: *", "sphinxql_second:purge: *", "sphinxql_second:reload_*",
             "sphinxql_second:opt_reload_index_from: *", "sphinxql_second:opt_with_truncate: *", "sphinxql_second:index_or_table: *",
             "sphinxql_second:indexes_or_tables: *", "sphinxql_second:like_filter: *", "sphinxql_second:opt_option_clause: *",
-            "sphinxql_second:set_global_stmt: SET <index_or_table> *", "sphinxql_second:option_item: *", "sphinxql:show_what: LOCKS",
+            "sphinxql_second:option_item: *", "sphinxql:show_what: LOCKS",
             "buddy:Backup", "buddy:Flush", "buddy:Optimize",
             "ddl:import_table: *", "docs:SQL commands / Backup: *", "docs:SQL commands / Flushing misc things: *",
             "docs:SQL commands / Table optimization: *", "docs:SQL commands / Real-time table optimization: *", "docs:SQL commands / Importing to a real-time table: *",

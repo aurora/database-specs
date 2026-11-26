@@ -82,6 +82,8 @@ examples:
   - { sql: "ZONESPAN:th red apple", expect: valid, engines: { manticore: {}, sphinx: {} } }
   - { sql: "r\\&b | \\(official video\\)", expect: valid, engines: { manticore: {}, sphinx: {} }, notes: ["Escaped operator characters are part of the word."] }
   - { sql: "\\$manticore", expect: valid, engines: { manticore: {}, sphinx: {} } }
+  - { sql: "say \\\"hi\\\" it\\'s", expect: valid, engines: { manticore: {} }, notes: ["Quotes from user input are escaped like the operator characters."] }
+  - { sql: "red ()", expect: valid, engines: { manticore: {} }, notes: ["An empty group is no error; on its own it matches nothing."] }
   - { sql: "red NOTNEAR/2 pie", expect: invalid, engines: { sphinx: {} }, notes: ["Manticore extension."] }
   - { sql: "REGEX(/app.*/)", expect: invalid, engines: { sphinx: {} }, notes: ["Manticore extension."] }
   - { sql: "-apple", expect: semantic-error, engines: { manticore: {}, sphinx: {} } }

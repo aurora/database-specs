@@ -139,6 +139,8 @@ def _render(tokens: list[str], keywords: dict[str, str]) -> tuple[str, list[str]
             kws.append(keywords[t])
         elif t.startswith("'"):
             words.append(t.strip("'"))
+        elif t in SIGIL_TOKENS:
+            words.append(SIGIL_TOKENS[t])
         elif t.startswith("TOK_"):
             words.append(f"<{t[4:].lower()}>")
         else:
@@ -176,7 +178,8 @@ def grammar_items(parser: str, grammar: str, lexer: str | None) -> list[dict]:
             # keyword forms, plus forms with syntax characters (j.a.b, cluster:table, name = (...)) and
             # operator tokens; pure sequences / list recursion of nonterminals are internal structure
             tokens = [t for t in alt if t.startswith("TOK_") and t not in keywords]
-            if kws or punct or (tokens and len(alt) > 1 and not keywords):
+            sigil = any(t in SIGIL_TOKENS for t in alt)
+            if kws or punct or sigil or (tokens and len(alt) > 1 and not keywords):
                 items.append({"id": f"{parser}:{rule}: {form}", "kind": "grammar", "parser": parser})
     return items
 
@@ -223,7 +226,16 @@ MANTICORE_DOC_PAGES = [
     "manual/english/Listing_tables.md",
     "manual/english/Creating_a_table/Data_types.md",
     "manual/english/Data_creation_and_modification/Updating_documents/UPDATE.md",
+    # session / global variable names, MATCH() escaping, grouping forms, scroll pagination
+    "manual/english/Server_settings/Setting_variables_online.md",
+    "manual/english/Searching/Full_text_matching/Escaping.md",
+    "manual/english/Searching/Grouping.md",
+    "manual/english/Searching/Pagination.md",
 ]
+# built-in expression functions: table g_dFuncs, names in comments  { /*"now", */ 0, TOK_FUNC, ...
+MANTICORE_FUNC_TABLE = "src/sphinxexpr.cpp"
+# tokens that stand for sigil syntax (@@session.x, @var) rather than identifiers
+SIGIL_TOKENS = {"TOK_SYSVAR": "@@<sysvar>", "TOK_USERVAR": "@<uservar>"}
 BUDDY_REPO = "manticoresoftware/manticoresearch-buddy"
 
 
@@ -247,6 +259,16 @@ def page_items(markdown: str, page: str, base_url: str) -> list[dict]:
             rel = page.removeprefix("manual/english/").removesuffix(".md")
             items.append({"id": f"docs-page:{rel}: {title}", "kind": "docs", "url": base_url + rel})
     return items
+
+
+def function_items(source: str, base_url: str) -> list[dict]:
+    """Names of the built-in expression functions from the C++ function table (the grammar only has
+    TOK_FUNC; the Functions pages miss some, e.g. DATABASE(), VERSION())."""
+    start = source.find("g_dFuncs[")
+    end = source.find("};", start)
+    names = re.findall(r'/\*\s*"(\w+)"', source[start:end]) if start >= 0 else []
+    return [{"id": f"func:{n.upper()}", "kind": "function",
+             "url": base_url + MANTICORE_FUNC_TABLE} for n in dict.fromkeys(names)]
 
 
 def buddy_items(buddy_commit: str) -> tuple[list[dict], str | None]:
@@ -280,9 +302,11 @@ def generate_manticore(version: str, short_commit: str, buddy_commit: str | None
     pages = sorted({p for pat in MANTICORE_DOC_PAGES for p in tree if fnmatch.fnmatchcase(p, pat)})
     for page in pages:
         docs += page_items(fetch(MANTICORE_REPO, commit, page), page, base)
+    funcs = function_items(fetch(MANTICORE_REPO, commit, MANTICORE_FUNC_TABLE),
+                           f"https://github.com/{MANTICORE_REPO}/blob/{commit}/")
     plugins, buddy_ref = buddy_items(buddy_commit) if buddy_commit else ([], None)
     unique = {}
-    for it in kw_items + sorted(items, key=lambda i: i["id"]) + docs + plugins:
+    for it in kw_items + sorted(items, key=lambda i: i["id"]) + funcs + docs + plugins:
         unique.setdefault(it["id"], it)
     return {
         "engine": "manticore",
@@ -290,12 +314,12 @@ def generate_manticore(version: str, short_commit: str, buddy_commit: str | None
         "generated_at": dt.date.today().isoformat(),
         "sources": [
             {"kind": "grammar", "repository": MANTICORE_REPO, "commit": commit,
-             "files": [f for pair in MANTICORE_PARSERS.values() for f in pair if f]},
+             "files": [f for pair in MANTICORE_PARSERS.values() for f in pair if f] + [MANTICORE_FUNC_TABLE]},
             {"kind": "docs-index", "repository": MANTICORE_REPO, "commit": commit, "files": [MANTICORE_DOCS_INDEX] + pages},
         ] + ([{"kind": "plugins", "repository": BUDDY_REPO, "commit": buddy_ref, "files": ["src/Plugin/*"]}] if buddy_ref else []),
         "notes": [
             "Statements handled by the Buddy sidecar (SHOW QUERIES, SHOW FULL TABLES, CREATE SOURCE / MATERIALIZED VIEW, the information_schema emulation, ...) are not in the C++ grammar: buddy: items name its plugins, the manual pages describe their statements.",
-            "Function, OPTION and setting names are resolved in C++ tables, not by the grammar: docs-page: items (headings of the manual pages) are the source for them. Names that the pages only list inside text or tables (most OPTION names, CALL SUGGEST / AUTOCOMPLETE / KEYWORDS / PQ options, knn() options, ranker names and ranking factors) are not separate items - the specs for them (dml.select, dml.call) must take them from the pages.",
+            "Function names come from the C++ function table (func: items). OPTION and setting names are resolved in C++ tables too: docs-page: items (headings of the manual pages) are the source for them. Names that the pages only list inside text or tables (most OPTION names, CALL SUGGEST / AUTOCOMPLETE / KEYWORDS / PQ options, knn() options, ranker names and ranking factors) are not separate items - the specs for them (dml.select, dml.call) must take them from the pages.",
             "Grammar items: alternatives with a keyword, a syntax character or (expression / full-text parsers, which have no keyword lexer) an operator token; plain sequences of nonterminals are internal structure.",
         ],
         "items": list(unique.values()),

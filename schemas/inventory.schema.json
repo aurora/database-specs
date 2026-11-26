@@ -32,8 +32,8 @@
         "required": ["id", "kind"],
         "additionalProperties": false,
         "properties": {
-          "id": { "type": "string", "description": "kw:<KEYWORD> | <parser>:<rule>: <form> | docs:<section>: <entry> | docs-page:<page>: <heading> | buddy:<plugin>" },
-          "kind": { "enum": ["keyword", "grammar", "docs", "plugin"] },
+          "id": { "type": "string", "description": "kw:<KEYWORD> | <parser>:<rule>: <form> | docs:<section>: <entry> | docs-page:<page>: <heading> | buddy:<plugin> | func:<NAME> (built-in function table)" },
+          "kind": { "enum": ["keyword", "grammar", "function", "docs", "plugin"] },
           "parser": { "type": "string" },
           "parsers": { "type": "array", "items": { "type": "string" } },
           "url": { "type": "string" }

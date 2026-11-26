@@ -182,7 +182,8 @@ def resolve_syntax(specs: Specs, syn_id: str, engine: str | None, version: str |
     if sql is not None:
         if not version:
             raise ShowError("--sql needs --version")
-        ok = matches(grammar, g["start"], tokenize(sql, lexical_for(specs, engine)))
+        from .syntax import grammar_accepts  # the entry's own tokenizer lexical (embedded languages)
+        ok = grammar_accepts(specs, syn_id, engine, version, sql)
         res["check"] = {"sql": sql, "grammar_accepts": ok,
                         "hint": "grammar only - the server may still reject it (names, types, semantics)"}
     return res

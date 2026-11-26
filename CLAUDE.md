@@ -56,7 +56,7 @@ uv run dbspecs inventory-diff manticore 27.1.5 28.4.4    # grammar items added (
   tokenizer lexical (`lexical: fulltext-query`), referenced from the engine lexical spec's
   `embedded_languages`.
 - `inventory/<engine>/<version>.yaml` (generated): everything the engine has - keywords and grammar
-  forms from its parser sources at the build commit, plus the manual's reference index.
+  forms from its parser sources at the build commit, plus the built-in function table (`func:`) and the manual's reference index.
   `scope/<engine>.yaml` classifies every item (covered by specs / planned in the roadmap / open /
   out-of-scope with a reason); `validate` fails on unclassified items. `/audit-inventory <engine>`
   runs an independent review in a fresh subagent and writes `dist/audit/`.

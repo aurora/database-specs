@@ -20,6 +20,7 @@ sources:
   - src/sphinxexpr.y
   - src/sphinxexpr.l
   - src/sphinxquery/sphinxquery.y
+  - src/sphinxexpr.cpp
 - kind: docs-index
   repository: manticoresoftware/manticoresearch
   commit: 9d4cd4df2d8a3758099dd77009394003f809c615
@@ -41,13 +42,17 @@ sources:
   - manual/english/Searching/Autocomplete.md
   - manual/english/Searching/Conversational_search.md
   - manual/english/Searching/Faceted_search.md
+  - manual/english/Searching/Full_text_matching/Escaping.md
+  - manual/english/Searching/Grouping.md
   - manual/english/Searching/Highlighting.md
   - manual/english/Searching/Joining.md
   - manual/english/Searching/KNN.md
   - manual/english/Searching/Options.md
+  - manual/english/Searching/Pagination.md
   - manual/english/Searching/Percolate_query.md
   - manual/english/Searching/Sorting_and_ranking.md
   - manual/english/Searching/Spell_correction.md
+  - manual/english/Server_settings/Setting_variables_online.md
 - kind: plugins
   repository: manticoresoftware/manticoresearch-buddy
   commit: 731399081ae6981c1f31191ccaede4529f583d9c
@@ -56,8 +61,10 @@ sources:
 notes:
 - 'Statements handled by the Buddy sidecar (SHOW QUERIES, SHOW FULL TABLES, CREATE SOURCE / MATERIALIZED VIEW, the information_schema
   emulation, ...) are not in the C++ grammar: buddy: items name its plugins, the manual pages describe their statements.'
-- 'Function, OPTION and setting names are resolved in C++ tables, not by the grammar: docs-page: items (headings of the manual
-  pages) are the source for them.'
+- 'Function names come from the C++ function table (func: items). OPTION and setting names are resolved in C++ tables too:
+  docs-page: items (headings of the manual pages) are the source for them. Names that the pages only list inside text or tables
+  (most OPTION names, CALL SUGGEST / AUTOCOMPLETE / KEYWORDS / PQ options, knn() options, ranker names and ranking factors)
+  are not separate items - the specs for them (dml.select, dml.call) must take them from the pages.'
 - 'Grammar items: alternatives with a keyword, a syntax character or (expression / full-text parsers, which have no keyword
   lexer) an operator token; plain sequences of nonterminals are internal structure.'
 items:
@@ -1438,6 +1445,9 @@ items:
 - id: 'sphinxexpr:constlist: <constlist> , <const_int>'
   kind: grammar
   parser: sphinxexpr
+- id: 'sphinxexpr:constlist_or_uservar: @<uservar>'
+  kind: grammar
+  parser: sphinxexpr
 - id: 'sphinxexpr:expr: ( <expr> )'
   kind: grammar
   parser: sphinxexpr
@@ -2559,6 +2569,21 @@ items:
 - id: 'sphinxql:sysfilters: SYSFILTERS <filter_expr>'
   kind: grammar
   parser: sphinxql
+- id: 'sphinxql:sysvar: @@<sysvar>'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:sysvar: @@<sysvar> <multi_strings_and_maybe_chunk_nokey>'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:sysvar_ext: @@<sysvar>'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:sysvar_ext: @@<sysvar> <chunk>'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:sysvar_ext: @@<sysvar> <maybechunk_then_subkeys>'
+  kind: grammar
+  parser: sphinxql
 - id: 'sphinxql:tablename_with_maybecluster: <ident> : <single_manticore_tablename>'
   kind: grammar
   parser: sphinxql
@@ -2796,7 +2821,7 @@ items:
 - id: 'sphinxql_debug:sleep: SLEEP <timeint> <opt_option_clause>'
   kind: grammar
   parser: sphinxql_debug
-- id: 'sphinxql_debug:split: SPLIT <ident> <chunk> <const_int> ON <uservar> <opt_option_clause>'
+- id: 'sphinxql_debug:split: SPLIT <ident> <chunk> <const_int> ON @<uservar> <opt_option_clause>'
   kind: grammar
   parser: sphinxql_debug
 - id: 'sphinxql_debug:trace: TRACE <trace_args>'
@@ -2905,6 +2930,12 @@ items:
   kind: grammar
   parser: sphinxql_second
 - id: 'sphinxql_second:backup_tail_token: ='
+  kind: grammar
+  parser: sphinxql_second
+- id: 'sphinxql_second:backup_tail_token: @<uservar>'
+  kind: grammar
+  parser: sphinxql_second
+- id: 'sphinxql_second:backup_tail_token: @@<sysvar>'
   kind: grammar
   parser: sphinxql_second
 - id: 'sphinxql_second:backup_tail_token: AUTH'
@@ -3165,6 +3196,294 @@ items:
 - id: 'sphinxquery:sp_item: " <phrase> "'
   kind: grammar
   parser: sphinxquery
+- id: func:NOW
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:ABS
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:CEIL
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:FLOOR
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:SIN
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:COS
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:LN
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:LOG2
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:LOG10
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:EXP
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:SQRT
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:BIGINT
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:SINT
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:CRC32
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:FIBONACCI
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:KNN_DIST
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:HYBRID_SCORE
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:DAY
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:WEEK
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:MONTH
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:YEAR
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:YEARMONTH
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:YEARMONTHDAY
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:YEARWEEK
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:HOUR
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:MINUTE
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:SECOND
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:DAYOFWEEK
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:DAYOFYEAR
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:QUARTER
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:MIN
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:MAX
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:POW
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:IDIV
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:IF
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:MADD
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:MUL3
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:INTERVAL
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:IN
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:BITDOT
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:REMAP
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:GEODIST
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:EXIST
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:POLY2D
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:GEOPOLY2D
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:CONTAINS
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:ZONESPANLIST
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:CONCAT
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:TO_STRING
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:RANKFACTORS
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:PACKEDFACTORS
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:BM25F
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:INTEGER
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:DOUBLE
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:LENGTH
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:LEAST
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:GREATEST
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:UINT
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:UINT64
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:QUERY
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:CURTIME
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:CURDATE
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:TIME
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:DATE
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:DAYNAME
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:MONTHNAME
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:UTC_TIME
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:UTC_TIMESTAMP
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:TIMEDIFF
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:DATEDIFF
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:DATE_ADD
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:DATE_SUB
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:CURRENT_USER
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:CONNECTION_ID
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:ALL
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:ANY
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:INDEXOF
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:MIN_TOP_WEIGHT
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:MIN_TOP_SORTVAL
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:ATAN2
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:RAND
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:REGEX
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:SUBSTRING_INDEX
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:UPPER
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:LOWER
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:LAST_INSERT_ID
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:LEVENSHTEIN
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:DATE_FORMAT
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:DATABASE
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:USER
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:VERSION
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:RANGE
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:HISTOGRAM
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:DATE_RANGE
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:DATE_HISTOGRAM
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
+- id: func:UUID_SHORT
+  kind: function
+  url: https://github.com/manticoresoftware/manticoresearch/blob/9d4cd4df2d8a3758099dd77009394003f809c615/src/sphinxexpr.cpp
 - id: 'docs:SQL commands / Schema management: CREATE TABLE'
   kind: docs
   url: 'https://manual.manticoresearch.com/Creating_a_table/Local_tables/Real-time_table.md#CREATE-TABLE-command:'
@@ -5286,6 +5605,39 @@ items:
 - id: 'docs-page:Searching/Faceted_search: Performance'
   kind: docs
   url: https://manual.manticoresearch.com/Searching/Faceted_search
+- id: 'docs-page:Searching/Full_text_matching/Escaping: Escaping characters in query string'
+  kind: docs
+  url: https://manual.manticoresearch.com/Searching/Full_text_matching/Escaping
+- id: 'docs-page:Searching/Full_text_matching/Escaping: In MySQL command line client'
+  kind: docs
+  url: https://manual.manticoresearch.com/Searching/Full_text_matching/Escaping
+- id: 'docs-page:Searching/Full_text_matching/Escaping: Using MySQL drivers'
+  kind: docs
+  url: https://manual.manticoresearch.com/Searching/Full_text_matching/Escaping
+- id: 'docs-page:Searching/Full_text_matching/Escaping: In HTTP JSON API'
+  kind: docs
+  url: https://manual.manticoresearch.com/Searching/Full_text_matching/Escaping
+- id: 'docs-page:Searching/Full_text_matching/Escaping: In clients'
+  kind: docs
+  url: https://manual.manticoresearch.com/Searching/Full_text_matching/Escaping
+- id: 'docs-page:Searching/Full_text_matching/Escaping: Escaping asterisk'
+  kind: docs
+  url: https://manual.manticoresearch.com/Searching/Full_text_matching/Escaping
+- id: 'docs-page:Searching/Full_text_matching/Escaping: Escaping json node names in SQL'
+  kind: docs
+  url: https://manual.manticoresearch.com/Searching/Full_text_matching/Escaping
+- id: 'docs-page:Searching/Grouping: Grouping search results'
+  kind: docs
+  url: https://manual.manticoresearch.com/Searching/Grouping
+- id: 'docs-page:Searching/Grouping: Just Grouping'
+  kind: docs
+  url: https://manual.manticoresearch.com/Searching/Grouping
+- id: 'docs-page:Searching/Grouping: Aggregation functions'
+  kind: docs
+  url: https://manual.manticoresearch.com/Searching/Grouping
+- id: 'docs-page:Searching/Grouping: Grouping accuracy'
+  kind: docs
+  url: https://manual.manticoresearch.com/Searching/Grouping
 - id: 'docs-page:Searching/Highlighting: Highlighting'
   kind: docs
   url: https://manual.manticoresearch.com/Searching/Highlighting
@@ -5610,6 +5962,27 @@ items:
 - id: 'docs-page:Searching/Options: Query optimizer hints'
   kind: docs
   url: https://manual.manticoresearch.com/Searching/Options
+- id: 'docs-page:Searching/Pagination: Pagination of search results'
+  kind: docs
+  url: https://manual.manticoresearch.com/Searching/Pagination
+- id: 'docs-page:Searching/Pagination: SQL'
+  kind: docs
+  url: https://manual.manticoresearch.com/Searching/Pagination
+- id: 'docs-page:Searching/Pagination: HTTP JSON'
+  kind: docs
+  url: https://manual.manticoresearch.com/Searching/Pagination
+- id: 'docs-page:Searching/Pagination: Result set window'
+  kind: docs
+  url: https://manual.manticoresearch.com/Searching/Pagination
+- id: 'docs-page:Searching/Pagination: Scroll Search Option'
+  kind: docs
+  url: https://manual.manticoresearch.com/Searching/Pagination
+- id: 'docs-page:Searching/Pagination: Scrolling via SQL'
+  kind: docs
+  url: https://manual.manticoresearch.com/Searching/Pagination
+- id: 'docs-page:Searching/Pagination: Scrolling via JSON'
+  kind: docs
+  url: https://manual.manticoresearch.com/Searching/Pagination
 - id: 'docs-page:Searching/Percolate_query: Percolate Query'
   kind: docs
   url: https://manual.manticoresearch.com/Searching/Percolate_query
@@ -5694,6 +6067,12 @@ items:
 - id: 'docs-page:Searching/Spell_correction: Demo'
   kind: docs
   url: https://manual.manticoresearch.com/Searching/Spell_correction
+- id: 'docs-page:Server_settings/Setting_variables_online: Setting variables online'
+  kind: docs
+  url: https://manual.manticoresearch.com/Server_settings/Setting_variables_online
+- id: 'docs-page:Server_settings/Setting_variables_online: SET'
+  kind: docs
+  url: https://manual.manticoresearch.com/Server_settings/Setting_variables_online
 - id: buddy:Alias
   kind: plugin
   url: https://github.com/manticoresoftware/manticoresearch-buddy/tree/731399081ae6981c1f31191ccaede4529f583d9c/src/Plugin/Alias

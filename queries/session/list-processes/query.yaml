@@ -37,9 +37,29 @@ variants:
     file: sqlserver.sql
     notes:
       - "User sessions (sys.dm_exec_sessions) with the running request, if any. Needs VIEW SERVER STATE to see other sessions."
+  - engine: manticore
+    file: manticore.sql
+    transform:
+      session_id: { column: connid }
+      user_name: { const: null }
+      client_address: { column: host }
+      database_name: { const: null }
+      application_name: { const: null }
+      state: { column: state }
+      query: { column: last cmd }
+      query_seconds: { const: null }
+      blocked_by: { const: null }
+      is_current: { column: is_current, equals: "1" }
+    extra_columns:
+      - { name: protocol, column: proto, description: "mysql, http, ... - HTTP API sessions are listed too." }
+      - { name: killed, column: killed, description: "1 after KILL; the session may still be open (see session.cancel-query)." }
+      - { name: last_command_time, column: last cmd time, description: "Text such as '131us ago' (running) or '5us' (idle), not a number." }
+    notes:
+      - "@@system.sessions (not in the manual) lists every connection, idle ones too (state net_idle; query is then the last command, for internal commands a name like show_tables). session_id = CONNECTION_ID() of that session."
+      - "Never query @@system.tables: it crashes 32.1.3 (see engine notes)."
+    sources: [{ evidence: observed, notes: "manticore 32.1.3" }]
 not_applicable:
   sqlite: "Embedded library: no server sessions."
 
 gaps:
   - "Sphinx: SHOW THREADS lists working threads (columns differ between 2.2 and 3.x); not mapped yet."
-  - "Manticore: SHOW THREADS lists working threads (ConnID = CONNECTION_ID(), Info = statement), not idle sessions; not mapped yet."

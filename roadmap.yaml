@@ -25,6 +25,8 @@ items:
     kind: query
     title: Server / session settings (sql_mode, search_path, compatibility level, ...)
     priority: medium
+    notes:
+      - "Manticore: the variable names (session: AUTOCOMMIT, COLLATION_CONNECTION, PROFILING, ro, WAIT_TIMEOUT, NET_READ_TIMEOUT, ...; about 30 global ones) are only listed in the text of manual/english/Server_settings/Setting_variables_online.md, not as inventory items - take them from there. User variables: SET GLOBAL @v = (1, 3) for IN @v filters."
 
   - id: introspection.table-statistics
     kind: query
@@ -100,6 +102,8 @@ items:
     kind: lexical
     title: Built-in function lists per version (autocomplete, highlighting)
     priority: medium
+    notes:
+      - "Manticore: the func: inventory items (function table g_dFuncs in src/sphinxexpr.cpp) are the complete name list; the Functions pages miss some (DATABASE, CURRENT_USER, VERSION, RANKFACTORS). MADD / MUL3 work but are undocumented helpers."
   - id: connection-parameters
     kind: protocol
     title: Connection parameters, authentication plugins and TLS modes per protocol

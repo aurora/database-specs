@@ -90,3 +90,11 @@ steps:
           values: { column_name: n, index_type: secondary, is_visible: true, value_type: uint32 }
         - match: { index_name: id }
           values: { value_type: int64 }
+
+  # process list from @@system.sessions (idle connections included)
+  - query: session.list-processes
+    expect:
+      rows:
+        - match: { is_current: true }
+          matches: { query: "(?i)@@system\\.sessions" }
+          values: { state: query, protocol: mysql }

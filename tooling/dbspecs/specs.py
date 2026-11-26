@@ -146,6 +146,8 @@ def quote_literal(lexical: dict, value: str) -> str:
                 value = value.replace("\\", "\\\\")
             if "double" in esc:
                 value = value.replace("'", "''")
+            elif "backslash" in esc:
+                value = value.replace("'", "\\'")
             return f"'{value}'"
     raise ValueError(f"no plain string literal rule in lexical spec {lexical['id']}")
 
@@ -180,7 +182,7 @@ def apply_transform(var: dict, raw_rows: list[dict], params: dict) -> list[dict]
                         raise ValueError(f"{name}: raw value {v!r} of {rule['column']} not in map")
                     v = rule["map"][v]
                 elif "equals" in rule:
-                    v = v == rule["equals"]
+                    v = v is not None and str(v) == rule["equals"]  # drivers return 1 or "1"
                 elif "contains" in rule:
                     v = rule["contains"] in str(v or "").split()
                 elif rule.get("empty_as_null") and v == "":

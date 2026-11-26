@@ -332,6 +332,10 @@ def tokenize(sql: str, lexical: dict, word_pattern: str | None = None) -> list[T
             j = sql.find("*/", i + 2)
             i = n if j < 0 else j + 2
             continue
+        if ch == "\\" and i + 1 < n:  # an escaped character outside quotes (\" in a MATCH() query) never opens a quote
+            out += [Tok("punct", ch), Tok("punct", sql[i + 1])]
+            i += 2
+            continue
         q = next((q for q in ident_quotes if sql.startswith(q["open"], i)), None)
         if q:
             out.append(Tok("qident", read_quoted(q)))

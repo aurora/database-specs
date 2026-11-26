@@ -6,7 +6,7 @@
    KNN / HYBRID_MATCH, LIMIT -n (accepted, but breaks the result: see engine notes). */
 
 select ::= 'SELECT' select_item ( ',' select_item )*
-           'FROM' table_name ( ',' table_name )* /* @since 27.1 */ join_clause*
+           'FROM' from_target /* @since 28.4 */ table_alias? /* @since 27.1 */ join_clause?
            where_clause?
            group_clause?
            order_clause?
@@ -15,15 +15,31 @@ select ::= 'SELECT' select_item ( ',' select_item )*
            facet_clause*
          | 'SELECT' select_item ( ',' select_item )* limit_clause?
 
+/* @@system.sessions / @@system.threads: built-in system tables (connections incl. idle ones,
+   worker threads). @@system.tables crashes 32.1.3 - see engine notes. */
+from_target ::= table_name ( ',' table_name )* | sysvar
+
 /* cluster:table addresses a table of a replication cluster */
 table_name ::= ( identifier ':' )? identifier
 
-select_item ::= '*' | identifier '.' '*' | arith_expr ( 'AS'? identifier )?
+/* an alias for the FROM table works only as a column prefix in the select list:
+   WHERE a.v, ORDER BY a.v and JOIN ON a.id fail, a JOIN table takes no alias */
+table_alias ::= 'AS'? identifier
 
-/* arithmetic and bitwise operators: in the select list (and subscripts) only - WHERE takes
-   plain comparisons ('WHERE v + 1 > 5' is a syntax error) */
-arith_expr ::= '-'? value_expr ( arith_operator '-'? value_expr )*
+select_item ::= '*' | identifier '.' '*' | select_expr ( 'AS'? identifier )?
+
+/* select-list expressions: arithmetic, bitwise, comparisons and AND / OR / NOT (v > 1 AS c,
+   IF(v > 1 AND v < 3, 1, 0)). In the select list (and its function arguments, subscripts) only -
+   WHERE takes plain comparisons ('WHERE v + 1 > 5' is a syntax error) */
+select_expr ::= bool_term ( 'OR' bool_term )*
+bool_term ::= bool_factor ( 'AND' bool_factor )*
+bool_factor ::= 'NOT'? arith_expr ( comparison_operator arith_expr )?
+arith_expr ::= '-'? arith_operand ( arith_operator '-'? arith_operand )*
+arith_operand ::= '(' select_expr ')' | expr_call | value_expr
 arith_operator ::= '+' | '-' | '*' | '/' | '%' | '&' | '|' | 'DIV' | 'MOD'
+
+/* function call with expression arguments (select list only) */
+expr_call ::= identifier '(' ( '*' | select_expr ( ',' select_expr )* )? ')'
 
 /* MATCH() items belong to the top-level AND chain only (not in OR, not under NOT; parentheses
    only around a single MATCH). Several MATCH items need a JOIN: one per table, named by the
@@ -39,7 +55,8 @@ match_item ::= ( match_call | '(' match_call ')' ) ( 'AS' identifier )?
 
 match_call ::= 'MATCH' '(' string_literal ( ',' identifier )? ')'
 
-join_clause ::= ( 'INNER' | 'LEFT' ) 'JOIN' identifier 'ON' join_condition ( 'AND' join_condition )*
+/* one JOIN at most; without INNER / LEFT it is an inner join */
+join_clause ::= ( 'INNER' | 'LEFT' )? 'JOIN' identifier 'ON' join_condition ( 'AND' join_condition )*
 
 join_condition ::= join_operand '=' join_operand
 
@@ -77,14 +94,20 @@ literal ::= string_literal | '-'? number
 
 /* GROUP n BY: up to n rows per group; WITHIN GROUP ORDER BY picks which rows.
    HAVING takes a single predicate (no AND / OR). */
-group_clause ::= 'GROUP' integer? 'BY' identifier ( ',' identifier )*
-                 ( 'WITHIN' 'GROUP' 'ORDER' 'BY' order_item ( ',' order_item )* )?
+/* GROUP BY takes columns, JSON paths (meta.a.b; missing keys form a NULL group) and MVAs */
+group_clause ::= 'GROUP' integer? 'BY' column_ref ( ',' column_ref )*
+                 ( 'WITHIN' 'GROUP' 'ORDER' 'BY' order_list )?
                  ( 'HAVING' predicate )?
 
-order_clause ::= 'ORDER' 'BY' order_item ( ',' order_item )*
+order_clause ::= 'ORDER' 'BY' order_list
 
-/* the direction is mandatory ('no sort order defined' otherwise) */
+/* the server parses the sort list as name / direction pairs: every item needs ASC or DESC
+   ('no sort order defined', 'invalid sorting order'), except the last of two or more */
+order_list ::= order_item ( ',' order_item )* ( ',' value_expr )?
 order_item ::= value_expr ( 'ASC' | 'DESC' )
+
+/* a FACET may also sort by a single item without direction */
+facet_order_clause ::= 'ORDER' 'BY' ( order_list | value_expr )
 
 limit_clause ::= 'LIMIT' integer ( ( ',' | 'OFFSET' ) integer )?
 
@@ -100,7 +123,7 @@ facet_clause ::= 'FACET' facet_item ( ',' facet_item )*
                  /* @since 28.4 */ 'ZEROES'?
                  /* @since 27.1 */ ( 'MODE' identifier )?
                  ( 'DISTINCT' identifier? )?
-                 order_clause?
+                 facet_order_clause?
                  limit_clause?
 
 /* FACET brand, FACET INTERVAL(price, 200, 400) AS range */

@@ -7,6 +7,10 @@ support:
       status: unsupported
     - since: "8.0"
       status: supported
+      notes:
+        - "Parsed but rejected with error 1235 ('doesn't yet support'): GROUPS frame units, EXCLUDE (frame exclusion), IGNORE NULLS and NTH_VALUE ... FROM LAST (observed 8.4.13 and 9.7.4). RESPECT NULLS and FROM FIRST are accepted (the defaults)."
+        - "Named windows (WINDOW w AS (...)) and frames ROWS / RANGE with BETWEEN ... PRECEDING / FOLLOWING work."
+      sources: [{ evidence: observed, notes: "mysql 8.4.13, 9.7.4" }]
   mariadb:
     - since: "10.2.0"
       status: supported

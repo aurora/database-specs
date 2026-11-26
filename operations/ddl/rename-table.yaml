@@ -14,6 +14,7 @@ implementations:
       caveats:
         - "An unqualified new name refers to the session's current database: if the table lives in another database, qualify new_name with it or the table is moved."
         - "Views referencing the old name break; foreign keys and triggers follow."
+        - "RENAME TABLE a TO b, c TO d renames several tables in one atomic statement (e.g. swapping two tables via a third name); the template renames one."
       sources: [{ evidence: tested }]
   mariadb:
     - status: supported

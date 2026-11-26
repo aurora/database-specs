@@ -9,7 +9,7 @@ grammars:
   mysql:
     file: mysql.ebnf
     start: create_index
-    since: "5.7"
+    since: "5.6"
     notes:
       - "5.7 parses ASC/DESC but ignores DESC; descending indexes are real since 8.0."
       - "Functional key parts need their own parentheses: ((expr)), not (lower(b))."
@@ -110,7 +110,11 @@ examples:
     engines: { postgresql: {}, sqlserver: {}, sqlite: {} }
   - sql: CREATE SPATIAL INDEX i_g ON t_idx (g)
     expect: valid
-    engines: { mysql: {}, mariadb: {} }
+    engines: { mysql: { since: "5.7" }, mariadb: {} }
+  - sql: CREATE SPATIAL INDEX i_g ON t_idx (g)
+    expect: semantic-error
+    engines: { mysql: { until: "5.7" } }
+    notes: ["5.6: InnoDB has no SPATIAL indexes (error 1464); MyISAM tables do."]
   - sql: CREATE INDEX i_alg ON t_idx (a) ALGORITHM = INPLACE LOCK = NONE
     expect: valid
     engines: { mysql: {}, mariadb: {} }
@@ -126,9 +130,17 @@ examples:
     engines: { postgresql: {}, sqlserver: {}, sqlite: {} }
 
   # --- MySQL only -----------------------------------------------------------
+  - sql: CREATE INDEX i_type TYPE BTREE ON t_idx (a)
+    expect: valid
+    engines: { mysql: {} }
+    notes: ["TYPE is an old synonym of USING."]
+  - sql: CREATE INDEX i_inst ON t_idx (a) ALGORITHM = INSTANT
+    expect: semantic-error
+    engines: { mysql: {} }
+    notes: ["Error 1845: INSTANT is an ALTER TABLE algorithm; index builds take INPLACE or COPY."]
   - sql: CREATE INDEX i_expr ON t_idx ((a + d))
     expect: valid
-    engines: { mysql: { since: "8.0.13", sqlite: {} }, postgresql: {} }
+    engines: { mysql: { since: "8.0.13" }, sqlite: {}, postgresql: {} }
   - sql: CREATE INDEX i_expr ON t_idx ((a + d))
     expect: invalid
     engines: { mysql: { until: "8.0.13" }, mariadb: {}, sqlserver: {} }
@@ -137,7 +149,7 @@ examples:
     engines: { mysql: { since: "8.0" } }
   - sql: CREATE INDEX i_inv ON t_idx (a) INVISIBLE
     expect: invalid
-    engines: { mysql: { until: "8.0", sqlite: {} }, mariadb: {}, postgresql: {}, sqlserver: {} }
+    engines: { mysql: { until: "8.0" }, sqlite: {}, mariadb: {}, postgresql: {}, sqlserver: {} }
   - sql: CREATE INDEX i_lower ON t_idx (lower(b))
     expect: invalid
     engines: { mysql: {}, mariadb: {}, sqlserver: {} }
@@ -204,7 +216,7 @@ examples:
     engines: { postgresql: { since: "15" } }
   - sql: CREATE UNIQUE INDEX i_nnd ON t_idx (a) NULLS NOT DISTINCT
     expect: invalid
-    engines: { postgresql: { until: "15", sqlite: {} }, sqlserver: {} }
+    engines: { postgresql: { until: "15" }, sqlite: {}, sqlserver: {} }
   - sql: CREATE INDEX i_ff ON t_idx (a) WITH (fillfactor = 70)
     expect: valid
     engines: { postgresql: {}, sqlserver: {} }

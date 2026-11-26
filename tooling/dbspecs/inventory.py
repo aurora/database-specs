@@ -174,6 +174,10 @@ def grammar_items(parser: str, grammar: str, lexer: str | None, keywords: dict[s
             if word not in seen:
                 seen.add(word)
                 items.append({"id": f"kw:{word}", "kind": "keyword", "parser": parser})
+    # rules that only spell keywords (describe_command: DESC | DESCRIBE): an alternative starting with
+    # one is a statement of its own even without a keyword of its own (describe_stmt, explain_stmt)
+    keyword_rules = {r for r, alts in rules.items()
+                     if alts and all(a and all(t in keywords for t in a) for a in alts)}
     for rule, alts in rules.items():
         if _is_keyword_list(alts, keywords):  # "these keywords may also be identifiers" lists
             continue
@@ -184,9 +188,30 @@ def grammar_items(parser: str, grammar: str, lexer: str | None, keywords: dict[s
             # operator tokens; pure sequences / list recursion of nonterminals are internal structure
             tokens = [t for t in alt if t.startswith("TOK_") and t not in keywords]
             sigil = any(t in SIGIL_TOKENS for t in alt)
-            if kws or punct or sigil or (tokens and len(alt) > 1 and not keywords):
+            lead = len(alt) > 1 and alt[0] in keyword_rules
+            if kws or punct or sigil or lead or (tokens and len(alt) > 1 and not keywords):
                 items.append({"id": f"{parser}:{rule}: {form}", "kind": "grammar", "parser": parser})
+    # names the actions compare an identifier with (ALGORITHM = INSTANT, FORMAT = TREE): words of the
+    # language that the grammar itself reads as <ident>
+    for rule, names in identifier_values(grammar).items():
+        for name in names:
+            items.append({"id": f"{parser}:{rule}: {name} (name)", "kind": "grammar", "parser": parser})
     return items
+
+
+def identifier_values(grammar: str) -> dict[str, list[str]]:
+    """rule -> names checked with is_identifier($n, "NAME") in its actions (MySQL)."""
+    parts = grammar.split("\n%%")
+    body = _strip_c(parts[1] if len(parts) > 1 else grammar)
+    heads = list(re.finditer(r"^([A-Za-z_][A-Za-z0-9_]*)[ \t]*:(?!:)", body, re.M))
+    out: dict[str, list[str]] = {}
+    for k, m in enumerate(heads):
+        chunk = body[m.end():heads[k + 1].start() if k + 1 < len(heads) else len(body)]
+        names = re.findall(r'is_identifier\(\s*\$\d+\s*,\s*"([A-Za-z_][A-Za-z0-9_]*)"', chunk)
+        if names:
+            out.setdefault(m.group(1), [])
+            out[m.group(1)] += [n for n in dict.fromkeys(names) if n not in out[m.group(1)]]
+    return out
 
 
 # --- reference index ---------------------------------------------------------------------
@@ -377,7 +402,11 @@ def help_items(categories: list[tuple], topics: list[tuple]) -> list[dict]:
     return items
 
 
-def generate_mysql(version: str, help_categories: list[tuple], help_topics: list[tuple]) -> dict:
+PRIVILEGES_SQL = "SHOW PRIVILEGES"
+
+
+def generate_mysql(version: str, help_categories: list[tuple], help_topics: list[tuple],
+                   privileges: list[tuple] = ()) -> dict:
     commit = resolve_commit(MYSQL_REPO, f"mysql-{version}")
     lex = parse_lex_h(fetch(MYSQL_REPO, commit, MYSQL_KEYWORDS))
     keywords = {tok: text for tok, (text, _g) in lex.items()}
@@ -396,8 +425,10 @@ def generate_mysql(version: str, help_categories: list[tuple], help_topics: list
     funcs = function_items(fetch(MYSQL_REPO, commit, MYSQL_FUNC_TABLE), f"https://github.com/{MYSQL_REPO}/blob/{commit}/",
                            table="func_array", source_file=MYSQL_FUNC_TABLE)
     docs = help_items(help_categories, help_topics)
+    # static privileges are grammar keywords, dynamic ones (8.0+: BACKUP_ADMIN, ...) are only names
+    privs = [{"id": f"priv:{row[0].upper().replace(' ', '_')}", "kind": "privilege"} for row in privileges]
     unique = {}
-    for it in kw_items + sorted(items, key=lambda i: i["id"]) + funcs + docs:
+    for it in kw_items + sorted(items, key=lambda i: i["id"]) + funcs + privs + docs:
         unique.setdefault(it["id"], it)
     return {
         "engine": "mysql",
@@ -406,12 +437,13 @@ def generate_mysql(version: str, help_categories: list[tuple], help_topics: list
         "sources": [
             {"kind": "grammar", "repository": MYSQL_REPO, "commit": commit,
              "files": parsers + [MYSQL_KEYWORDS, MYSQL_FUNC_TABLE]},
-            {"kind": "server", "files": ["mysql.help_category", "mysql.help_topic"]},
+            {"kind": "server", "files": ["mysql.help_category", "mysql.help_topic", "SHOW PRIVILEGES"]},
         ],
         "notes": [
             "Keywords: every name in sql/lex.h; group function = function-like word (COUNT, CAST, ...), group hint = word of the optimizer-hint parser only. information_schema.KEYWORDS (8.0+) lists neither, so keyword lists leave them out.",
             "func: items are the native functions resolved by name (func_array in sql/item_create.cc); functions with their own grammar (CAST, EXTRACT, aggregates, window functions, ...) are grammar items.",
-            "help: items are the topics of the server's HELP tables (mysql.help_topic), which are generated from the reference manual - names, categories and links only. The source tree has them only from 8.0 on (5.x: a placeholder file), and dev.mysql.com refuses automated requests.",
+            "priv: items are the privilege names of SHOW PRIVILEGES (static and, since 8.0, dynamic privileges, which the grammar reads as identifiers); grammar items ending in (name) are words the parser actions compare an identifier with (ALGORITHM = INSTANT, FORMAT = TREE).",
+            "help: items are the topics of the server's HELP tables (mysql.help_topic), which are generated from the reference manual - names, categories and links only. The source tree has them only from 8.0 on (5.x: a placeholder file), and dev.mysql.com refuses automated requests. The categories are partly misfiled upstream (JSON functions under Spatial Functions / MBR Functions, 9.x vector functions under Window Functions): classify by topic name.",
         ],
         "items": list(unique.values()),
     }

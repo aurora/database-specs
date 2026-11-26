@@ -27,6 +27,9 @@ rules:
     status: covered
     specs: ["keywords:keyword-list"]
     reason: "Keywords the grammar also accepts as identifiers; listed in keywords/manticore/ (non-reserved)."
+  - match: ["sphinxql:where_clause: *"]
+    status: covered
+    specs: ["syntax:query.fulltext-select"]
   - match: ["sphinxql:expr_ident: *"]
     status: covered
     specs: ["syntax:query.fulltext-select"]
@@ -159,7 +162,7 @@ rules:
     specs: ["operation:ddl.add-column", "operation:ddl.drop-column", "operation:ddl.rename-table", "operation:ddl.change-column-type"]
   - match: ["ddl:alter: <alter_table_name> *", "ddl:alter: ALTER RTINDEX *",
             "docs:SQL commands / Schema management: ALTER TABLE REBUILD SECONDARY",
-            "docs:SQL commands / Schema management: ALTER TABLE type='distributed'", "buddy:AlterDistributedTable"]
+            "docs:SQL commands / Schema management: ALTER TABLE type='distributed'", "buddy:AlterDistributedTable", "ddl:alter_col_type: *"]
     status: planned
     roadmap: ddl.alter-table
   - match: ["ddl:create_table: *", "ddl:create_table_item: *", "ddl:create_table_items: *", "ddl:create_table_option: *",
@@ -194,7 +197,7 @@ rules:
   - match: ["sphinxql:show_what: DATABASES *"]
     status: covered
     specs: ["query:introspection.list-schemas"]
-  - match: ["sphinxql:describe_tok: *", "sphinxql:describe_opt: *", "docs:SQL commands / Schema management: DESCRIBE"]
+  - match: ["sphinxql:describe: *", "sphinxql:describe_tok: *", "sphinxql:describe_opt: *", "docs:SQL commands / Schema management: DESCRIBE"]
     status: covered
     specs: ["query:introspection.list-columns"]
   - match: ["sphinxql:show_what: CREATE TABLE *", "docs:SQL commands / Schema management: SHOW CREATE TABLE"]

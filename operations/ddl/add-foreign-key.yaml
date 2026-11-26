@@ -17,6 +17,8 @@ implementations:
       caveats:
         - "InnoDB only; column types must match (including signedness and charset). An index on the columns is created automatically if missing."
         - "SET DEFAULT is parsed but rejected by InnoDB."
+        - "MATCH FULL / PARTIAL / SIMPLE is parsed and silently dropped (SHOW CREATE TABLE shows no MATCH; observed 8.4.13, 9.7.4)."
+        - "A column-level REFERENCES in CREATE / ALTER TABLE (pid INT REFERENCES p(id)) created no foreign key on 8.4.13 (parsed and ignored) but a real one named <table>_ibfk_<n> on 9.7.4; versions in between are untested. Use the table-level FOREIGN KEY form for older servers."
       sources: [{ evidence: tested }]
   mariadb:
     - status: supported

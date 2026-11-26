@@ -70,7 +70,14 @@
             "description": "Engine -> version range ({} = all versions) the expectation holds for.",
             "type": "object",
             "propertyNames": { "$ref": "common.schema.json#/$defs/engineId" },
-            "additionalProperties": { "$ref": "common.schema.json#/$defs/rangeFields" }
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "since": { "$ref": "common.schema.json#/$defs/version" },
+                "until": { "$ref": "common.schema.json#/$defs/version" }
+              }
+            }
           },
           "notes": { "$ref": "common.schema.json#/$defs/notes" }
         }

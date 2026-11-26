@@ -709,6 +709,9 @@ items:
 - id: 'sphinxql:delete_from: DELETE FROM <ident_list> <where_clause>'
   kind: grammar
   parser: sphinxql
+- id: 'sphinxql:describe: <describe_tok> <ident> <like_filter>'
+  kind: grammar
+  parser: sphinxql
 - id: 'sphinxql:describe_tok: DESC'
   kind: grammar
   parser: sphinxql
@@ -992,6 +995,9 @@ items:
   kind: grammar
   parser: sphinxql
 - id: 'sphinxql:opt_column_list: ( <column_list> )'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:opt_facet_by_items_list: <facet_by> <facet_items_list>'
   kind: grammar
   parser: sphinxql
 - id: 'sphinxql:opt_group_clause: GROUP <opt_int> BY <group_items_list>'

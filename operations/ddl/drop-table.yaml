@@ -9,7 +9,9 @@ implementations:
     - status: supported
       template: "DROP TABLE {{table}}"
       transactional: false
-      caveats: ["Fails if other tables reference it by foreign key (drop those first or disable foreign_key_checks). Views on it remain and become invalid."]
+      caveats:
+        - "Fails if other tables reference it by foreign key (drop those first or disable foreign_key_checks). Views on it remain and become invalid."
+        - "The statement also has DROP TEMPORARY TABLE, IF EXISTS (a note instead of an error) and several tables at once; CASCADE / RESTRICT are parsed and do nothing, so the cascade parameter has no effect."
       sources: [{ evidence: tested }]
   mariadb:
     - status: supported

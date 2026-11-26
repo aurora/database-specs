@@ -58,6 +58,7 @@ items:
     kind: capability
     title: FULL / RIGHT OUTER JOIN
     priority: low
+    notes: ["MySQL has no FULL JOIN, and the mistake is silent: in t FULL JOIN u USING (id) FULL is read as the alias of t, so the query runs as an inner join (observed 8.4.13, 9.7.4). The spec should say so for AI-generated SQL."]
   - id: query.lateral
     kind: capability
     title: LATERAL / CROSS APPLY
@@ -100,6 +101,15 @@ items:
     kind: syntax
     title: CREATE / ALTER / DROP VIEW (algorithm, security, check option, materialized views)
     priority: medium
+  - id: ddl.create-event
+    kind: syntax
+    title: CREATE / ALTER / DROP EVENT (schedule grammar)
+    priority: low
+    engines: [mysql, mariadb]
+  - id: admin.table-maintenance
+    kind: operation
+    title: Table maintenance actions (ANALYZE / OPTIMIZE / CHECK / REPAIR / CHECKSUM TABLE, VACUUM, UPDATE STATISTICS)
+    priority: low
   - id: ddl.create-trigger
     kind: syntax
     title: CREATE / DROP TRIGGER

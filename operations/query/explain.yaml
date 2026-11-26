@@ -11,7 +11,9 @@ implementations:
     - status: supported
       template: "EXPLAIN {{#analyze}}ANALYZE {{/analyze}}{{#format}}FORMAT={{format}} {{/format}}{{sql}}"
       caveats:
-        - "format: TRADITIONAL (rows per table, default), JSON (5.7+, one row), TREE (8.0.16+). EXPLAIN ANALYZE (8.0.18+) executes the query and always prints TREE format."
+        - "format: TRADITIONAL (rows per table, default), JSON (5.7+, one row), TREE (8.0.16+). EXPLAIN ANALYZE (8.0.18+) executes the query and prints TREE format; FORMAT=JSON with ANALYZE needs JSON layout version 2 (observed: 8.4.13 error 1235 by default, works after SET explain_json_format_version = 2; 9.7.4 works by default)."
+        - "5.x also accepts EXPLAIN EXTENDED / EXPLAIN PARTITIONS (PARTITIONS gives deprecation warning 1681 on 5.7); 8.0+ rejects both (1064) - EXTENDED is then only SHOW EXTENDED COLUMNS / INDEX."
+        - "Not described here: EXPLAIN FOR CONNECTION n (plan of another session's running statement), EXPLAIN ... INTO @var (8.0.32+, JSON only; observed 8.4.13) and FOR SCHEMA / FOR DATABASE (9.x)."
         - "Result columns differ per format: traditional id, select_type, table, ..., JSON / TREE a single column named EXPLAIN."
         - "Primary key lookups may be resolved during optimization: EXPLAIN ANALYZE then reports 'Rows fetched before execution'."
         - "Two JSON layouts: version 1 with query_block (observed up to 8.4) and version 2 with query_plan / json_schema_version 2.0 (observed as default in 9.7). Selectable with SET explain_json_format_version = 1|2 (exact version of the default switch unverified)."

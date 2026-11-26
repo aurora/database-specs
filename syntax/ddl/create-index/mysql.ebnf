@@ -1,4 +1,4 @@
-/* MySQL - CREATE INDEX (5.7 - 9.x)
+/* MySQL - CREATE INDEX (5.6 - 9.x)
    Built-ins: identifier, string_literal, integer, expression.
    Version annotations apply to the item that follows them. */
 
@@ -12,7 +12,8 @@ key_part ::= ( identifier ( '(' integer ')' )?
              | /* @since 8.0.13 */ ( '(' expression ')' ) )
              ( 'ASC' | 'DESC' )?
 
-index_type ::= 'USING' ( 'BTREE' | 'HASH' )
+/* TYPE is an old synonym of USING (accepted by 5.7 - 9.7) */
+index_type ::= ( 'USING' | 'TYPE' ) ( 'BTREE' | 'HASH' )
 
 index_option ::= 'KEY_BLOCK_SIZE' '='? integer
                | index_type
@@ -22,6 +23,7 @@ index_option ::= 'KEY_BLOCK_SIZE' '='? integer
                | /* @since 8.0.21 */ ( 'ENGINE_ATTRIBUTE' '='? string_literal )
                | /* @since 8.0.21 */ ( 'SECONDARY_ENGINE_ATTRIBUTE' '='? string_literal )
 
-algorithm_option ::= 'ALGORITHM' '='? ( 'DEFAULT' | 'INPLACE' | 'COPY' )
+/* INSTANT parses (the values are names, not keywords) but CREATE INDEX rejects it: error 1845 */
+algorithm_option ::= 'ALGORITHM' '='? ( 'DEFAULT' | 'INPLACE' | 'COPY' | 'INSTANT' )
 
 lock_option ::= 'LOCK' '='? ( 'DEFAULT' | 'NONE' | 'SHARED' | 'EXCLUSIVE' )

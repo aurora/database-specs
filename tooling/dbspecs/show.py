@@ -6,7 +6,7 @@ Every resolver returns plain data (used for --json); render_text() turns it into
 from __future__ import annotations
 
 from .ebnf import grammar_to_ebnf, matches, tokenize
-from .specs import Specs, parse_version, statement_for, variant_for
+from .specs import in_range, Specs, parse_version, statement_for, variant_for
 from .syntax import examples_for, lexical_for, load_grammar
 
 KIND_ALIASES = {
@@ -171,6 +171,9 @@ def resolve_syntax(specs: Specs, syn_id: str, engine: str | None, version: str |
     if engine not in syn["grammars"]:
         raise ShowError(f"no {syn_id} grammar for {engine}; available: {', '.join(syn['grammars'])}")
     g = syn["grammars"][engine]
+    if version and not in_range(version, g):
+        raise ShowError(f"the {syn_id} grammar for {engine} describes "
+                        f"{g.get('since', 'any')} - {g.get('until', 'newest')} (since inclusive, until exclusive), not {version}")
     grammar = load_grammar(specs, syn_id, engine)
     if version:
         grammar = grammar.for_version(version)

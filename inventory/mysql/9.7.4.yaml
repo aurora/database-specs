@@ -15,11 +15,15 @@ sources:
   files:
   - mysql.help_category
   - mysql.help_topic
+  - SHOW PRIVILEGES
 notes:
 - 'Keywords: every name in sql/lex.h; group function = function-like word (COUNT, CAST, ...), group hint = word of the optimizer-hint
   parser only. information_schema.KEYWORDS (8.0+) lists neither, so keyword lists leave them out.'
 - 'func: items are the native functions resolved by name (func_array in sql/item_create.cc); functions with their own grammar
   (CAST, EXTRACT, aggregates, window functions, ...) are grammar items.'
+- 'priv: items are the privilege names of SHOW PRIVILEGES (static and, since 8.0, dynamic privileges, which the grammar reads
+  as identifiers); grammar items ending in (name) are words the parser actions compare an identifier with (ALGORITHM = INSTANT,
+  FORMAT = TREE).'
 - 'help: items are the topics of the server''s HELP tables (mysql.help_topic), which are generated from the reference manual
   - names, categories and links only. The source tree has them only from 8.0 on (5.x: a placeholder file), and dev.mysql.com
   refuses automated requests.'
@@ -1874,7 +1878,16 @@ items:
 - id: 'sql:alter_algorithm_option: ALGORITHM <opt_equal> <alter_algorithm_option_value>'
   kind: grammar
   parser: sql
+- id: 'sql:alter_algorithm_option_value: COPY (name)'
+  kind: grammar
+  parser: sql
 - id: 'sql:alter_algorithm_option_value: DEFAULT'
+  kind: grammar
+  parser: sql
+- id: 'sql:alter_algorithm_option_value: INPLACE (name)'
+  kind: grammar
+  parser: sql
+- id: 'sql:alter_algorithm_option_value: INSTANT (name)'
   kind: grammar
   parser: sql
 - id: 'sql:alter_database_option: READ ONLY <opt_equal> <ternary_option>'
@@ -1890,10 +1903,19 @@ items:
 - id: 'sql:alter_function_stmt: ALTER FUNCTION <sp_name> <sp_a_chistics>'
   kind: grammar
   parser: sql
+- id: 'sql:alter_instance_action: BINLOG (name)'
+  kind: grammar
+  parser: sql
 - id: 'sql:alter_instance_action: DISABLE <ident> <ident>'
   kind: grammar
   parser: sql
 - id: 'sql:alter_instance_action: ENABLE <ident> <ident>'
+  kind: grammar
+  parser: sql
+- id: 'sql:alter_instance_action: INNODB (name)'
+  kind: grammar
+  parser: sql
+- id: 'sql:alter_instance_action: REDO_LOG (name)'
   kind: grammar
   parser: sql
 - id: 'sql:alter_instance_action: RELOAD KEYRING'
@@ -2011,6 +2033,15 @@ items:
   kind: grammar
   parser: sql
 - id: 'sql:alter_lock_option_value: DEFAULT'
+  kind: grammar
+  parser: sql
+- id: 'sql:alter_lock_option_value: EXCLUSIVE (name)'
+  kind: grammar
+  parser: sql
+- id: 'sql:alter_lock_option_value: NONE (name)'
+  kind: grammar
+  parser: sql
+- id: 'sql:alter_lock_option_value: SHARED (name)'
   kind: grammar
   parser: sql
 - id: 'sql:alter_logfile_stmt: ALTER LOGFILE GROUP <ident> ADD <lg_undofile> <opt_alter_logfile_group_options>'
@@ -2189,6 +2220,9 @@ items:
   kind: grammar
   parser: sql
 - id: 'sql:call_stmt: CALL <sp_name> <opt_paren_expr_list>'
+  kind: grammar
+  parser: sql
+- id: 'sql:cast_type: <nchar> <opt_field_length>'
   kind: grammar
   parser: sql
 - id: 'sql:cast_type: BINARY <opt_field_length>'
@@ -2723,6 +2757,9 @@ items:
 - id: 'sql:describe_command: DESCRIBE'
   kind: grammar
   parser: sql
+- id: 'sql:describe_stmt: <describe_command> <table_ident> <opt_describe_column>'
+  kind: grammar
+  parser: sql
 - id: 'sql:diagnostics_information: CONDITION <condition_number> <condition_information>'
   kind: grammar
   parser: sql
@@ -2839,6 +2876,9 @@ items:
   kind: grammar
   parser: sql
 - id: 'sql:execute_var_ident: @ <ident_or_text>'
+  kind: grammar
+  parser: sql
+- id: 'sql:explain_stmt: <describe_command> <opt_explain_options> <explainable_stmt>'
   kind: grammar
   parser: sql
 - id: 'sql:explainable_stmt: FOR CONNECTION <real_ulong_num>'
@@ -3019,6 +3059,9 @@ items:
   kind: grammar
   parser: sql
 - id: 'sql:flush_option: USER_RESOURCES'
+  kind: grammar
+  parser: sql
+- id: 'sql:flush_options: <table_or_tables> <opt_table_list> <opt_flush_lock>'
   kind: grammar
   parser: sql
 - id: 'sql:from_clause: FROM <from_tables>'
@@ -3325,6 +3368,9 @@ items:
 - id: 'sql:grant_options: WITH GRANT OPTION'
   kind: grammar
   parser: sql
+- id: 'sql:group_replication: <group_replication_start> <opt_group_replication_start_options>'
+  kind: grammar
+  parser: sql
 - id: 'sql:group_replication: STOP GROUP_REPLICATION'
   kind: grammar
   parser: sql
@@ -3560,6 +3606,9 @@ items:
   parser: sql
 - id: 'sql:insert_stmt: INSERT <insert_lock_option> <opt_ignore> <opt_INTO> <table_ident> <opt_use_partition> SET <update_list>
     <opt_values_reference> <opt_insert_update_list>'
+  kind: grammar
+  parser: sql
+- id: 'sql:insert_values: <value_or_values> <values_list>'
   kind: grammar
   parser: sql
 - id: 'sql:install_option_type: GLOBAL'
@@ -3877,6 +3926,9 @@ items:
 - id: 'sql:mi_check_type: QUICK'
   kind: grammar
   parser: sql
+- id: 'sql:mi_check_types: <mi_check_type> <mi_check_types>'
+  kind: grammar
+  parser: sql
 - id: 'sql:mi_repair_type: EXTENDED'
   kind: grammar
   parser: sql
@@ -4048,6 +4100,9 @@ items:
 - id: 'sql:opt_channel: FOR CHANNEL <TEXT_STRING_sys_nonewline>'
   kind: grammar
   parser: sql
+- id: 'sql:opt_charset_with_opt_binary: <character_set> <charset_name> <opt_bin_mod>'
+  kind: grammar
+  parser: sql
 - id: 'sql:opt_charset_with_opt_binary: BINARY'
   kind: grammar
   parser: sql
@@ -4090,6 +4145,9 @@ items:
 - id: 'sql:opt_datadir_ssl: DATA DIRECTORY <opt_equal> <TEXT_STRING_filesystem> <opt_ssl>'
   kind: grammar
   parser: sql
+- id: 'sql:opt_db: <from_or_in> <ident>'
+  kind: grammar
+  parser: sql
 - id: 'sql:opt_default: DEFAULT'
   kind: grammar
   parser: sql
@@ -4105,6 +4163,9 @@ items:
 - id: 'sql:opt_delete_option: QUICK'
   kind: grammar
   parser: sql
+- id: 'sql:opt_delete_options: <opt_delete_option> <opt_delete_options>'
+  kind: grammar
+  parser: sql
 - id: 'sql:opt_derived_column_list: ( <simple_ident_list> )'
   kind: grammar
   parser: sql
@@ -4112,6 +4173,9 @@ items:
   kind: grammar
   parser: sql
 - id: 'sql:opt_distinct: DISTINCT'
+  kind: grammar
+  parser: sql
+- id: 'sql:opt_duplicate_as_qe: <duplicate> <as_create_query_expression>'
   kind: grammar
   parser: sql
 - id: 'sql:opt_else: ELSE <expr>'
@@ -4145,6 +4209,15 @@ items:
   kind: grammar
   parser: sql
 - id: 'sql:opt_explain_format: FORMAT = <ident_or_text>'
+  kind: grammar
+  parser: sql
+- id: 'sql:opt_explain_format: JSON (name)'
+  kind: grammar
+  parser: sql
+- id: 'sql:opt_explain_format: TRADITIONAL (name)'
+  kind: grammar
+  parser: sql
+- id: 'sql:opt_explain_format: TREE (name)'
   kind: grammar
   parser: sql
 - id: 'sql:opt_explain_into: INTO @ <ident_or_text>'
@@ -4343,6 +4416,9 @@ items:
   kind: grammar
   parser: sql
 - id: 'sql:opt_load_algorithm: ALGORITHM = BULK'
+  kind: grammar
+  parser: sql
+- id: 'sql:opt_load_data_charset: <character_set> <charset_name>'
   kind: grammar
   parser: sql
 - id: 'sql:opt_load_data_set_spec: SET <load_data_set_list>'
@@ -4657,6 +4733,9 @@ items:
 - id: 'sql:opt_window_clause: WINDOW <window_definition_list>'
   kind: grammar
   parser: sql
+- id: 'sql:opt_window_frame_clause: <window_frame_units> <window_frame_extent> <opt_window_frame_exclusion>'
+  kind: grammar
+  parser: sql
 - id: 'sql:opt_window_frame_exclusion: EXCLUDE CURRENT ROW'
   kind: grammar
   parser: sql
@@ -4714,6 +4793,12 @@ items:
 - id: 'sql:option_type: SESSION'
   kind: grammar
   parser: sql
+- id: 'sql:option_value: <option_type> <option_value_following_option_type>'
+  kind: grammar
+  parser: sql
+- id: 'sql:option_value_no_option_type: <character_set> <old_or_new_charset_name_or_default>'
+  kind: grammar
+  parser: sql
 - id: 'sql:option_value_no_option_type: @ <ident_or_text> <equal> <expr>'
   kind: grammar
   parser: sql
@@ -4748,6 +4833,9 @@ items:
   kind: grammar
   parser: sql
 - id: 'sql:outer_join_type: RIGHT <opt_outer> JOIN'
+  kind: grammar
+  parser: sql
+- id: 'sql:outfile_file_info_elem: <character_set> <charset_name>'
   kind: grammar
   parser: sql
 - id: 'sql:outfile_file_info_elem: COMPRESSION <ident_or_text>'
@@ -5988,6 +6076,12 @@ items:
 - id: 'sql:start_entry: <GRAMMAR_SELECTOR_GCOL> <IDENT_sys> ( <expr> ) <END_OF_INPUT>'
   kind: grammar
   parser: sql
+- id: 'sql:start_entry: PARSE_GCOL_EXPR (name)'
+  kind: grammar
+  parser: sql
+- id: 'sql:start_option_value_list: <option_type> <start_option_value_list_following_option_type>'
+  kind: grammar
+  parser: sql
 - id: 'sql:start_option_value_list: PASSWORD <equal> <TEXT_STRING_password> <opt_replace_password> <opt_retain_current_password>'
   kind: grammar
   parser: sql
@@ -6221,6 +6315,9 @@ items:
 - id: 'sql:trigger_action_order: PRECEDES'
   kind: grammar
   parser: sql
+- id: 'sql:trigger_follows_precedes_clause: <trigger_action_order> <ident_or_text>'
+  kind: grammar
+  parser: sql
 - id: 'sql:trigger_tail: TRIGGER <opt_if_not_exists> <sp_name> <trg_action_time> <trg_event> ON <table_ident> FOR EACH ROW
     <trigger_follows_precedes_clause> <sp_proc_stmt>'
   kind: grammar
@@ -6268,6 +6365,24 @@ items:
   kind: grammar
   parser: sql
 - id: 'sql:ts_option_wait: WAIT'
+  kind: grammar
+  parser: sql
+- id: 'sql:type: <int_type> <opt_field_length> <field_options>'
+  kind: grammar
+  parser: sql
+- id: 'sql:type: <nchar> <field_length> <opt_bin_mod>'
+  kind: grammar
+  parser: sql
+- id: 'sql:type: <nchar> <opt_bin_mod>'
+  kind: grammar
+  parser: sql
+- id: 'sql:type: <numeric_type> <float_options> <field_options>'
+  kind: grammar
+  parser: sql
+- id: 'sql:type: <nvarchar> <field_length> <opt_bin_mod>'
+  kind: grammar
+  parser: sql
+- id: 'sql:type: <varchar> <field_length> <opt_charset_with_opt_binary>'
   kind: grammar
   parser: sql
 - id: 'sql:type: BINARY'
@@ -6457,6 +6572,9 @@ items:
 - id: 'sql:view_algorithm: ALGORITHM = UNDEFINED'
   kind: grammar
   parser: sql
+- id: 'sql:view_algorithm_or_materialization: <view_algorithm> <view_materialization>'
+  kind: grammar
+  parser: sql
 - id: 'sql:view_check_option: WITH CASCADED CHECK OPTION'
   kind: grammar
   parser: sql
@@ -6470,6 +6588,9 @@ items:
   kind: grammar
   parser: sql
 - id: 'sql:view_replace: OR REPLACE'
+  kind: grammar
+  parser: sql
+- id: 'sql:view_replace_or_algorithm: <view_replace> <view_algorithm>'
   kind: grammar
   parser: sql
 - id: 'sql:view_suid: SQL SECURITY DEFINER'
@@ -7678,6 +7799,156 @@ items:
 - id: func:INTERNAL_IS_ENABLED_ROLE
   kind: function
   url: https://github.com/mysql/mysql-server/blob/780b506e8296a61f2a7067bf2087d32c78e0bb76/sql/item_create.cc
+- id: priv:ALTER
+  kind: privilege
+- id: priv:ALTER_ROUTINE
+  kind: privilege
+- id: priv:CREATE
+  kind: privilege
+- id: priv:CREATE_ROUTINE
+  kind: privilege
+- id: priv:CREATE_ROLE
+  kind: privilege
+- id: priv:CREATE_TEMPORARY_TABLES
+  kind: privilege
+- id: priv:CREATE_VIEW
+  kind: privilege
+- id: priv:CREATE_USER
+  kind: privilege
+- id: priv:DELETE
+  kind: privilege
+- id: priv:DROP
+  kind: privilege
+- id: priv:DROP_ROLE
+  kind: privilege
+- id: priv:EVENT
+  kind: privilege
+- id: priv:EXECUTE
+  kind: privilege
+- id: priv:FILE
+  kind: privilege
+- id: priv:GRANT_OPTION
+  kind: privilege
+- id: priv:INDEX
+  kind: privilege
+- id: priv:INSERT
+  kind: privilege
+- id: priv:LOCK_TABLES
+  kind: privilege
+- id: priv:PROCESS
+  kind: privilege
+- id: priv:PROXY
+  kind: privilege
+- id: priv:REFERENCES
+  kind: privilege
+- id: priv:RELOAD
+  kind: privilege
+- id: priv:REPLICATION_CLIENT
+  kind: privilege
+- id: priv:REPLICATION_SLAVE
+  kind: privilege
+- id: priv:SELECT
+  kind: privilege
+- id: priv:SHOW_DATABASES
+  kind: privilege
+- id: priv:SHOW_VIEW
+  kind: privilege
+- id: priv:SHUTDOWN
+  kind: privilege
+- id: priv:SUPER
+  kind: privilege
+- id: priv:TRIGGER
+  kind: privilege
+- id: priv:CREATE_TABLESPACE
+  kind: privilege
+- id: priv:UPDATE
+  kind: privilege
+- id: priv:USAGE
+  kind: privilege
+- id: priv:AUDIT_ABORT_EXEMPT
+  kind: privilege
+- id: priv:FIREWALL_EXEMPT
+  kind: privilege
+- id: priv:OPTIMIZE_LOCAL_TABLE
+  kind: privilege
+- id: priv:ALLOW_NONEXISTENT_DEFINER
+  kind: privilege
+- id: priv:SET_ANY_DEFINER
+  kind: privilege
+- id: priv:SENSITIVE_VARIABLES_OBSERVER
+  kind: privilege
+- id: priv:AUTHENTICATION_POLICY_ADMIN
+  kind: privilege
+- id: priv:GROUP_REPLICATION_STREAM
+  kind: privilege
+- id: priv:FLUSH_PRIVILEGES
+  kind: privilege
+- id: priv:FLUSH_TABLES
+  kind: privilege
+- id: priv:XA_RECOVER_ADMIN
+  kind: privilege
+- id: priv:CONNECTION_ADMIN
+  kind: privilege
+- id: priv:CLONE_ADMIN
+  kind: privilege
+- id: priv:ENCRYPTION_KEY_ADMIN
+  kind: privilege
+- id: priv:INNODB_REDO_LOG_ARCHIVE
+  kind: privilege
+- id: priv:MANAGE_DATA_MASKING_POLICY
+  kind: privilege
+- id: priv:SESSION_VARIABLES_ADMIN
+  kind: privilege
+- id: priv:APPLICATION_PASSWORD_ADMIN
+  kind: privilege
+- id: priv:CREATE_SPATIAL_REFERENCE_SYSTEM
+  kind: privilege
+- id: priv:REPLICATION_SLAVE_ADMIN
+  kind: privilege
+- id: priv:BACKUP_ADMIN
+  kind: privilege
+- id: priv:GROUP_REPLICATION_ADMIN
+  kind: privilege
+- id: priv:SYSTEM_VARIABLES_ADMIN
+  kind: privilege
+- id: priv:BINLOG_ADMIN
+  kind: privilege
+- id: priv:PERSIST_RO_VARIABLES_ADMIN
+  kind: privilege
+- id: priv:TRANSACTION_GTID_TAG
+  kind: privilege
+- id: priv:PASSWORDLESS_USER_ADMIN
+  kind: privilege
+- id: priv:ROLE_ADMIN
+  kind: privilege
+- id: priv:INNODB_REDO_LOG_ENABLE
+  kind: privilege
+- id: priv:RESOURCE_GROUP_USER
+  kind: privilege
+- id: priv:BINLOG_ENCRYPTION_ADMIN
+  kind: privilege
+- id: priv:SERVICE_CONNECTION_ADMIN
+  kind: privilege
+- id: priv:SHOW_ROUTINE
+  kind: privilege
+- id: priv:RESOURCE_GROUP_ADMIN
+  kind: privilege
+- id: priv:SYSTEM_USER
+  kind: privilege
+- id: priv:TABLE_ENCRYPTION_ADMIN
+  kind: privilege
+- id: priv:TELEMETRY_LOG_ADMIN
+  kind: privilege
+- id: priv:FLUSH_STATUS
+  kind: privilege
+- id: priv:REPLICATION_APPLIER
+  kind: privilege
+- id: priv:FLUSH_OPTIMIZER_COSTS
+  kind: privilege
+- id: priv:AUDIT_ADMIN
+  kind: privilege
+- id: priv:FLUSH_USER_RESOURCES
+  kind: privilege
 - id: 'help:Data Types: AUTO_INCREMENT'
   kind: docs
   url: https://dev.mysql.com/doc/refman/9.1/en/example-auto-increment.html

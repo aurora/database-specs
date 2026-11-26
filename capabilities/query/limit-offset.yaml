@@ -5,7 +5,8 @@ related: [query.fetch-first]
 support:
   mysql:
     - status: supported
-      notes: ["Also LIMIT m, n (offset first). No 'LIMIT ALL'; use a huge number (18446744073709551615) for offset-only."]
+      notes: ["Also LIMIT m, n (offset first). No 'LIMIT ALL'; use a huge number (18446744073709551615) for offset-only.",
+              "UPDATE / DELETE take LIMIT row_count only (with ORDER BY): LIMIT ... OFFSET there is a syntax error (observed 8.4.13, 9.7.4)."]
   mariadb:
     - status: supported
       notes: ["Also LIMIT m, n (offset first). LIMIT ROWS EXAMINED n is MariaDB-specific."]

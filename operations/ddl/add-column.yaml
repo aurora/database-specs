@@ -14,6 +14,7 @@ implementations:
       transactional: false
       caveats:
         - "ALGORITHM=INSTANT since 8.0.12 (only as last column until 8.0.29); otherwise the table is rebuilt."
+        - "The statement also takes FIRST instead of AFTER col, and several columns at once: ADD COLUMN (a INT, b INT) (no FIRST / AFTER there); the template generates one column."
       sources: [{ evidence: tested }]
   mariadb:
     - status: supported

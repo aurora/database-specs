@@ -163,7 +163,9 @@ def cmd_inventory(args) -> int:
                 cats = cur.fetchall()
                 cur.execute(inv.HELP_TOPICS_SQL)
                 topics = cur.fetchall()
-            doc = inv.generate_mysql(version, cats, topics)
+                cur.execute(inv.PRIVILEGES_SQL)
+                privileges = cur.fetchall()
+            doc = inv.generate_mysql(version, cats, topics, privileges)
             path = inv.write(doc)
             print(f"{target['id']:16} {version:10} {len(doc['items'])} items -> {path.relative_to(ROOT)}", flush=True)
             continue

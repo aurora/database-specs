@@ -21,7 +21,7 @@ rules:
             "sphinxql:select_from: *", "sphinxql:select_item: *", "sphinxql:opt_alias: *", "sphinxql:opt_as: *",
             "sphinxql:opt_group_clause: *", "sphinxql:group_order_clause: *", "sphinxql:opt_having_clause: *",
             "sphinxql:order_clause: *", "sphinxql:order_item: *", "sphinxql:limit_clause: *", "sphinxql:option_clause: *",
-            "sphinxql:option_item: *", "sphinxql:named_const: *", "sphinxql:facet_stmt: *", "sphinxql:facet_by: *",
+            "sphinxql:option_item: *", "sphinxql:named_const: *", "sphinxql:facet_stmt: *", "sphinxql:facet_by: *", "sphinxql:opt_facet_by_items_list: *",
             "sphinxql:select_dual: *", "sphinxql:like_filter: *", "sphinxexpr:expr: *", "sphinxexpr:streq: *",
             "sphinxexpr:subkey: *", "sphinxexpr:attr: *", "sphinxexpr:json_expr: *", "sphinxexpr:iterator: *",
             "sphinxexpr:constlist: *", "sphinxexpr:stringlist: *", "sphinxselect:*",
@@ -77,7 +77,7 @@ rules:
   - match: ["sphinxql:show_tables: *", "docs-page:sphinxql-show-tables: *"]
     status: covered
     specs: ["query:introspection.list-tables"]
-  - match: ["sphinxql:describe_tok: *", "docs-page:sphinxql-describe: *", "docs-page:sphinx3: DESCRIBE syntax"]
+  - match: ["sphinxql:describe: *", "sphinxql:describe_tok: *", "docs-page:sphinxql-describe: *", "docs-page:sphinx3: DESCRIBE syntax"]
     status: covered
     specs: ["query:introspection.list-columns"]
   - match: ["sphinxql:show_what: PLAN", "sphinxql:show_what: PROFILE", "sphinxql:show_what: META *", "docs-page:sphinxql-show-plan: *",

@@ -1177,6 +1177,9 @@ items:
 - id: 'ddl:alter_cluster_ident: ALTER CLUSTER <ident>'
   kind: grammar
   parser: ddl
+- id: 'ddl:alter_col_type: <text_or_string> <field_flag_list>'
+  kind: grammar
+  parser: ddl
 - id: 'ddl:alter_table_name: ALTER TABLE <tablename>'
   kind: grammar
   parser: ddl
@@ -1682,6 +1685,9 @@ items:
   kind: grammar
   parser: sphinxql
 - id: 'sphinxql:delete_from: DELETE FROM <target_in_delete_from> <where_clause> <opt_option_clause>'
+  kind: grammar
+  parser: sphinxql
+- id: 'sphinxql:describe: <describe_tok> <one_index_opt_subindex> <describe_opt> <like_filter> <opt_option_clause>'
   kind: grammar
   parser: sphinxql
 - id: 'sphinxql:describe_opt: TABLE'
@@ -2190,6 +2196,9 @@ items:
 - id: 'sphinxql:opt_distinct_item: DISTINCT <identcol>'
   kind: grammar
   parser: sphinxql
+- id: 'sphinxql:opt_facet_by_items_list: <facet_by> <facet_items_list>'
+  kind: grammar
+  parser: sphinxql
 - id: 'sphinxql:opt_facet_filters: ALL FILTERS'
   kind: grammar
   parser: sphinxql
@@ -2589,6 +2598,9 @@ items:
 - id: 'sphinxql:update_item: <json_expr> = <const_int>'
   kind: grammar
   parser: sphinxql
+- id: 'sphinxql:where_clause: <where_tok> <where_expr>'
+  kind: grammar
+  parser: sphinxql
 - id: 'sphinxql:where_expr: <filter_expr> AND <where_items>'
   kind: grammar
   parser: sphinxql
@@ -2641,6 +2653,9 @@ items:
   kind: grammar
   parser: sphinxql_debug
 - id: 'sphinxql_debug:curl: CURL <szparam>'
+  kind: grammar
+  parser: sphinxql_debug
+- id: 'sphinxql_debug:debugclause: <word_debug> <debugcommand>'
   kind: grammar
   parser: sphinxql_debug
 - id: 'sphinxql_debug:debugcommand: CLOSE'
@@ -2737,6 +2752,9 @@ items:
   kind: grammar
   parser: sphinxql_debug
 - id: 'sphinxql_debug:sh_cr_tok: TOKEN'
+  kind: grammar
+  parser: sphinxql_debug
+- id: 'sphinxql_debug:shutdown_crash_token: <sh_cr_tok> <szparam> <opt_option_clause>'
   kind: grammar
   parser: sphinxql_debug
 - id: 'sphinxql_debug:sleep: SLEEP <timeint> <opt_option_clause>'

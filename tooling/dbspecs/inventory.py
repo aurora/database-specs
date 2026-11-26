@@ -212,6 +212,9 @@ def identifier_values(grammar: str) -> dict[str, list[str]]:
         names = re.findall(r'is_identifier\(\s*\$\d+\s*,\s*"([A-Za-z_][A-Za-z0-9_]*)"', chunk)
         # MariaDB: lex_string_eq(&$3, STRING_WITH_LEN("JSON"))
         names += re.findall(r'lex_string_eq\(\s*&\$\d+\s*,\s*STRING_WITH_LEN\(\s*"([A-Za-z_][A-Za-z0-9_]*)"', chunk)
+        # PostgreSQL: strcmp($1, "superuser") == 0
+        names += [n.upper() for n in re.findall(r'strcmp\(\s*\$\d+\s*,\s*"([A-Za-z_][A-Za-z0-9_]*)"\s*\)\s*==\s*0', chunk)
+                  if not n.startswith("__")]
         if names:
             out.setdefault(m.group(1), [])
             out[m.group(1)] += [n for n in dict.fromkeys(names) if n not in out[m.group(1)]]
@@ -509,6 +512,93 @@ def generate_mysql(version: str, help_categories: list[tuple], help_topics: list
              + (["information_schema.PLUGINS"] if maria else [])},
         ],
         "notes": notes,
+        "items": list(unique.values()),
+    }
+
+
+POSTGRES_REPO = "postgres/postgres"
+POSTGRES_PARSERS = {
+    "sql": ("src/backend/parser/gram.y", ["src/include/parser/kwlist.h"]),
+    "plpgsql": ("src/pl/plpgsql/src/pl_gram.y", ["src/pl/plpgsql/src/pl_reserved_kwlist.h",
+                                                  "src/pl/plpgsql/src/pl_unreserved_kwlist.h"]),
+}
+# built-in functions / types of pg_catalog, without I/O and planner support functions (internal arguments)
+POSTGRES_FUNCTIONS_SQL = """
+SELECT DISTINCT p.proname, p.prokind FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'pg_catalog' AND p.prorettype NOT IN ('internal'::regtype, 'cstring'::regtype)
+  AND NOT 'internal'::regtype = ANY (p.proargtypes) AND NOT 'cstring'::regtype = ANY (p.proargtypes)
+  AND p.prorettype <> 'trigger'::regtype AND p.prorettype <> 'event_trigger'::regtype
+ORDER BY 1"""
+POSTGRES_TYPES_SQL = """
+SELECT t.typname FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
+WHERE n.nspname = 'pg_catalog' AND t.typtype IN ('b', 'r', 'm', 'd', 'e', 'p') AND t.typname NOT LIKE '\\_%'
+ORDER BY 1"""
+
+
+def parse_pg_kwlist(text: str) -> dict[str, str]:
+    """TOKEN -> KEYWORD from PG_KEYWORD("abort", ABORT_P, UNRESERVED_KEYWORD, BARE_LABEL) / PG_KEYWORD("all", K_ALL)."""
+    return {m.group(2): m.group(1).upper() for m in re.finditer(r'PG_KEYWORD\(\s*"([a-z_0-9]+)"\s*,\s*([A-Z0-9_]+)', text)}
+
+
+def sgml_statement_items(sources: dict[str, str], major: str) -> list[dict]:
+    """<refname> of the SQL command reference pages (doc/src/sgml/ref/*.sgml): names and links only."""
+    items = []
+    for path, text in sorted(sources.items()):
+        if "SQL - Language Statements" not in text:
+            continue
+        rid = re.search(r'<refentry\s+id="([^"]+)"', text)
+        url = f"https://www.postgresql.org/docs/{major}/{rid.group(1)}.html" if rid else None
+        for name in re.findall(r"<refname>\s*(.*?)\s*</refname>", text, re.S):
+            items.append({"id": f"docs:SQL Commands: {' '.join(name.split())}", "kind": "docs", **({"url": url} if url else {})})
+    return items
+
+
+def generate_postgresql(version: str, functions: list[tuple], types: list[tuple]) -> dict:
+    major = version.split(".")[0]
+    tag = f"REL_{version.replace('.', '_')}"
+    commit = resolve_commit(POSTGRES_REPO, tag)
+    items, kw_group, files = [], {}, []
+    for parser, (gfile, kwfiles) in POSTGRES_PARSERS.items():
+        keywords, used = {}, []
+        for kf in kwfiles:
+            try:
+                keywords.update(parse_pg_kwlist(fetch(POSTGRES_REPO, commit, kf)))
+                used.append(kf)
+            except Exception:  # noqa: BLE001 - before 12 the PL/pgSQL keywords live in pl_scanner.c
+                if parser == "plpgsql" and "src/pl/plpgsql/src/pl_scanner.c" not in used:
+                    keywords.update(parse_pg_kwlist(fetch(POSTGRES_REPO, commit, "src/pl/plpgsql/src/pl_scanner.c")))
+                    used.append("src/pl/plpgsql/src/pl_scanner.c")
+        files += [gfile] + used
+        items += [it for it in grammar_items(parser, fetch(POSTGRES_REPO, commit, gfile), None, keywords)
+                  if it["kind"] == "grammar"]
+        for word in keywords.values():  # an SQL keyword stays an SQL keyword
+            kw_group[word] = None if parser == "sql" or kw_group.get(word, "x") is None else "plpgsql"
+    kw_items = [{"id": f"kw:{w}", "kind": "keyword", **({"group": g} if g else {})} for w, g in sorted(kw_group.items())]
+    kinds = {"f": None, "a": "aggregate", "w": "window", "p": "procedure"}
+    funcs = [{"id": f"func:{name.upper()}", "kind": "function"} for name, _k in functions]
+    tys = [{"id": f"type:{name.upper()}", "kind": "type"} for (name,) in types]
+    ref = [p for p in _tree(POSTGRES_REPO, commit) if p.startswith("doc/src/sgml/ref/") and p.endswith(".sgml")]
+    docs = sgml_statement_items({p: fetch(POSTGRES_REPO, commit, p) for p in ref}, major)
+    unique = {}
+    for it in kw_items + sorted(items, key=lambda i: i["id"]) + funcs + tys + docs:
+        unique.setdefault(it["id"], it)
+    del kinds
+    return {
+        "engine": "postgresql",
+        "version": version,
+        "generated_at": dt.date.today().isoformat(),
+        "sources": [
+            {"kind": "grammar", "repository": POSTGRES_REPO, "commit": commit, "files": files},
+            {"kind": "docs-index", "repository": POSTGRES_REPO, "commit": commit, "files": ["doc/src/sgml/ref/*.sgml"]},
+            {"kind": "server", "files": ["pg_catalog.pg_proc", "pg_catalog.pg_type"]},
+        ],
+        "notes": [
+            "Keywords: kwlist.h (SQL) and the PL/pgSQL keyword lists (group plpgsql: words of the procedural language only, not in pg_get_keywords()).",
+            "func: items are the pg_catalog functions of the running server without type I/O, planner-support and trigger functions (arguments / result internal, cstring, trigger); type: items are pg_catalog base, range, multirange, domain, enum and pseudo types (no array or catalog row types).",
+            "docs: items are the <refname> entries of the SQL command reference (doc/src/sgml/ref, refmiscinfo 'SQL - Language Statements') - names and links only.",
+            "Grammar items ending in (name) are words the parser actions compare an identifier with (CREATE ROLE ... SUPERUSER / LOGIN options, ...).",
+            "psql meta-commands and client applications are not inventoried (client side).",
+        ],
         "items": list(unique.values()),
     }
 

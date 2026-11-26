@@ -32,6 +32,7 @@ implementations:
       caveats:
         - "format: TEXT (one row per line, column QUERY PLAN), JSON, YAML, XML (one row). ANALYZE executes the statement - wrap data-modifying statements in BEGIN ... ROLLBACK."
         - "Further options: BUFFERS, VERBOSE, SETTINGS, WAL, SERIALIZE (17+), MEMORY (17+)."
+        - "Legacy form without parentheses: EXPLAIN [ANALYZE] [VERBOSE] <statement> (only these two options, in this order)."
       sources: [{ evidence: tested }]
   sqlserver:
     - status: supported

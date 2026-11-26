@@ -36,7 +36,7 @@
           "kind": { "enum": ["keyword", "grammar", "function", "type", "privilege", "docs", "plugin"] },
           "parser": { "type": "string" },
           "parsers": { "type": "array", "items": { "type": "string" } },
-          "group": { "enum": ["function", "hint"], "description": "Keywords only: a function-like word or a word of the optimizer-hint parser, not an SQL keyword." },
+          "group": { "enum": ["function", "hint", "plpgsql"], "description": "Keywords only: a function-like word or a word of the optimizer-hint parser, not an SQL keyword." },
           "url": { "type": "string" }
         }
       }

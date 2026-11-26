@@ -33,7 +33,7 @@ uv run dbspecs test --target manticore --extended  # include tier: extended targ
 uv run dbspecs build        # dist/db-specs.json + dist/syntax/ (railroad diagrams)
 uv run dbspecs keywords     # regenerate keywords/<engine>/<version>.yaml from the test targets
 uv run dbspecs coverage     # COVERAGE.md + dist/coverage.html (also written after every test run)
-uv run dbspecs inventory --target manticore --extended   # inventory/<engine>/<version>.yaml from each server's sources (manticore, sphinx, mysql, mariadb)
+uv run dbspecs inventory --target manticore --extended   # inventory/<engine>/<version>.yaml from each server's sources (manticore, sphinx, mysql, mariadb, postgresql)
 uv run dbspecs inventory-diff manticore 27.1.5 28.4.4    # grammar items added (+) / removed (-) between versions
 ```
 
@@ -58,7 +58,8 @@ uv run dbspecs inventory-diff manticore 27.1.5 28.4.4    # grammar items added (
 - `inventory/<engine>/<version>.yaml` (generated): everything the engine has - keywords and grammar
   forms from its parser sources at the build commit, plus the built-in function table (`func:`) and the manual's reference index
   (MySQL / MariaDB: sql_yacc.yy (MariaDB: its default-mode %ifdef branch) / sql_hints.yy / lex.h / item_create.cc at the release tag, topics of the server's HELP tables as
-  `help:` items; keywords with `group: function | hint` are not SQL keywords and stay out of the keyword lists).
+  `help:` items; PostgreSQL: gram.y / kwlist.h, the PL/pgSQL grammar, the SQL command reference pages and the server's
+  pg_catalog functions / types; keywords with a `group` (function, hint, plpgsql) are not SQL keywords and stay out of the keyword lists).
   `scope/<engine>.yaml` classifies every item (covered by specs / planned in the roadmap / open /
   out-of-scope with a reason); `validate` fails on unclassified items. `/audit-inventory <engine>`
   runs an independent review in a fresh subagent and writes `dist/audit/`.

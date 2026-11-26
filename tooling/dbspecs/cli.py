@@ -156,6 +156,17 @@ def cmd_inventory(args) -> int:
             path = inv.write(doc)
             print(f"{target['id']:16} {server.version:10} {len(doc['items'])} items -> {path.relative_to(ROOT)}", flush=True)
             continue
+        if target["engine"] == "postgresql":
+            with running(target) as server, server.connect() as conn, conn.cursor() as cur:
+                version = server.detect_version()
+                cur.execute(inv.POSTGRES_FUNCTIONS_SQL)
+                functions = cur.fetchall()
+                cur.execute(inv.POSTGRES_TYPES_SQL)
+                types = cur.fetchall()
+            doc = inv.generate_postgresql(version, functions, types)
+            path = inv.write(doc)
+            print(f"{target['id']:16} {version:10} {len(doc['items'])} items -> {path.relative_to(ROOT)}", flush=True)
+            continue
         if target["engine"] in ("mysql", "mariadb"):
             with running(target) as server, server.connect() as conn, conn.cursor() as cur:
                 version = server.detect_version()

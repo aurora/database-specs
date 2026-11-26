@@ -28,7 +28,7 @@ grammars:
   postgresql:
     file: postgresql.ebnf
     start: create_index
-    since: "12"
+    since: "11"
     notes:
       - "Index name is optional; the server generates one."
       - "A function call can be used directly as index element; other expressions need parentheses."

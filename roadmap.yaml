@@ -135,6 +135,20 @@ items:
     kind: syntax
     title: Transaction control (BEGIN / START TRANSACTION options, COMMIT / ROLLBACK [AND CHAIN], autocommit, LOCK TABLES)
     priority: medium
+  - id: dml.merge
+    kind: syntax
+    title: MERGE (WHEN MATCHED / NOT MATCHED actions)
+    priority: medium
+    engines: [postgresql, sqlserver]
+  - id: ddl.comment-on
+    kind: syntax
+    title: Object and column comments (COMMENT ON, sp_addextendedproperty, COMMENT '...' clauses)
+    priority: medium
+  - id: ddl.create-type
+    kind: syntax
+    title: CREATE / ALTER / DROP TYPE and DOMAIN (enum, composite, range types)
+    priority: low
+    engines: [postgresql, sqlserver]
   - id: dml.call
     kind: syntax
     title: CALL statements (Manticore SUGGEST / QSUGGEST / SNIPPETS / KEYWORDS / PQ / AUTOCOMPLETE, stored procedure calls)
